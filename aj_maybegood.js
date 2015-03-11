@@ -13,9 +13,9 @@ $(function(){
           .bind(otherData, {
             size: ".x-size",
             country: ".x-country",
-            counter: ".x-counter[length]", //set attribute
-            isGood: ".x-goog-flag[class:good]", //bound css class to a boolean value
-            display: ".x-display-control[style:display]", //bound style value
+            counter: ".x-counter@>[length]", //set attribute
+            isGood: ".x-goog-flag@>[class:good]", //bound css class to a boolean value
+            display: ".x-display-control@>[style:display]", //bound style value
 
             //can be bound to multiple elements by array
             yabi: [
