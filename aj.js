@@ -1,6 +1,4 @@
 Aj={
-  
-  obs: new Array(),
 
   init: function(init_func){
     init_func(Aj.createScope());
@@ -51,11 +49,61 @@ Aj={
         }
       },
 
-      bindOne: function(propertyPath, meta){
+      rewriteMeta: function(meta){
+        if(!meta._render){
+          meta._render = function(target, newValue, oldValue){
+            target.text(newValue);
+          };
+        }
+        if(!meta._assign){
+          meta._assign = function(scope, propertyPath, value){
+            Path.get(propertyPath).setValueFrom(scope, value);
+          };
+        }
+        if(!meta._register_render){
+          meta._register_render = function(scope, propertyPath, onChange){
+            var observer = new PathObserver(scope, propertyPath);
+            observer.open(function(newValue, oldValue){
+              onChange(newValue, oldValue);
+            });
+          };
+        }
+        /*
+        if(!meta._register_assign){
+          meta._register_assign = function(target, onChange){
+            target.change(function(){
+              var v = $(this).val();
+            });
+          }
+        }
+        */
+      },
+      
+      bindOne: function(propertyPath, originalMeta){
+        
+        //convert string to standard meta format
+        var metaType = typeof originalMeta;
+        var meta;
+        if (metaType == "string"){
+          meta = {
+            _selector: originalMeta
+          }
+        } else if (metaType == "object"){
+          meta = $.extend(true, {}, originalMeta);
+        } else {
+          throw "meta must be a string or object rather than " + metaType;
+        }
+        
+        //rewrite meta
+        this.rewriteMeta(meta);
+        
+        //retrieve target
         var target = $(meta._selector);
         if(target.length === 0){
           throw "could not found target for selector:" + meta._selector;
         }
+        
+        //register actions
         if(meta._register_render){
           meta._register_render(
             this._scope, 
@@ -76,8 +124,5 @@ Aj={
 
     }
   },
-
-  dummy: ""
-  
 
 };
