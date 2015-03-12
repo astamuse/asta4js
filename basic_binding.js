@@ -17,6 +17,7 @@ $(function(){
                   target.keyup(function(){
                     var v = $(this).val();
                     onChange(v);
+                    Platform.performMicrotaskCheckpoint();
                   });
                 }
               },
@@ -30,6 +31,7 @@ $(function(){
                   target.keyup(function(){
                     var v = $(this).val();
                     onChange(v);
+                    Platform.performMicrotaskCheckpoint();
                   });
                 }
               },
@@ -37,6 +39,14 @@ $(function(){
               "#preview",
             ]
           });
+    
+    window.setTimeout(function(){
+      console.log("timeout trigger");
+      $scope.data = {
+        value: "timeout auto assign"
+      };
+      Platform.performMicrotaskCheckpoint();
+    }, 2000);
     
   });
 
