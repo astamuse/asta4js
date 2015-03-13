@@ -8,7 +8,7 @@ $(function(){
           .bind($scope.data, {
             list: {
               _duplicator: "li",
-              _value:[
+              _item:[
                 //2 way on input
                 {
                   _selector: "[name=input]",

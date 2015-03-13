@@ -1,0 +1,105 @@
+{
+  _type : "_root",
+  _id : "", //optional
+
+  _value: {
+    _type: "_value"
+    _selector: "",
+    _render: function(){},
+    _assign: function(){},
+    _register_render: function(){},
+    _register_assign: function(){}
+  },
+  
+  _prop: {
+    _type : "_prop"
+    a : {
+      _type : "_root"
+    },
+    b : ""
+  }
+}  ==>  {
+  _selector: "",
+  _render: function(){},
+  _assign: function(){},
+  _register_render: function(){},
+  _register_assign: function(){},
+  
+  a : "",
+  b : ""
+  
+}
+
+{
+  _type: "_root"
+  _value:{ // the array itself
+    _type: "_value"
+    _duplicator: ""
+    _item : { // the element of the array
+      _type: "_root"
+      _value:{
+        _type: "_value"
+        _selector : ""
+      },
+      _prop: {
+        _type: "_value",
+        a: {},
+        b: {}
+      }
+    },
+  },
+  //TODO is it works?
+  _prop : {
+    _type : "_prop"
+    length : ""
+  }
+}  ==>  {
+  _duplicator: ""
+  _item:{
+    _selector : "",
+    a: {},
+    b: {}
+  },
+  length : ""
+}
+
+// for recursive fields, 
+{
+  _type: "_root",
+  _prop:{
+    _type: "_prop"
+    propa:{
+      _value :{
+        _selector: ""
+      }
+    },
+    propb:{
+      _type: "_root"
+      _value: {
+        _type: "_value"
+        _selector: ""
+      },
+      _prop:{
+        subofb:{
+          _type: "_root"
+          _value:{
+            _selector:""
+          }
+        }
+      }//_prop
+    }// propb 
+  }// _prop
+}  ==>  {
+  propa:{
+    _selector: ""
+  },
+  propb:{
+    _value: {
+      _selector: ""
+    }
+    subofb:{
+      _selector:""
+    }
+  }
+}
+

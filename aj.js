@@ -1,5 +1,15 @@
 Aj = {
 
+  config : {
+    metaFieldDistinguisher : function (metaId, fieldName) {
+      if (fieldName.indexOf("_") === 0) {
+        return "_value";
+      } else {
+        return "_prop";
+      }
+    }
+  },
+
   obs : new Array(),
 
   init : function (init_func) {
@@ -15,29 +25,11 @@ Aj = {
   },
 
   createSnippet : function (_scope, _root) {
+    var reverseMetaKeys = ["_type", "_id", "_value", "_prop"];
     return {
+      rewriteMeta : function (originalMeta) {
 
-      bind : function (varRef, meta) {
-        //find out the ref path at first
-        var searchKey = "ashfdpnasvdnoaisdfn3423#$%$#$%0as8d23nalsfdasdf";
-        varRef[searchKey] = 1;
-
-        var refPath = null;
-        for (var p in _scope) {
-          var ref = _scope[p];
-          if (ref[searchKey] == 1) {
-            refPath = p;
-            break;
-          }
-        }
-
-        varRef[searchKey] = null;
-        delete varRef[searchKey];
-
-        this.bindMeta(refPath, meta);
-      },
-
-      rewriteMeta : function (meta) {
+        var meta = Aj.util.clone(originalMeta);
 
         //set default 1 way binding
         if (!meta._render) {
@@ -67,50 +59,160 @@ Aj = {
         }
         }
          */
+        return meta;
       },
 
-      bindMeta : function (parentPath, meta) {
-        for (var p in meta) {
-          var m = meta[p];
-          var refPath = null;
-          if (p === "_value") { //bound to the variable root
-            refPath = parentPath;
-          } else {
-            refPath = parentPath + "." + p;
-          }
-          if ($.isArray(m)) {
-            for (var sm in m) {
-              this.bindPropertyPath(refPath, m[sm]);
-            }
-          } else {
-            this.bindPropertyPath(refPath, m);
+      bind : function (varRef, meta) {
+        //find out the ref path at first
+        var searchKey = "ashfdpnasvdnoaisdfn3423#$%$#$%0as8d23nalsfdasdf";
+        varRef[searchKey] = 1;
+
+        var refPath = null;
+        for (var p in _scope) {
+          var ref = _scope[p];
+          if (ref[searchKey] == 1) {
+            refPath = p;
+            break;
           }
         }
+
+        varRef[searchKey] = null;
+        delete varRef[searchKey];
+
+        this.bindMeta(refPath, meta);
       },
 
-      bindPropertyPath : function (propertyPath, originalMeta) {
+      bindMeta : function (parentPath, originalMeta) {
+
+        // if the user defined root meta is an array, we can bind then one by one
+        if ($.isArray(originalMeta)) {
+          var THIS = this;
+          originalMeta.forEach(function (m) {
+            THIS.bindMeta(parentPath, m)
+          });
+          return;
+        }
 
         //convert string to standard meta format
         var metaType = typeof originalMeta;
         var meta;
-        if (metaType == "string") {
+        if (metaType === "string") {
           meta = {
             _selector : originalMeta
           }
-        } else if (metaType == "object") {
-          meta = $.extend(true, {}, originalMeta);
+        } else if (metaType === "object") {
+          meta = Aj.util.clone(originalMeta);
         } else {
           throw "meta must be a string or object rather than " + metaType;
         }
 
+        //the only possible no-type meta is passed by user defined root meta
+        //which must be the root
+        if (!meta._type) {
+          meta._type = "_root";
+        }
+
+        switch (meta._type) {
+        case "_root":
+          //if the _value is array, we should create a new empty object to receive the moved fields from _root
+          var _value_ref;
+          if (!meta._value) {
+            meta._value = {};
+            _value_ref = meta._value;
+          } else if ($.isArray(meta._value)) {
+            //make sure all the _type of elements of _vlaue be "_value"
+            meta._value.forEach(function (v) {
+              v._type = "_value";
+            });
+            _value_ref = {};
+            meta._value.push(_value_ref);
+          } else {
+            _value_ref = meta._value;
+          }
+          _value_ref._type = "_value";
+
+          //the same as _value
+          var _prop_ref;
+          if (!meta._prop) {
+            meta._prop = {};
+            _prop_ref = meta._prop;
+          } else if ($.isArray(meta._prop)) {
+            meta._prop.forEach(function (v) {
+              v._type = "_prop";
+            });
+            _prop_ref = {};
+            meta._prop.push(_prop_ref);
+          } else {
+            _prop_ref = meta._prop;
+          }
+          _prop_ref._type = "_prop";
+
+          var moveTargetRef = {
+            _value : _value_ref,
+            _prop : _prop_ref
+          }
+          //we need to move all the fields under root to the corresponding standard holding fields: _value or _prop
+
+          for (var p in meta) {
+            if (reverseMetaKeys.indexOf(p) >= 0) {
+              continue;
+            }
+            var moveTarget = Aj.config.metaFieldDistinguisher(meta._id, p);
+            if (moveTarget === "_value" || moveTarget === "_prop") {
+              moveTargetRef[moveTarget][p] = meta[p];
+              meta[p] = null;
+              delete meta[p];
+            } else {
+              throw "metaFieldDistinguisher can only return '_value' or '_prop' rather than '" + moveTarget + "'";
+            }
+          }
+          // now we can bind the _value and _prop one by one
+          this.bindMeta(parentPath, meta._value);
+          this.bindMeta(parentPath, meta._prop);
+          break;
+        case "_prop":
+          this.bindProperty(parentPath, meta);
+          break;
+        case "_value":
+          this.bindValue(parentPath, meta);
+          break;
+        default:
+          throw "impossible meta type:" + meta._type;
+        }
+      },
+
+      bindProperty : function (parentPath, originalMeta) {
+        if (originalMeta._type !== "_prop") {
+          throw "Only _prop meta can be bound to here but got:" + originalMeta._type;
+        }
+        for (var p in originalMeta) {
+          if (reverseMetaKeys.indexOf(p) >= 0) {
+            continue;
+          }
+          var m = originalMeta[p];
+          refPath = parentPath + "." + p;
+          this.bindMeta(refPath, m);
+        }
+      },
+
+      bindValue : function (propertyPath, originalMeta) {
+        if (originalMeta._type !== "_value") {
+          throw "Only _value meta can be bound to here but got:" + originalMeta._type;
+        }
+
         //special binding for array
-        if (meta._duplicator) {
-          this.bindArray(propertyPath, meta);
+        if (originalMeta._duplicator) {
+          this.bindArray(propertyPath, originalMeta);
+          return;
+        }
+
+        //which means there is nothing about the value to do
+        if (!originalMeta._selector) {
           return;
         }
 
         //rewrite meta
-        this.rewriteMeta(meta);
+        var meta = this.rewriteMeta(originalMeta);
 
         //retrieve target
         var target = _root.find(meta._selector);
@@ -126,6 +228,8 @@ Aj = {
             function (newValue, oldValue) {
             meta._render(target, newValue, oldValue);
           });
+          var currentValue = Path.get(propertyPath).getValueFrom(_scope);
+          meta._render(target, currentValue, undefined);
         }
 
         if (meta._register_assign) {
@@ -136,17 +240,13 @@ Aj = {
       },
 
       bindArray : function (propertyPath, originalMeta) {
-        var meta = $.extend(true, {}, originalMeta);
-        var target = _root.find(meta._duplicator);
+        var target = _root.find(originalMeta._duplicator);
         if (target.length == 0) {
-          throw "could not find duplicator:" + meta._duplicator;
+          throw "could not find duplicator:" + originalMeta._duplicator;
         }
-                
-        //we convert the array meta to a common meta by removing the mark field "_duplicator"
-        meta["_duplicator"] = null;
-        delete meta["_duplicator"];
-        
+
         var THIS = this;
+        var childMeta = Aj.util.clone(originalMeta["_item"]);
 
         target.each(function (index, elem) {
 
@@ -186,9 +286,11 @@ Aj = {
 
             for (; i < newLength && j < nodeLength; i++, j++) {
               var childPath = propertyPath + "[" + i + "]";
-              var childMeta = $.extend(true, {}, meta);
               var childElem = $(existingNodes.get(j));
               //todo retrieve the existing observer and onChange event handler
+
+              console.log("bind childpath:" + childPath);
+              console.log(childMeta);
 
               //recursive binding
               var childSnippet = Aj.createSnippet(_scope, childElem);
@@ -199,10 +301,12 @@ Aj = {
 
             for (; i < newLength; i++) {
               var childPath = propertyPath + "[" + i + "]";
-              var childMeta = $.extend(true, {}, meta);
               var childElem = $(templateStr);
               insertPoint.after(childElem);
 
+              console.log("bind childpath:" + childPath);
+              console.log(childMeta);
+              
               //recursive binding
               var childSnippet = Aj.createSnippet(_scope, childElem);
               childSnippet.bindMeta(childPath, childMeta);
@@ -220,6 +324,7 @@ Aj = {
 
         }); //target.each
       }, //bindArray
+
 
       discard : function () {
         //TODO
@@ -240,5 +345,8 @@ Aj = {
         return new Array();
       }
     },
+    clone: function(obj){
+      return clone(obj);
+    }
   }
 };

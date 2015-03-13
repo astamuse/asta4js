@@ -37,13 +37,19 @@ $(function(){
               },
               //1 way
               "#preview",
-            ]
+            ],
+            sub: {
+              rr: ".x-recursive-value"
+            }
           });
     
     window.setTimeout(function(){
       console.log("timeout trigger");
       $scope.data = {
-        value: "timeout auto assign"
+        value: "timeout auto assign",
+        sub: {
+          rr: "recursive"
+        }
       };
       Platform.performMicrotaskCheckpoint();
     }, 2000);
