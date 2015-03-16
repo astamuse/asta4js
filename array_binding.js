@@ -24,6 +24,9 @@ $(function(){
                 },
                 //1 way
                 "#preview",
+                {
+                  _index: ".x-index"
+                }
               ],
               length: ".x-length"
             }

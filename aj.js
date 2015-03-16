@@ -2,7 +2,9 @@ Aj = {
 
   config : {
     metaFieldDistinguisher : function (metaId, fieldName) {
-      if (fieldName.indexOf("_") === 0) {
+      if (fieldName === "_index") {
+        return "_prop";
+      } else if (fieldName.indexOf("_") === 0) {
         return "_value";
       } else {
         return "_prop";
@@ -29,7 +31,7 @@ Aj = {
   },
 
   createSnippet : function (_scope, _root) {
-    var reverseMetaKeys = ["_type", "_id", "_value", "_prop"];
+    var reverseMetaKeys = ["_meta_type", "_meta_id", "_value", "_prop"];
     return {
       rewriteMeta : function (originalMeta) {
 
@@ -83,14 +85,14 @@ Aj = {
                 reg : /^\[class:(.+)\?\]$/,
                 renderFn : function (matched) {
                   return function (target, newValue, oldValue) {
-                    if(newValue){
+                    if (newValue) {
                       target.addClass(matched);
-                    }else{
+                    } else {
                       target.removeClass(matched);
                     }
                   };
                 }
-              },{
+              }, {
                 comment : "attr equal",
                 reg : /^\[(.+)=\]$/,
                 renderFn : function (matched) {
@@ -135,6 +137,7 @@ Aj = {
             };
           }
         }
+
         if (!meta._assign) {
           meta._assign = function (_scope, propertyPath, value) {
             Path.get(propertyPath).setValueFrom(_scope, value);
@@ -157,6 +160,7 @@ Aj = {
         }
         }
          */
+
         return meta;
       },
 
@@ -180,13 +184,13 @@ Aj = {
         this.bindMeta(refPath, meta);
       },
 
-      bindMeta : function (parentPath, originalMeta) {
+      bindMeta : function (parentPath, originalMeta, arrayIndex) {
 
         // if the user defined root meta is an array, we can bind then one by one
         if ($.isArray(originalMeta)) {
           var THIS = this;
           originalMeta.forEach(function (m) {
-            THIS.bindMeta(parentPath, m)
+            THIS.bindMeta(parentPath, m, arrayIndex)
           });
           return;
         }
@@ -206,11 +210,11 @@ Aj = {
 
         //the only possible no-type meta is passed by user defined root meta
         //which must be the root
-        if (!meta._type) {
-          meta._type = "_root";
+        if (!meta._meta_type) {
+          meta._meta_type = "_root";
         }
 
-        switch (meta._type) {
+        switch (meta._meta_type) {
         case "_root":
           //if the _value is array, we should create a new empty object to receive the moved fields from _root
           var _value_ref;
@@ -218,16 +222,16 @@ Aj = {
             meta._value = {};
             _value_ref = meta._value;
           } else if ($.isArray(meta._value)) {
-            //make sure all the _type of elements of _vlaue be "_value"
+            //make sure all the _meta_type of elements of _vlaue be "_value"
             meta._value.forEach(function (v) {
-              v._type = "_value";
+              v._meta_type = "_value";
             });
             _value_ref = {};
             meta._value.push(_value_ref);
           } else {
             _value_ref = meta._value;
           }
-          _value_ref._type = "_value";
+          _value_ref._meta_type = "_value";
 
           //the same as _value
           var _prop_ref;
@@ -236,14 +240,14 @@ Aj = {
             _prop_ref = meta._prop;
           } else if ($.isArray(meta._prop)) {
             meta._prop.forEach(function (v) {
-              v._type = "_prop";
+              v._meta_type = "_prop";
             });
             _prop_ref = {};
             meta._prop.push(_prop_ref);
           } else {
             _prop_ref = meta._prop;
           }
-          _prop_ref._type = "_prop";
+          _prop_ref._meta_type = "_prop";
 
           var moveTargetRef = {
             _value : _value_ref,
@@ -255,7 +259,7 @@ Aj = {
             if (reverseMetaKeys.indexOf(p) >= 0) {
               continue;
             }
-            var moveTarget = Aj.config.metaFieldDistinguisher(meta._id, p);
+            var moveTarget = Aj.config.metaFieldDistinguisher(meta._meta_id, p);
             if (moveTarget === "_value" || moveTarget === "_prop") {
               moveTargetRef[moveTarget][p] = meta[p];
               meta[p] = null;
@@ -265,37 +269,40 @@ Aj = {
             }
           }
           // now we can bind the _value and _prop one by one
-          this.bindMeta(parentPath, meta._value);
-          this.bindMeta(parentPath, meta._prop);
+          this.bindMeta(parentPath, meta._value, arrayIndex);
+          this.bindMeta(parentPath, meta._prop, arrayIndex);
           break;
         case "_prop":
-          this.bindProperty(parentPath, meta);
+          this.bindProperty(parentPath, meta, arrayIndex);
           break;
         case "_value":
-          this.bindValue(parentPath, meta);
+          this.bindValue(parentPath, meta, arrayIndex);
           break;
         default:
-          throw "impossible meta type:" + meta._type;
+          throw "impossible meta type:" + meta._meta_type;
         }
       },
 
-      bindProperty : function (parentPath, originalMeta) {
-        if (originalMeta._type !== "_prop") {
-          throw "Only _prop meta can be bound to here but got:" + originalMeta._type;
+      bindProperty : function (parentPath, originalMeta, arrayIndex) {
+        if (originalMeta._meta_type !== "_prop") {
+          throw "Only _prop meta can be bound to here but got:" + originalMeta._meta_type;
         }
         for (var p in originalMeta) {
           if (reverseMetaKeys.indexOf(p) >= 0) {
             continue;
           }
           var m = originalMeta[p];
-          refPath = parentPath + "." + p;
-          this.bindMeta(refPath, m);
+          if (p === "_index") {
+            this.bindMeta(p, m, arrayIndex);
+          } else {
+            this.bindMeta(parentPath + "." + p, m);
+          }
         }
       },
 
-      bindValue : function (propertyPath, originalMeta) {
-        if (originalMeta._type !== "_value") {
-          throw "Only _value meta can be bound to here but got:" + originalMeta._type;
+      bindValue : function (propertyPath, originalMeta, arrayIndex) {
+        if (originalMeta._meta_type !== "_value") {
+          throw "Only _value meta can be bound to here but got:" + originalMeta._meta_type;
         }
 
         //special binding for array
@@ -309,8 +316,21 @@ Aj = {
           return;
         }
 
+        var meta = Aj.util.clone(originalMeta);
+        
+        //special for _index path
+        if (propertyPath === "_index") {
+          //do nothing if binding for array index
+          if (!meta._assign) {
+            meta._assign = function (_scope, propertyPath, value) {};
+          }
+          if (!meta._register_render) {
+            meta._register_render = function (_scope, propertyPath, onChange) {};
+          }
+        }
+
         //rewrite meta
-        var meta = this.rewriteMeta(originalMeta);
+        meta = this.rewriteMeta(meta);
 
         //retrieve target
         var target = _root.find(meta._selector);
@@ -326,13 +346,19 @@ Aj = {
             function (newValue, oldValue) {
             meta._render(target, newValue, oldValue);
           });
-          var currentValue = Path.get(propertyPath).getValueFrom(_scope);
+          var currentValue = null;
+          if (propertyPath === "_index") {
+            currentValue = arrayIndex;
+          } else {
+            currentValue = Path.get(propertyPath).getValueFrom(_scope);
+          }
           meta._render(target, currentValue, undefined);
         }
 
         if (meta._register_assign) {
           meta._register_assign(target, function (value) {
             meta._assign(_scope, propertyPath, value);
+            Aj.sync();
           });
         }
       },
@@ -392,7 +418,7 @@ Aj = {
 
               //recursive binding
               var childSnippet = Aj.createSnippet(_scope, childElem);
-              childSnippet.bindMeta(childPath, childMeta);
+              childSnippet.bindMeta(childPath, childMeta, i);
 
               insertPoint = childElem;
             } // end i,j
@@ -407,7 +433,7 @@ Aj = {
 
               //recursive binding
               var childSnippet = Aj.createSnippet(_scope, childElem);
-              childSnippet.bindMeta(childPath, childMeta);
+              childSnippet.bindMeta(childPath, childMeta, i);
 
               insertPoint = childElem;
             } // end i

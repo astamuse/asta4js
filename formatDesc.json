@@ -1,24 +1,4 @@
 {
-  _type : "_root",
-  _id : "", //optional
-
-  _value: {
-    _type: "_value"
-    _selector: "",
-    _render: function(){},
-    _assign: function(){},
-    _register_render: function(){},
-    _register_assign: function(){}
-  },
-  
-  _prop: {
-    _type : "_prop"
-    a : {
-      _type : "_root"
-    },
-    b : ""
-  }
-}  ==>  {
   _selector: "",
   _render: function(){},
   _assign: function(){},
@@ -28,68 +8,71 @@
   a : "",
   b : ""
   
-}
+} ==>  {
+  _meta_type : "_root",
+  _meta_id : "", //optional
+
+  _value: {
+    _meta_type: "_value"
+    _selector: "",
+    _render: function(){},
+    _assign: function(){},
+    _register_render: function(){},
+    _register_assign: function(){}
+  },
+  
+  _prop: {
+    _meta_type : "_prop"
+    a : {
+      _meta_type : "_root"
+      ...
+    },
+    b : {
+      _meta_type : "_root"
+      ...
+    },
+  }
+}  
 
 {
-  _type: "_root"
+  _duplicator: ""
+  _item:{
+    _selector : "",
+    _index: "" 
+    a: {},
+    b: {}
+  },
+  length : ""
+}  ==>  {
+  _meta_type: "_root"
   _value:{ // the array itself
-    _type: "_value"
+    _meta_type: "_value"
     _duplicator: ""
     _item : { // the element of the array
-      _type: "_root"
+      _meta_type: "_root",
+      // if stored, the index change can be watched, but this would be supported later, not now
+      _store_index: false, 
       _value:{
-        _type: "_value"
+        _meta_type: "_value"
         _selector : ""
       },
       _prop: {
-        _type: "_value",
+        _meta_type: "_prop",
+        // NOTE: the index can be rendered even not stored, maybe we need to clarify it more.
+        _index: {},
         a: {},
         b: {}
       }
     },
   },
-  //TODO is it works?
   _prop : {
-    _type : "_prop"
+    _meta_type : "_prop"
     length : ""
   }
-}  ==>  {
-  _duplicator: ""
-  _item:{
-    _selector : "",
-    a: {},
-    b: {}
-  },
-  length : ""
-}
+} 
 
 // for recursive fields, 
 {
-  _type: "_root",
-  _prop:{
-    _type: "_prop"
-    propa:{
-      _value :{
-        _selector: ""
-      }
-    },
-    propb:{
-      _type: "_root"
-      _value: {
-        _type: "_value"
-        _selector: ""
-      },
-      _prop:{
-        subofb:{
-          _type: "_root"
-          _value:{
-            _selector:""
-          }
-        }
-      }//_prop
-    }// propb 
-  }// _prop
-}  ==>  {
   propa:{
     _selector: ""
   },
@@ -101,6 +84,31 @@
       _selector:""
     }
   }
+} ==> {
+  _meta_type: "_root",
+  _prop:{
+    _meta_type: "_prop"
+    propa:{
+      _value :{
+        _selector: ""
+      }
+    },
+    propb:{
+      _meta_type: "_root"
+      _value: {
+        _meta_type: "_value"
+        _selector: ""
+      },
+      _prop:{
+        subofb:{
+          _meta_type: "_root"
+          _value:{
+            _selector:""
+          }
+        }
+      }//_prop
+    }// propb 
+  }// _prop
 }
 
 //attr operations(1-way only),@> to suggest an operation of attribution
