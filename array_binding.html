@@ -1,5 +1,6 @@
 <html>
 <head>
+<meta charset="utf-8"> 
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
 <script src="observe.js"></script>
 <script src="clone.js"></script>
@@ -14,8 +15,17 @@ fffs
 </textarea>
 <button id="set-value">set value</button>
 
+<div>array length: <span class="x-length"></span></div>
+
 <ul>
-<li><input name="input">preview:<span id="preview"></span></li>
+<li>
+<button class="x-add">+</button>    &nbsp;
+<button class="x-remove">-</button> &nbsp;
+<button class="x-go-up">↑</button>  &nbsp;
+<button class="x-go-end">↓</button> &nbsp;
+<input name="input">
+preview:<span id="preview"></span>
+</li>
 </ul>
 
 </body>

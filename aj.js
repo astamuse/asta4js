@@ -10,6 +10,10 @@ Aj = {
     }
   },
 
+  sync : function () {
+    Platform.performMicrotaskCheckpoint();
+  },
+
   obs : new Array(),
 
   init : function (init_func) {
@@ -31,11 +35,105 @@ Aj = {
 
         var meta = Aj.util.clone(originalMeta);
 
+        //rewrite selector to extract attr operations
+        var attrOpIndex = meta._selector.indexOf("@>");
+        var attrOp = null;
+        if (attrOpIndex >= 0) {
+          attrOp = meta._selector.substr(attrOpIndex + 2);
+          meta._selector = meta._selector.substring(0, attrOpIndex);
+        }
+
         //set default 1 way binding
         if (!meta._render) {
-          meta._render = function (target, newValue, oldValue) {
-            target.text(newValue);
-          };
+          if (attrOp) {
+            var attrRegs = [{
+                comment : "style equal",
+                reg : /^\[style\:(.+)=\]$/,
+                renderFn : function (matched) {
+                  return function (target, newValue, oldValue) {
+                    target.css(matched, newValue);
+                  };
+                }
+              }, {
+                comment : "class switch",
+                reg : /^\[class:\((.+)\)\?\]$/,
+                renderFn : function (matched) {
+                  var classes = matched.split("|");
+                  return function (target, newValue, oldValue) {
+                    if (newValue === undefined
+                       || newValue === ""
+                       || newValue == null
+                       || classes.indexOf(newValue) >= 0) {
+                      classes.forEach(function (c) {
+                        target.removeClass(c);
+                      });
+                      if (newValue) {
+                        target.addClass(newValue);
+                      }
+                    } else {
+                      throw "the specified css class name:'"
+                       + newValue
+                       + "' is not contained in the declared switching list:"
+                       + originalMeta._selector;
+                    }
+                  };
+                }
+              }, {
+                comment : "class existing",
+                reg : /^\[class:(.+)\?\]$/,
+                renderFn : function (matched) {
+                  return function (target, newValue, oldValue) {
+                    if(newValue){
+                      target.addClass(matched);
+                    }else{
+                      target.removeClass(matched);
+                    }
+                  };
+                }
+              },{
+                comment : "attr equal",
+                reg : /^\[(.+)=\]$/,
+                renderFn : function (matched) {
+                  return function (target, newValue, oldValue) {
+                    target.attr(matched, newValue);
+                  };
+                }
+              }, {
+                comment : "attr existing",
+                reg : /^\[(.+)\?\]$/,
+                renderFn : function (matched) {
+                  return function (target, newValue, oldValue) {
+                    target.prop(matched, newValue);
+                  };
+                }
+              }
+            ];
+
+            var renderFn = null;
+            console.log("attrOp=" + attrOp);
+            for (var i = 0; i < attrRegs.length; i++) {
+              var attrReg = attrRegs[i];
+              var matchResult = attrReg.reg.exec(attrOp);
+              if (matchResult) {
+                console.log("matched");
+                console.log(attrReg);
+                var matched = matchResult[1];
+                renderFn = attrReg.renderFn(matched);
+                break;
+              }
+              //console.log("not matched");
+            }
+
+            if (renderFn) {
+              meta._render = renderFn;
+            } else {
+              throw "not supported attr operation:" + attrOp;
+            }
+          } else {
+            meta._render = function (target, newValue, oldValue) {
+              target.text(newValue);
+            };
+          }
         }
         if (!meta._assign) {
           meta._assign = function (_scope, propertyPath, value) {
@@ -306,7 +404,7 @@ Aj = {
 
               console.log("bind childpath:" + childPath);
               console.log(childMeta);
-              
+
               //recursive binding
               var childSnippet = Aj.createSnippet(_scope, childElem);
               childSnippet.bindMeta(childPath, childMeta);
@@ -345,7 +443,7 @@ Aj = {
         return new Array();
       }
     },
-    clone: function(obj){
+    clone : function (obj) {
       return clone(obj);
     }
   }

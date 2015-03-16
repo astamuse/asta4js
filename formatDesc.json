@@ -103,3 +103,12 @@
   }
 }
 
+//attr operations(1-way only),@> to suggest an operation of attribution
+
+border: "#target-table@>[border=]",  //assign value to the target attribution
+width: "#target-table@>[style:width=]", //assign value to the target style property
+color: "#target-table@>[class:(blue|red)?]", // switch the class in declared list by given value(must contained in the list)
+height: "#target-table@>[class:height40?]",  // add/remove target class by given value(treated as boolean)
+checked: "#check-box@>[checked?]" // add/remove target attribution by given value(treated as boolean)
+
+
