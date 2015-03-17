@@ -182,6 +182,8 @@ Aj = {
         delete varRef[searchKey];
 
         this.bindMeta(refPath, meta);
+
+        return this;
       },
 
       bindMeta : function (parentPath, originalMeta, arrayIndex) {
@@ -317,7 +319,7 @@ Aj = {
         }
 
         var meta = Aj.util.clone(originalMeta);
-        
+
         //special for _index path
         if (propertyPath === "_index") {
           //do nothing if binding for array index
@@ -395,19 +397,71 @@ Aj = {
             console.log("to");
             console.log(newValue);
 
+            /*
+             * we should monitor the array splicing
+             */
+            if ($.isArray(newValue)) { // only when the new value is not undefined/null
+              var splicingObserver = new ArrayObserver(newValue);
+              splicingObserver.open(function (splices) {
+                var removedCount = 0;
+                var addedCount = 0;
+
+                splices.forEach(function (s) {
+                  removedCount += s.removed.length;
+                  addedCount += s.addedCount;
+                });
+
+                var diff = addedCount - removedCount;
+
+                var existingNodes = _root.find("[aj-generated=" + placeHolderId + "]");
+                var existingLength = existingNodes.length;
+
+                if (diff > 0) {
+                  //we simply add the new child to the last of current children list,
+                  //all the values will be synchronized correctly since we bind them
+                  //by a string value path rather than the real object reference.
+                  var insertPoint = $(existingNodes.get(existingLength - 1)); // the last one as insert point
+                  for (var i = 0; i < diff; i++) {
+                    var newIndex = existingLength + i;
+                    var childPath = propertyPath + "[" + newIndex + "]";
+                    var childElem = $(templateStr);
+                    insertPoint.after(childElem);
+
+                    console.log("bind childpath:" + childPath);
+                    console.log(childMeta);
+
+                    //recursive binding
+                    var childSnippet = Aj.createSnippet(_scope, childElem);
+                    childSnippet.bindMeta(childPath, childMeta, newIndex);
+
+                    insertPoint = childElem;
+                  }
+                } else if (diff < 0) {
+                  diff = 0 - diff;
+                  for (var i = 1; i <= diff; i++) {
+                    $(existingNodes.get(existingLength - i)).remove();
+                  }
+                }
+              });
+            }
+
+            /*
+             * following is for value assigning by whole array instance
+             */
+            var existingNodes = _root.find("[aj-generated=" + placeHolderId + "]");
+
             var regularOld = Aj.util.regulateArray(oldValue);
             var regularNew = Aj.util.regulateArray(newValue);
 
-            //we will diff the old and new and try our best to reuse the existing DOMs
-
-            var existingNodes = _root.find("[aj-generated=" + placeHolderId + "]");
-
             var newLength = regularNew.length;
             var nodeLength = existingNodes.length;
+
             var i = 0; // loop for value
             var j = 0; // loop for node
+
             var insertPoint = placeHolder;
 
+            //we will diff the old and new and try our best to reuse the existing DOMs
             for (; i < newLength && j < nodeLength; i++, j++) {
               var childPath = propertyPath + "[" + i + "]";
               var childElem = $(existingNodes.get(j));
@@ -452,6 +506,12 @@ Aj = {
 
       discard : function () {
         //TODO
+      },
+
+      on : function (selector, event, fn) {
+        _root.on(selector, event, fn);
+        Aj.sync();
+        return this;
       }
 
     } //return snippet
@@ -471,6 +531,11 @@ Aj = {
     },
     clone : function (obj) {
       return clone(obj);
+    },
+    arraySwap : function (array, index1, index2) {
+      var tmp = array[index1];
+      array[index1] = array[index2];
+      array[index2] = tmp;
     }
   }
 };
