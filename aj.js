@@ -1,7 +1,7 @@
 Aj = {
 
   config : {
-    metaFieldDistinguisher : function (metaId, fieldName) {
+    metaFieldClassifier : function (metaId, fieldName) {
       if (fieldName === "_index") {
         return "_prop";
       } else if (fieldName.indexOf("_") === 0) {
@@ -9,45 +9,104 @@ Aj = {
       } else {
         return "_prop";
       }
-    }
-  },
-
-  sync : function () {
-    Platform.performMicrotaskCheckpoint();
-  },
-
-  obs : new Array(),
-
-  init : function (init_func) {
-    init_func(Aj.createScope());
-  },
-
-  createScope : function () {
-    return {
-      snippet : function (selector) {
-        return Aj.createSnippet(this, $(selector));
+    },
+    _ordered_metaFieldRewritter : null,
+    _order_metaFieldRewritter : function () {
+      if (!this._ordered_metaFieldRewritter) {
+        var array = new Array();
+        for (k in this.metaFieldRewritter) {
+          var def = this.metaFieldRewritter[k];
+          var _priority = null;
+          var _fn = null;
+          if(typeof def === "object"){
+            _priority = def.priority;
+            _fn = def.fn;
+          }else{
+            _priority = 100;
+            _fn = def;
+          }
+          array.push({
+            key : k,
+            fn : _fn,
+            priority: _priority 
+          });
+        } //end k loop
+        //order the array
+        array.sort(function (a, b) {
+          if(a.priority === b.priority){
+            return a.key.localeCompare(b.key);
+          }else{
+            return a.priority - b.priority;
+          }
+        });
+        this._ordered_metaFieldRewritter = array;
       }
-    };
-  },
-
-  createSnippet : function (_scope, _root) {
-    var reverseMetaKeys = ["_meta_type", "_meta_id", "_value", "_prop"];
-    return {
-      rewriteMeta : function (originalMeta) {
-
-        var meta = Aj.util.clone(originalMeta);
-
-        //rewrite selector to extract attr operations
-        var attrOpIndex = meta._selector.indexOf("@>");
-        var attrOp = null;
-        if (attrOpIndex >= 0) {
-          attrOp = meta._selector.substr(attrOpIndex + 2);
-          meta._selector = meta._selector.substring(0, attrOpIndex);
+    },
+    metaFieldRewritter : {
+      _form : function (meta) {
+        var formDef = meta._form;
+        if (typeof formDef === "string") {
+          formDef = {
+            name : formDef
+          };
         }
 
-        //set default 1 way binding
+        if (!meta._selector) {
+          meta._selector = "[name=" + formDef.name + "]";
+        }
+
         if (!meta._render) {
-          if (attrOp) {
+          meta._render = function (target, newValue, oldValue) {
+            //TODO we need to do more for select/checkbox/radio
+            target.val(newValue);
+          }
+        }
+
+        if (!meta._register_assign) {
+          var changeEvents = new Array();
+
+          var defaultChangeEvent = formDef._default_change_event;
+          if (defaultChangeEvent === undefined) {
+            changeEvents.push("blur");
+          } else if (defaultChangeEvent) {
+            changeEvents.push(defaultChangeEvent);
+          }
+
+          var extraChangeEvents = formDef._extra_change_events;
+          extraChangeEvents = Aj.util.regulateArray(extraChangeEvents);
+          Array.prototype.push.apply(changeEvents, extraChangeEvents);
+
+          if (changeEvents.length > 0) {
+            meta._register_assign = function (target, onChange) {
+              target.bind(changeEvents.join(" "), function () {
+                var v = $(this).val();
+                onChange(v);
+              });
+            }
+          };
+        }
+
+      },
+      _watch : function () {},
+      _selector : {
+        priority: 10000000-1, // a little smaller than bigger
+        fn: function (meta) {
+          if(meta._selector){// when(why) is it undefined?
+            //rewrite selector to extract attr operations
+            var attrOpIndex = meta._selector.indexOf("@>");
+            if (attrOpIndex >= 0) {
+              meta._attr_op = meta._selector.substr(attrOpIndex + 2);
+              meta._selector = meta._selector.substring(0, attrOpIndex);
+            }
+          }
+        }
+      },
+      _attr_op : {
+        priority: 10000000, // bigger than bigger
+        fn: function (meta) {
+          var attrOp = meta._attr_op;
+          //set default 1 way binding
+          if (!meta._render && attrOp) {
             var attrRegs = [{
                 comment : "style equal",
                 reg : /^\[style\:(.+)=\]$/,
@@ -131,11 +190,56 @@ Aj = {
             } else {
               throw "not supported attr operation:" + attrOp;
             }
-          } else {
-            meta._render = function (target, newValue, oldValue) {
-              target.text(newValue);
-            };
           }
+        }
+      }
+    }
+  },
+
+  sync : function () {
+    Platform.performMicrotaskCheckpoint();
+  },
+
+  obs : new Array(),
+
+  init : function (init_func) {
+    init_func(Aj.createScope());
+  },
+
+  createScope : function () {
+    return {
+      snippet : function (selector) {
+        return Aj.createSnippet(this, $(selector));
+      }
+    };
+  },
+
+  createSnippet : function (_scope, _root) {
+    var reverseMetaKeys = ["_meta_type", "_meta_id", "_value", "_prop"];
+    return {
+      rewriteMeta : function (originalMeta) {
+
+        var meta = Aj.util.clone(originalMeta);
+
+
+
+        //now we will call the registered meta rewritter to rewrite the meta
+        Aj.config._order_metaFieldRewritter();
+        console.log(Aj.config._ordered_metaFieldRewritter);
+        Aj.config._ordered_metaFieldRewritter.forEach(function (mr) {
+          if (meta[mr.key] !== undefined) {
+            mr.fn(meta);
+            if(mr.key !== "_selector"){
+              meta[mr.key] = null;
+              delete meta[mr.key];
+            }
+          }
+        });
+
+        if (!meta._render) {
+          meta._render = function (target, newValue, oldValue) {
+            target.text(newValue);
+          };
         }
 
         if (!meta._assign) {
@@ -261,13 +365,13 @@ Aj = {
             if (reverseMetaKeys.indexOf(p) >= 0) {
               continue;
             }
-            var moveTarget = Aj.config.metaFieldDistinguisher(meta._meta_id, p);
+            var moveTarget = Aj.config.metaFieldClassifier(meta._meta_id, p);
             if (moveTarget === "_value" || moveTarget === "_prop") {
               moveTargetRef[moveTarget][p] = meta[p];
               meta[p] = null;
               delete meta[p];
             } else {
-              throw "metaFieldDistinguisher can only return '_value' or '_prop' rather than '" + moveTarget + "'";
+              throw "metaFieldClassifier can only return '_value' or '_prop' rather than '" + moveTarget + "'";
             }
           }
           // now we can bind the _value and _prop one by one
@@ -313,11 +417,6 @@ Aj = {
           return;
         }
 
-        //which means there is nothing about the value to do
-        if (!originalMeta._selector) {
-          return;
-        }
-
         var meta = Aj.util.clone(originalMeta);
 
         //special for _index path
@@ -333,6 +432,11 @@ Aj = {
 
         //rewrite meta
         meta = this.rewriteMeta(meta);
+
+        //which means there is nothing about the value to do
+        if (!meta._selector) {
+          return;
+        }
 
         //retrieve target
         var target = _root.find(meta._selector);
@@ -508,8 +612,8 @@ Aj = {
         //TODO
       },
 
-      on : function (selector, event, fn) {
-        _root.on(selector, event, fn);
+      on : function (event, selector, fn) {
+        _root.on(event, selector, fn);
         Aj.sync();
         return this;
       }
@@ -525,8 +629,10 @@ Aj = {
     regulateArray : function (v) {
       if ($.isArray(v)) {
         return v;
-      } else {
+      } else if (v === null || v === undefined) {
         return new Array();
+      } else {
+        return [v];
       }
     },
     clone : function (obj) {

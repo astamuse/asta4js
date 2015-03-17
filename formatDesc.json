@@ -120,3 +120,24 @@ height: "#target-table@>[class:height40?]",  // add/remove target class by given
 checked: "#check-box@>[checked?]" // add/remove target attribution by given value(treated as boolean)
 
 
+// form element rewrite
+{
+  name: {
+    _form: "name"
+  }
+} ==> {
+  name: {
+    _form:{
+      _name: "name",
+      _default_change_event: "blur", //set to null to disable default change event
+      _extra_change_events: ["keyup"] //optional, default is undefined 
+    }
+  }
+} == > {
+  _selector: "[name=name]",
+  _render: function(){},
+  _assign: function(){},
+  _register_render: function(){},
+  _register_assign: function(){},
+  
+}

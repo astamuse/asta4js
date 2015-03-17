@@ -1,0 +1,54 @@
+<html>
+<head>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+<script src="observe.js"></script>
+<script src="clone.js"></script>
+<script src="aj.js"></script>
+<script src="form_binding.js"></script>
+
+<style>
+
+table {
+    width: 80%;
+}
+
+td.c1 {
+    width: 30%;
+}
+
+td.c2 {
+    width: 70%;
+}
+
+pre {
+    background-color: lightgrey;
+}
+
+textarea {
+    width: 300px;
+    height: 200px;
+}
+
+
+</style>
+
+</head>
+<body>
+
+<table>
+    <tr>
+        <td class="c1">name: <input type="text" name="name"></td>
+        <td class="c2"><pre id="name-pre"></pre></td>
+    </tr>
+    <tr>
+        <td>desc(also change by keyup): <textarea name="desc"></textarea></td>
+        <td><pre id="desc-pre"></pre></td>
+    </tr>
+</table>
+
+
+<button id="confirm-value">confirm value</button>
+<pre id="confirm-value-pre"></pre>
+
+</body>
+</html>

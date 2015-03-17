@@ -4,8 +4,7 @@ $(function () {
     console.log($scope);
 
     $scope.data = {};
-    $scope.snippet("body")
-    .bind($scope.data, {
+    $scope.snippet("body").bind($scope.data, {
       list : {
         _duplicator : "li",
         _item : [
@@ -23,7 +22,9 @@ $(function () {
             }
           },
           //1 way
-          "#preview", {
+          "#preview",
+          //binding _index
+          {
             _index : [".x-index", ".x-func@>[aIndex=]"]
           }
         ],
