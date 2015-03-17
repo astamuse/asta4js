@@ -12,13 +12,15 @@ table {
     width: 80%;
 }
 
+
 td.c1 {
-    width: 30%;
+    width: 40%;
 }
 
 td.c2 {
-    width: 70%;
+    width: 60%;
 }
+
 
 pre {
     background-color: lightgrey;
@@ -29,16 +31,56 @@ textarea {
     height: 200px;
 }
 
+#input-wrapper-data {
+    float: left;
+}
 
 </style>
 
 </head>
 <body>
 
+<div id="input-wrapper-data">
+    <textarea id="data-input">
+{
+    "name": "asdfas",
+    "bloodType": "AB",
+    "sex": "male",
+    "language": "English",
+    "desc": "aaa\nffff"
+}
+    </textarea>
+    <button id="set-value">set value</button>
+</div>
+<div>
+    <textarea id="option-input">
+{
+    
+}
+    </textarea>
+    <button id="set-option">set option</button>
+</div>
+
 <table>
     <tr>
         <td class="c1">name: <input type="text" name="name"></td>
         <td class="c2"><pre id="name-pre"></pre></td>
+    </tr>
+    <tr>
+        <td>bloodType: 
+            <select name="bloodType">
+                
+            </select>
+        </td>
+        <td><pre id="bloodType-pre"></pre></td>
+    </tr>
+    <tr>
+        <td>sex: <input type="radio" name="sex"></td>
+        <td><pre id="sex-pre"></pre></td>
+    </tr>
+    <tr>
+        <td>language: <input type="checkbox" name="language"></td>
+        <td><pre id="language-pre"></pre></td>
     </tr>
     <tr>
         <td>desc(also change by keyup): <textarea name="desc"></textarea></td>

@@ -47,18 +47,37 @@ Aj = {
         var formDef = meta._form;
         if (typeof formDef === "string") {
           formDef = {
-            name : formDef
+            _name : formDef
           };
         }
 
         if (!meta._selector) {
-          meta._selector = "[name=" + formDef.name + "]";
+          meta._selector = "[name=" + formDef._name + "]";
         }
 
         if (!meta._render) {
           meta._render = function (target, newValue, oldValue) {
             //TODO we need to do more for select/checkbox/radio
-            target.val(newValue);
+            var tagName = target.prop("tagName");
+            switch(tagName){
+              case "SELECT":
+                target.val(newValue);
+                var domValue = target.val();
+                console.log("domValue=" + domValue);
+                if(domValue === null){//which means there is no corresponding option
+                  var op = $("<option>").val(newValue).text(newValue);
+                  console.log(op);
+                  target.append(op);
+                  target.val(newValue);
+                }
+                break;
+              case "INPUT":
+                target.val(newValue);
+                break;
+              default:
+                target.val(newValue);
+            }
+            
           }
         }
 

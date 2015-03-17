@@ -124,6 +124,9 @@ checked: "#check-box@>[checked?]" // add/remove target attribution by given valu
 {
   name: {
     _form: "name"
+  },
+  sexOption: {
+    _form_option: "sex"
   }
 } ==> {
   name: {
@@ -132,9 +135,23 @@ checked: "#check-box@>[checked?]" // add/remove target attribution by given valu
       _default_change_event: "blur", //set to null to disable default change event
       _extra_change_events: ["keyup"] //optional, default is undefined 
     }
+  },
+  sexOption: {
+    _form_option:{
+      _name: "sex",
+      _value: function(v){return v;},
+      _text: function(v){return v;}
+    }
   }
 } == > {
   _selector: "[name=name]",
+  _render: function(){},
+  _assign: function(){},
+  _register_render: function(){},
+  _register_assign: function(){},
+  
+},{
+  _selector: "[name=sex]",
   _render: function(){},
   _assign: function(){},
   _register_render: function(){},
