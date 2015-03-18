@@ -123,24 +123,20 @@ checked: "#check-box@>[checked?]" // add/remove target attribution by given valu
 // form element rewrite
 {
   name: {
+    _form: {} // (not implemented yet)name can be ignored , the leaf property name will be treated as name of form element
+  }
+} ==>
+{
+  name: {
     _form: "name"
-  },
-  sexOption: {
-    _form_option: "sex"
   }
 } ==> {
   name: {
     _form:{
       _name: "name",
       _default_change_event: "blur", //set to null to disable default change event
-      _extra_change_events: ["keyup"] //optional, default is undefined 
-    }
-  },
-  sexOption: {
-    _form_option:{
-      _name: "sex",
-      _value: function(v){return v;},
-      _text: function(v){return v;}
+      _extra_change_events: ["keyup"] //optional, default is undefined
+      _option: undefined // for building option list
     }
   }
 } == > {
@@ -150,11 +146,83 @@ checked: "#check-box@>[checked?]" // add/remove target attribution by given valu
   _register_render: function(){},
   _register_assign: function(){},
   
-},{
-  _selector: "[name=sex]",
-  _render: function(){},
-  _assign: function(){},
-  _register_render: function(){},
-  _register_assign: function(){},
-  
+}
+
+
+//form option bind
+_option: Aj.optionBind($scope.dataOption,"bloodTypes")  ==>
+{
+  bloodTypes: {}
+} ==> {
+  bloodTypes: {
+    _value: function(v){return v;},
+    _text: function(v){return v}
+  }
+} ==> {
+  bloodTypes: {
+    _item: {
+      _value: function(v){return v;},
+      _text: function(v){return v}
+    }
+  }
+} ==> { // in this step, it will be treated as normal array binding
+  bloodTypes: {
+    _duplicator: "",
+    _item: {
+      _selector: "",
+      _render: function(){ (_value, _text) }, // _value, _text will be used as default rendering
+      _assign: function(){}, //should do nothing
+      _register_render: function(){},
+      _register_assign: function(){}, //should do nothing
+    }
+  }
+}
+
+//select optgroup support(we will support it in furture)
+_option: Aj.optionBind($scope.dataOption,{
+  bloodTypes: {
+    groupName: {
+      _group_label: {}
+    },
+    list:{
+      _sub_option: {},
+    }
+  }
+}) ==> {
+  bloodTypes: {
+    groupName: {
+      _group_label: {
+        _label: function(v){return v;}
+      }
+    },
+    list: {
+      _sub_option:{
+        _value: function(v){return v;},
+        _text: function(v){return v}
+      }
+    }
+  }
+} ==> { // in this step, it will be treated as normal array binding
+  bloodTypes: {
+    _duplicator: "optgroup",
+    _item: {
+      groupName:{
+        _selector: "optgroup@>[label=]",
+        _render: function(){}, // default attr op render
+        _assign: function(){}, //should do nothing
+        _register_render: function(){}, //
+        _register_assign: function(){}, //should do nothing,
+      },
+      list: {
+        _duplicator: "option"
+        _item: {
+          _selector: "option",
+          _render: function(){ (_value, _text) }, // _value, _text will be used as default rendering
+          _assign: function(){}, //should do nothing
+          _register_render: function(){},
+          _register_assign: function(){}, //should do nothing,
+        }
+      }
+    }
+  }
 }

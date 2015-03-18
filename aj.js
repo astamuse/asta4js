@@ -18,24 +18,24 @@ Aj = {
           var def = this.metaFieldRewritter[k];
           var _priority = null;
           var _fn = null;
-          if(typeof def === "object"){
+          if (typeof def === "object") {
             _priority = def.priority;
             _fn = def.fn;
-          }else{
+          } else {
             _priority = 100;
             _fn = def;
           }
           array.push({
             key : k,
             fn : _fn,
-            priority: _priority 
+            priority : _priority
           });
         } //end k loop
         //order the array
         array.sort(function (a, b) {
-          if(a.priority === b.priority){
+          if (a.priority === b.priority) {
             return a.key.localeCompare(b.key);
-          }else{
+          } else {
             return a.priority - b.priority;
           }
         });
@@ -43,7 +43,7 @@ Aj = {
       }
     },
     metaFieldRewritter : {
-      _form : function (meta) {
+      _form : function (scope, meta) {
         var formDef = meta._form;
         if (typeof formDef === "string") {
           formDef = {
@@ -59,26 +59,43 @@ Aj = {
           meta._render = function (target, newValue, oldValue) {
             //TODO we need to do more for select/checkbox/radio
             var tagName = target.prop("tagName");
-            switch(tagName){
-              case "SELECT":
+            switch (tagName) {
+            case "SELECT":
+              //move diverge value option at first
+              target.find("[aj-diverge-value]").remove();
+              target.val(newValue);
+              var domValue = target.val();
+              console.log("domValue=" + domValue);
+              if (domValue === null) { //which means there is no corresponding option
+                var op = $("<option aj-diverge-value>").val(newValue).text(newValue);
+                console.log(op);
+                target.append(op);
                 target.val(newValue);
-                var domValue = target.val();
-                console.log("domValue=" + domValue);
-                if(domValue === null){//which means there is no corresponding option
-                  var op = $("<option>").val(newValue).text(newValue);
-                  console.log(op);
-                  target.append(op);
-                  target.val(newValue);
-                }
-                break;
-              case "INPUT":
-                target.val(newValue);
-                break;
-              default:
-                target.val(newValue);
+              }
+              break;
+            case "INPUT":
+              target.val(newValue);
+              break;
+            default:
+              target.val(newValue);
+            } //end switch
+          } // end _render = function...
+        } // end !meta._render
+
+        if (formDef._option) {
+          meta._post_binding.push(function (target) {
+            var tagName = target.prop("tagName");
+            switch (tagName) {
+            case "SELECT":
+              formDef._option.bindAsSubSnippet(scope, target, tagName, function () {
+                var currentDomValue = target.val();
+                meta._render(target, currentDomValue, undefined);
+              });
+              break;
+            default:
+              //
             }
-            
-          }
+          });
         }
 
         if (!meta._register_assign) {
@@ -108,9 +125,9 @@ Aj = {
       },
       _watch : function () {},
       _selector : {
-        priority: 10000000-1, // a little smaller than bigger
-        fn: function (meta) {
-          if(meta._selector){// when(why) is it undefined?
+        priority : 10000000 - 1, // a little smaller than bigger
+        fn : function (scope, meta) {
+          if (meta._selector) { // when(why) is it undefined?
             //rewrite selector to extract attr operations
             var attrOpIndex = meta._selector.indexOf("@>");
             if (attrOpIndex >= 0) {
@@ -121,8 +138,8 @@ Aj = {
         }
       },
       _attr_op : {
-        priority: 10000000, // bigger than bigger
-        fn: function (meta) {
+        priority : 10000000, // bigger than bigger
+        fn : function (scope, meta) {
           var attrOp = meta._attr_op;
           //set default 1 way binding
           if (!meta._render && attrOp) {
@@ -240,15 +257,13 @@ Aj = {
 
         var meta = Aj.util.clone(originalMeta);
 
-
-
         //now we will call the registered meta rewritter to rewrite the meta
         Aj.config._order_metaFieldRewritter();
         console.log(Aj.config._ordered_metaFieldRewritter);
         Aj.config._ordered_metaFieldRewritter.forEach(function (mr) {
           if (meta[mr.key] !== undefined) {
-            mr.fn(meta);
-            if(mr.key !== "_selector"){
+            mr.fn(_scope, meta);
+            if (mr.key !== "_selector") {
               meta[mr.key] = null;
               delete meta[mr.key];
             }
@@ -288,24 +303,8 @@ Aj = {
       },
 
       bind : function (varRef, meta) {
-        //find out the ref path at first
-        var searchKey = "ashfdpnasvdnoaisdfn3423#$%$#$%0as8d23nalsfdasdf";
-        varRef[searchKey] = 1;
-
-        var refPath = null;
-        for (var p in _scope) {
-          var ref = _scope[p];
-          if (ref[searchKey] == 1) {
-            refPath = p;
-            break;
-          }
-        }
-
-        varRef[searchKey] = null;
-        delete varRef[searchKey];
-
+        var refPath = Aj.util.determineRefPath(_scope, varRef);
         this.bindMeta(refPath, meta);
-
         return this;
       },
 
@@ -437,6 +436,7 @@ Aj = {
         }
 
         var meta = Aj.util.clone(originalMeta);
+        meta._post_binding = [];
 
         //special for _index path
         if (propertyPath === "_index") {
@@ -458,7 +458,7 @@ Aj = {
         }
 
         //retrieve target
-        var target = _root.find(meta._selector);
+        var target = meta._selector === ":root" ? _root : _root.find(meta._selector);
         if (target.length === 0) {
           throw "could not found target for selector:" + meta._selector + " under root element:" + _root.selector;
         }
@@ -486,6 +486,11 @@ Aj = {
             Aj.sync();
           });
         }
+
+        //post binding
+        meta._post_binding.forEach(function (pf) {
+          pf(target);
+        });
       },
 
       bindArray : function (propertyPath, originalMeta) {
@@ -502,7 +507,10 @@ Aj = {
           //create placle holder
           var tagName = elem.tagName;
           var placeHolderId = Aj.util.createUID();
-          var placeHolder = $("<" + tagName + " style='display:none' id='" + placeHolderId + "'/>");
+          if( (tagName === "OPTION" || tagName === "OPTGROUP") && $.browser !== "mozilla"){
+            tagName = "span";
+          }
+          var placeHolder = $("<" + tagName + " style='display:none' id='" + placeHolderId + "' value='SFDASF#$#RDFVC%&!#$%%2345sadfasfd'/>");
           var $elem = $(elem);
           $elem.after(placeHolder);
 
@@ -513,8 +521,7 @@ Aj = {
           var templateStr = $("<div>").append($elem).html();
           console.log(templateStr);
 
-          var observer = new PathObserver(_scope, propertyPath);
-          observer.open(function (newValue, oldValue) {
+          var observerFunc = function (newValue, oldValue) {
             console.log("from");
             console.log(oldValue);
             console.log("to");
@@ -564,6 +571,11 @@ Aj = {
                   for (var i = 1; i <= diff; i++) {
                     $(existingNodes.get(existingLength - i)).remove();
                   }
+                }
+
+                //post rendering
+                if (originalMeta._post_render) {
+                  originalMeta._post_render();
                 }
               });
             }
@@ -621,7 +633,17 @@ Aj = {
               childElem.remove();
             }
 
-          }); //observer.open
+            //post rendering
+            if (originalMeta._post_render) {
+              originalMeta._post_render();
+            }
+
+          }; // observerFunc
+          var observer = new PathObserver(_scope, propertyPath);
+          observer.open(observerFunc);
+
+          var currentValue = Path.get(propertyPath).getValueFrom(_scope);
+          observerFunc(Aj.util.regulateArray(currentValue), []);
 
         }); //target.each
       }, //bindArray
@@ -639,6 +661,95 @@ Aj = {
 
     } //return snippet
   }, //create snippet
+
+  optionBind : function (_varRef, _meta) {
+    var varRef = _varRef;
+    var meta;
+    if (typeof _meta === "string") {
+      meta = {};
+      meta[_meta] = {};
+    } else {
+      meta = Aj.util.clone(_meta);
+    }
+
+    var checkKeys = Object.keys(meta);
+    if (checkKeys.length !== 1) {
+      throw "There can only be one property declaration in option binding, but got:" + checkKeys;
+    }
+
+    var bindingMeta = meta[checkKeys[0]];
+
+    if (!bindingMeta._item) {
+      bindingMeta._item = {};
+      //move all the properties to _item
+      for (var p in bindingMeta) {
+        if (p === "_duplicator" || p === "_item") {
+          continue;
+        }
+        bindingMeta._item[p] = bindingMeta[p];
+      }
+    }
+
+    //we do not want there are other properties from "_duplicator" and "_item"
+    for (var p in bindingMeta) {
+      if (p === "_duplicator" || p === "_item") {
+        continue;
+      }
+      throw "Only _duplicator and _item are allowed under option binding but found:" + p;
+    }
+
+    var itemDef = bindingMeta._item;
+    var valueFn = itemDef._value ? itemDef._value : function (v) {
+      return v;
+    };
+    delete itemDef._value;
+
+    var textFn = itemDef._text ? itemDef._text : function (v) {
+      return v;
+    };
+    delete itemDef._text;
+
+    var op = {};
+    op.bindAsSubSnippet = function (scope, root, targetTag, onOptionChange) {
+      //rewrite meta at first
+      switch (targetTag) {
+      case "SELECT":
+        if (!bindingMeta._duplicator) {
+          bindingMeta._duplicator = "option:first"; //we will always use the first option as template
+        }
+        var removeUnWantedNodes = function(){
+          
+        };
+        if(bindingMeta._post_render){
+          var pr = bindingMeta._post_render;
+          bindingMeta._post_render = function(){
+            onOptionChange();
+            pr();
+          }
+        }else{
+          bindingMeta._post_render = onOptionChange;
+        }
+        if (!itemDef._selector) {
+          itemDef._selector = ":root";
+        }
+        if (itemDef._render) {
+          var renderFn = itemDef._render;
+          itemDef._render = function (target, newValue, oldValue) {
+            renderFn(target, newValue, oldValue);
+          }
+        } else {
+          itemDef._render = function (target, newValue) {
+            target.val(valueFn(newValue));
+            target.text(textFn(newValue));
+          };
+        }
+        break;
+      default:
+      }
+      return Aj.createSnippet(scope, root).bind(varRef, meta);
+    };
+    return op;
+  }, //end optionBind
 
   util : {
     idSeq : 0,
@@ -661,6 +772,24 @@ Aj = {
       var tmp = array[index1];
       array[index1] = array[index2];
       array[index2] = tmp;
-    }
+    },
+    determineRefPath : function (scope, varRef) {
+      var searchKey = "ashfdpnasvdnoaisdfn3423#$%$#$%0as8d23nalsfdasdf";
+      varRef[searchKey] = 1;
+
+      var refPath = null;
+      for (var p in scope) {
+        var ref = scope[p];
+        if (ref[searchKey] == 1) {
+          refPath = p;
+          break;
+        }
+      }
+
+      varRef[searchKey] = null;
+      delete varRef[searchKey];
+
+      return refPath;
+    },
   }
 };

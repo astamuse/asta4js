@@ -13,8 +13,11 @@ $(function () {
         }
       ],
       bloodType : [
-        "#bloodType-pre",{
-          _form: "bloodType"
+        "#bloodType-pre", {
+          _form : {
+            _name: "bloodType",
+            _option: Aj.optionBind($scope.dataOption,"bloodTypes")
+          }
         }
       ],
       sex : [
@@ -23,8 +26,8 @@ $(function () {
         }
       ],
       language : [
-        "#language-pre",{
-          _form: "language"
+        "#language-pre", {
+          _form : "language"
         }
       ],
       desc : [
@@ -35,12 +38,6 @@ $(function () {
           }
         }
       ]
-    }).bind($scope.dataOption, {
-      languages:{
-        _form_option:{
-          name: "language"
-        }
-      }
     });
 
     $("#confirm-value").click(function () {
@@ -50,6 +47,12 @@ $(function () {
     $("#set-value").click(function () {
       var v = $("#data-input").val();
       $scope.data = JSON.parse(v);
+      Aj.sync();
+    });
+    
+    $("#set-option").click(function () {
+      var v = $("#option-input").val();
+      $scope.dataOption = JSON.parse(v);
       Aj.sync();
     });
   });
