@@ -155,6 +155,7 @@ _option: Aj.optionBind($scope.dataOption,"bloodTypes")  ==>
   bloodTypes: {}
 } ==> {
   bloodTypes: {
+    _duplicator: "", // if necessary
     _value: function(v){return v;},
     _text: function(v){return v}
   }

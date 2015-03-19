@@ -43,7 +43,7 @@ Aj = {
       }
     },
     metaFieldRewritter : {
-      _form : function (scope, meta) {
+      _form : function (scope, root, meta) {
         var formDef = meta._form;
         if (typeof formDef === "string") {
           formDef = {
@@ -74,30 +74,68 @@ Aj = {
               }
               break;
             case "INPUT":
-              target.val(newValue);
-              break;
+              var type = target.attr("type");
+              if(type){
+                type = type.toLowerCase();
+              }
+              if(type === "checkbox" || type === "radio"){
+                var va = Aj.util.regulateArray(newValue);
+                if(type === "radio" && va.length > 1){
+                  throw "There are over than one candidate value for radio:" + va;
+                }
+                var unmatchedValue = [];
+                //there must be "aj-placeholder-id"
+                var placeHolderId = target.attr("aj-placeholder-id");
+                
+                //remove the auto generated diverge elements
+                root.find("[aj-diverge-value=" + placeHolderId + "]").remove();
+                
+                //find out all the existing options
+                var ops = root.find("[aj-generated=" + placeHolderId + "]").prop("checked", false);
+                va.forEach(function(v){
+                  var foundInput = Aj.util.findWithRoot(ops, "input[value="+v+"]");
+                  if(foundInput.length === 0){
+                    unmatchedValue.push(v);
+                  }else{
+                    foundInput.prop("checked", true);
+                  }
+                });
+                if(unmatchedValue.length > 0){
+                  var insertPoint = root.find("#" + placeHolderId);
+                  unmatchedValue.forEach(function(v){
+                    var uid = Aj.util.createUID();
+                    var clone = target.clone().attr("id", uid).val(v).prop("checked", true);
+                    var label = $("<label>").attr("for",uid).text(v);
+                    
+                    var diverge = $("<span>").attr("aj-diverge-value", placeHolderId);
+                    diverge.append(clone).append(label);
+                    
+                    insertPoint.after(diverge);
+                    insertPoint = diverge;
+                  });
+                }
+                break;
+              }else{
+                //continue to default
+              }
             default:
               target.val(newValue);
             } //end switch
+            
+            //save the current value to target as data attribute
+            Aj.util.getDataRef(target, "aj-form-binding-ref").value = newValue;
           } // end _render = function...
         } // end !meta._render
 
         if (formDef._option) {
           meta._post_binding.push(function (target) {
-            var tagName = target.prop("tagName");
-            switch (tagName) {
-            case "SELECT":
-              formDef._option.bindAsSubSnippet(scope, target, tagName, function () {
-                var currentDomValue = target.val();
-                meta._render(target, currentDomValue, undefined);
-              });
-              break;
-            default:
-              //
-            }
+            formDef._option.bindAsSubSnippet(scope, root, target, function () {
+              var currentDomValue = Aj.util.getDataRef(target, "aj-form-binding-ref").value;
+              meta._render(target, currentDomValue, undefined);
+            });
           });
         }
-
+        
         if (!meta._register_assign) {
           var changeEvents = new Array();
 
@@ -111,22 +149,41 @@ Aj = {
           var extraChangeEvents = formDef._extra_change_events;
           extraChangeEvents = Aj.util.regulateArray(extraChangeEvents);
           Array.prototype.push.apply(changeEvents, extraChangeEvents);
+          
 
           if (changeEvents.length > 0) {
             meta._register_assign = function (target, onChange) {
-              target.bind(changeEvents.join(" "), function () {
-                var v = $(this).val();
-                onChange(v);
-              });
-            }
-          };
-        }
 
-      },
+              var ref = Aj.util.getDataRef(target, "aj-form-binding-ref");
+              ref.changeEvents = changeEvents;
+
+              var inputType;
+              var tagName = target.prop("tagName");
+              if(tagName === "INPUT"){
+                inputType = target.attr("type");
+                if(inputType){
+                  inputType = inputType.toLowerCase();
+                }
+              }
+              if(inputType === "checkbox" || inputType === "radio"){
+                var observer = new PathObserver(ref, "value");
+                observer.open(function(newValue, oldValue){
+                  onChange(newValue);
+                });
+              }else{
+                target.bind(changeEvents.join(" "), function () {
+                  var v = $(this).val();
+                  onChange(v);
+                }); 
+              }
+            }// end meta._register_assign
+          };// end changeEvents.length > 0
+        }// end !meta._register_assign
+      },// end _form
       _watch : function () {},
       _selector : {
         priority : 10000000 - 1, // a little smaller than bigger
-        fn : function (scope, meta) {
+        fn : function (scope, root, meta) {
           if (meta._selector) { // when(why) is it undefined?
             //rewrite selector to extract attr operations
             var attrOpIndex = meta._selector.indexOf("@>");
@@ -139,7 +196,7 @@ Aj = {
       },
       _attr_op : {
         priority : 10000000, // bigger than bigger
-        fn : function (scope, meta) {
+        fn : function (scope, root, meta){
           var attrOp = meta._attr_op;
           //set default 1 way binding
           if (!meta._render && attrOp) {
@@ -262,7 +319,7 @@ Aj = {
         console.log(Aj.config._ordered_metaFieldRewritter);
         Aj.config._ordered_metaFieldRewritter.forEach(function (mr) {
           if (meta[mr.key] !== undefined) {
-            mr.fn(_scope, meta);
+            mr.fn(_scope, _root, meta);
             if (mr.key !== "_selector") {
               meta[mr.key] = null;
               delete meta[mr.key];
@@ -458,7 +515,7 @@ Aj = {
         }
 
         //retrieve target
-        var target = meta._selector === ":root" ? _root : _root.find(meta._selector);
+        var target = Aj.util.findWithRoot(_root, meta._selector);
         if (target.length === 0) {
           throw "could not found target for selector:" + meta._selector + " under root element:" + _root.selector;
         }
@@ -494,7 +551,7 @@ Aj = {
       },
 
       bindArray : function (propertyPath, originalMeta) {
-        var target = _root.find(originalMeta._duplicator);
+        var target = Aj.util.findWithRoot(_root, originalMeta._duplicator);
         if (target.length == 0) {
           throw "could not find duplicator:" + originalMeta._duplicator;
         }
@@ -514,19 +571,17 @@ Aj = {
           var $elem = $(elem);
           $elem.after(placeHolder);
 
+          //$elem.attr("aj-placeholder-id",placeHolderId);
           //remove the duplicate target
           $elem.remove();
           $elem.attr("aj-generated", placeHolderId);
 
           var templateStr = $("<div>").append($elem).html();
-          console.log(templateStr);
+          
+          //set the placeholder id to all the children input elements for the sake of checkbox/radio box option rendering
+          $elem.find("input").attr("aj-placeholder-id", placeHolderId);
 
           var observerFunc = function (newValue, oldValue) {
-            console.log("from");
-            console.log(oldValue);
-            console.log("to");
-            console.log(newValue);
-
             /*
              * we should monitor the array splicing
              */
@@ -678,16 +733,19 @@ Aj = {
     }
 
     var bindingMeta = meta[checkKeys[0]];
-
+    var itemDef = bindingMeta._item; 
     if (!bindingMeta._item) {
       bindingMeta._item = {};
-      //move all the properties to _item
-      for (var p in bindingMeta) {
-        if (p === "_duplicator" || p === "_item") {
-          continue;
-        }
-        bindingMeta._item[p] = bindingMeta[p];
+    }
+    var itemDef = bindingMeta._item;
+    
+    //move all the properties to _item
+    for (var p in bindingMeta) {
+      if (p === "_duplicator" || p === "_item") {
+        continue;
       }
+      itemDef[p] = bindingMeta[p];
+      delete bindingMeta[p];
     }
 
     //we do not want there are other properties from "_duplicator" and "_item"
@@ -698,7 +756,7 @@ Aj = {
       throw "Only _duplicator and _item are allowed under option binding but found:" + p;
     }
 
-    var itemDef = bindingMeta._item;
+    
     var valueFn = itemDef._value ? itemDef._value : function (v) {
       return v;
     };
@@ -710,25 +768,29 @@ Aj = {
     delete itemDef._text;
 
     var op = {};
-    op.bindAsSubSnippet = function (scope, root, targetTag, onOptionChange) {
-      //rewrite meta at first
-      switch (targetTag) {
+    op.bindAsSubSnippet = function (scope, root, target, onOptionChange) {
+      var snippetRoot;
+      
+      //rewrite post render
+      if(bindingMeta._post_render){
+        var pr = bindingMeta._post_render;
+        bindingMeta._post_render = function(){
+          onOptionChange();
+          pr();
+        }
+      }else{
+        bindingMeta._post_render = onOptionChange;
+      }
+      
+      //rewrite render by type
+      var tagName = target.prop("tagName");
+      switch (tagName) {
       case "SELECT":
+        snippetRoot = target;
         if (!bindingMeta._duplicator) {
           bindingMeta._duplicator = "option:first"; //we will always use the first option as template
         }
-        var removeUnWantedNodes = function(){
-          
-        };
-        if(bindingMeta._post_render){
-          var pr = bindingMeta._post_render;
-          bindingMeta._post_render = function(){
-            onOptionChange();
-            pr();
-          }
-        }else{
-          bindingMeta._post_render = onOptionChange;
-        }
+
         if (!itemDef._selector) {
           itemDef._selector = ":root";
         }
@@ -744,9 +806,90 @@ Aj = {
           };
         }
         break;
+      case "INPUT":
+        var type = target.attr("type");
+        if(type){
+          type = type.toLowerCase();
+        }
+        if(type=== "checkbox" || type === "radio"){
+          if (!bindingMeta._duplicator) {
+            throw "_duplicator must be specified for options of checkbox or radio";
+          }
+
+          //find out the parent of duplicator
+          var parent = target;
+          while(!parent.is(bindingMeta._duplicator)){
+            parent = parent.parent();
+          }
+          snippetRoot = parent.parent();
+          
+          if (!itemDef._selector) {
+            itemDef._selector = ":root";
+          }
+          if(itemDef._register_assign || itemDef._assign){
+            throw "_register_assign/_assign cannot be specified for checkbox/radio option";
+          }else{
+            var ref = Aj.util.getDataRef(target, "aj-form-binding-ref");
+            if(ref.changeEvents.length > 0){
+              itemDef._register_assign = function (target, onChange){
+                var events = ref.changeEvents.join(" ");
+                target.find("input").bind(events, function () {
+                  var je = $(this);
+                  var value = je.val();
+                  var checked = je.prop("checked");
+                  onChange({
+                    "value": value,
+                    "checked": checked
+                  });
+                });
+                target.find("label").bind(events, function(){
+                  var je= $(this);
+                  var id = je.attr("for");
+                  var input = target.find("#" + id);
+                  target[ref.changeEvents[0]].apply();
+                });
+              }
+              itemDef._assign = function (_scope, propertyPath, value) {
+                  if(type === "checkbox"){
+                    var newResult = Aj.util.regulateArray(ref.value);
+                    var v = value.value;
+                    var checked = value.checked;
+                    var vidx = newResult.indexOf(v);
+                    if(checked && vidx>= 0){
+                      //it is ok
+                    }else if(checked && vidx < 0){
+                      //add
+                      newResult.push(v);
+                    }else if(!checked && vidx >= 0){
+                      //remove
+                      newResult.splice(vidx, 1);
+                    }else{// !checked && vidx < 0
+                      //it is ok
+                    }
+                    ref.value = newResult;
+                  }else{
+                    ref.value = value.value;
+                  }
+                  
+                  Aj.sync();
+              } //_assign
+            } // ref.changeEvents.length > 0
+          } // else of (itemDef._register_assign || itemDef._assign)
+          if (!itemDef._render) {
+            itemDef._render = function (target, newValue) {
+              var uid = Aj.util.createUID();
+              target.find("input[type="+type+"]").attr("id", uid).val(valueFn(newValue));;
+              target.find("label").attr("for", uid).text(textFn(newValue));
+            };
+          }
+          break;
+        }else{
+          // continue to the default
+        }
       default:
+        throw "Only select, checkbox or radio can declare _option but found:" + target[0].outerHTML;
       }
-      return Aj.createSnippet(scope, root).bind(varRef, meta);
+      return Aj.createSnippet(scope, snippetRoot).bind(varRef, meta);
     };
     return op;
   }, //end optionBind
@@ -754,11 +897,12 @@ Aj = {
   util : {
     idSeq : 0,
     createUID : function () {
+      this.idSeq++;
       return "BISD-" + this.idSeq;
     },
     regulateArray : function (v) {
       if ($.isArray(v)) {
-        return v;
+        return [].concat(v);
       } else if (v === null || v === undefined) {
         return new Array();
       } else {
@@ -791,5 +935,39 @@ Aj = {
 
       return refPath;
     },
+    _element_ref_map: {},
+    getDataRef: function(jqueryObject, dataAttrName){
+      var elementRefId = jqueryObject.attr("aj-element-ref-id");
+      if(!elementRefId){
+        elementRefId = Aj.util.createUID();
+        jqueryObject.attr("aj-element-ref-id", elementRefId);
+      }
+      var refMap = Aj.util._element_ref_map[elementRefId];
+      if(!refMap){
+        refMap = {};
+        Aj.util._element_ref_map[elementRefId] = refMap;
+      }
+      var dataRef = refMap[dataAttrName];
+      if(!dataRef){
+        dataRef = {
+            _trace_id: Aj.util.createUID()
+        };
+        refMap[dataAttrName] = dataRef;
+        console.log("create ref:" + dataRef._trace_id + " for " + jqueryObject[0].outerHTML);
+      }
+      return dataRef;
+    },
+    findWithRoot: function(rootElem, selector){
+      if(selector === ":root"){
+        return rootElem;
+      }
+      var result = rootElem.find(selector);
+      if(result.length === 0){
+        if(rootElem.is(selector)){
+          return rootElem;
+        }
+      }
+      return result;
+    }
   }
 };

@@ -3,9 +3,18 @@ $(function () {
   Aj.init(function ($scope) {
     console.log($scope);
 
-    $scope.data = {};
+   
     $scope.dataOption = {};
 
+    var langOption = function(duplicator){
+      return Aj.optionBind($scope.dataOption,{
+        languages:{
+          _duplicator: duplicator
+        }
+      });
+    };
+
+    $scope.data = {};
     $scope.snippet("body").bind($scope.data, {
       name : [
         "#name-pre", {
@@ -26,6 +35,7 @@ $(function () {
             _name: "sex",
             _option: Aj.optionBind($scope.dataOption, {
               genders: {
+                _duplicator: ".x-sex-group",
                 _value: function(v){return v.value;},
                 _text: function(v){return v.name;}
               }
@@ -35,7 +45,11 @@ $(function () {
       ],
       language : [
         "#language-pre", {
-          _form : "language"
+          _form : {
+            _name: "language",
+            _extra_change_events: ["click"],
+            _option:langOption(".x-lang-group")
+          }
         }
       ],
       desc : [

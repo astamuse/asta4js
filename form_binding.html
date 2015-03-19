@@ -45,8 +45,8 @@ textarea {
 {
     "name": "asdfas",
     "bloodType": "AB",
-    "sex": "male",
-    "language": "English",
+    "sex": "0",
+    "language": ["English"],
     "desc": "aaa\nffff"
 }
     </textarea>
@@ -55,7 +55,18 @@ textarea {
 <div>
     <textarea id="option-input">
 {
-    "bloodTypes":["A", "B", "AB", "O"]
+    "bloodTypes":["A", "B", "AB", "O"],
+    "genders":[
+        {
+            "value": 0,
+            "name": "female"
+        },
+        {
+            "value": 1,
+            "name": "male"
+        }
+    ],
+    "languages": ["English", "Japanese", "Chinese"]
 }
     </textarea>
     <button id="set-option">set option</button>
@@ -75,11 +86,21 @@ textarea {
         <td><pre id="bloodType-pre"></pre></td>
     </tr>
     <tr>
-        <td>sex: <input type="radio" name="sex"></td>
+        <td>sex: 
+            <span class="x-sex-group">
+                <input id="sex-radio" type="radio" name="sex">
+                <label for="sex-radio">xxx</label>
+            </span>
+        </td>
         <td><pre id="sex-pre"></pre></td>
     </tr>
     <tr>
-        <td>language: <input type="checkbox" name="language"></td>
+        <td>language(also click): 
+            <span class="x-lang-group">
+                <input id="lang-ck" type="checkbox" name="language">
+                <label for="lang-ck">xxx</label>
+            </span>
+        </td>
         <td><pre id="language-pre"></pre></td>
     </tr>
     <tr>
