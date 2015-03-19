@@ -22,7 +22,15 @@ $(function () {
       ],
       sex : [
         "#sex-pre", {
-          _form : "sex"
+          _form : {
+            _name: "sex",
+            _option: Aj.optionBind($scope.dataOption, {
+              genders: {
+                _value: function(v){return v.value;},
+                _text: function(v){return v.name;}
+              }
+            })
+          }
         }
       ],
       language : [
