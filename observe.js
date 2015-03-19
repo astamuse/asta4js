@@ -1221,7 +1221,7 @@
   var expectedRecordTypes = {
     add: true,
     update: true,
-    delete: true
+    "delete": true
   };
 
   function diffObjectFromChangeRecords(object, changeRecords, oldValues) {
