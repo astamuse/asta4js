@@ -52,6 +52,18 @@ $(function () {
           }
         }
       ],
+      "private": {
+        _form: {
+          _name : "private",
+          _single_check: true
+        }
+      },
+      "agree": {
+        _form: {
+          _name : "agree",
+          _single_check: true
+        }
+      },
       desc : [
         "#desc-pre", {
           _form : {

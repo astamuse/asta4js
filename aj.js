@@ -79,40 +79,44 @@ Aj = {
                 type = type.toLowerCase();
               }
               if(type === "checkbox" || type === "radio"){
-                var va = Aj.util.regulateArray(newValue);
-                if(type === "radio" && va.length > 1){
-                  throw "There are over than one candidate value for radio:" + va;
-                }
-                var unmatchedValue = [];
-                //there must be "aj-placeholder-id"
-                var placeHolderId = target.attr("aj-placeholder-id");
-                
-                //remove the auto generated diverge elements
-                root.find("[aj-diverge-value=" + placeHolderId + "]").remove();
-                
-                //find out all the existing options
-                var ops = root.find("[aj-generated=" + placeHolderId + "]").prop("checked", false);
-                va.forEach(function(v){
-                  var foundInput = Aj.util.findWithRoot(ops, "input[value="+v+"]");
-                  if(foundInput.length === 0){
-                    unmatchedValue.push(v);
-                  }else{
-                    foundInput.prop("checked", true);
+                if(formDef._single_check){
+                  target.prop("checked", newValue);
+                }else{
+                  var va = Aj.util.regulateArray(newValue);
+                  if(type === "radio" && va.length > 1){
+                    throw "There are over than one candidate value for radio:" + va;
                   }
-                });
-                if(unmatchedValue.length > 0){
-                  var insertPoint = root.find("#" + placeHolderId);
-                  unmatchedValue.forEach(function(v){
-                    var uid = Aj.util.createUID();
-                    var clone = target.clone().attr("id", uid).val(v).prop("checked", true);
-                    var label = $("<label>").attr("for",uid).text(v);
-                    
-                    var diverge = $("<span>").attr("aj-diverge-value", placeHolderId);
-                    diverge.append(clone).append(label);
-                    
-                    insertPoint.after(diverge);
-                    insertPoint = diverge;
+                  var unmatchedValue = [];
+                  //there must be "aj-placeholder-id"
+                  var placeHolderId = target.attr("aj-placeholder-id");
+                  
+                  //remove the auto generated diverge elements
+                  root.find("[aj-diverge-value=" + placeHolderId + "]").remove();
+                  
+                  //find out all the existing options
+                  var ops = root.find("[aj-generated=" + placeHolderId + "]").prop("checked", false);
+                  va.forEach(function(v){
+                    var foundInput = Aj.util.findWithRoot(ops, "input[value="+v+"]");
+                    if(foundInput.length === 0){
+                      unmatchedValue.push(v);
+                    }else{
+                      foundInput.prop("checked", true);
+                    }
                   });
+                  if(unmatchedValue.length > 0){
+                    var insertPoint = root.find("#" + placeHolderId);
+                    unmatchedValue.forEach(function(v){
+                      var uid = Aj.util.createUID();
+                      var clone = target.clone().attr("id", uid).val(v).prop("checked", true);
+                      var label = $("<label>").attr("for",uid).text(v);
+                      
+                      var diverge = $("<span>").attr("aj-diverge-value", placeHolderId);
+                      diverge.append(clone).append(label);
+                      
+                      insertPoint.after(diverge);
+                      insertPoint = diverge;
+                    });
+                  }
                 }
                 break;
               }else{
@@ -166,10 +170,17 @@ Aj = {
                 }
               }
               if(inputType === "checkbox" || inputType === "radio"){
-                var observer = new PathObserver(ref, "value");
-                observer.open(function(newValue, oldValue){
-                  onChange(newValue);
-                });
+                if(formDef._single_check){
+                  target.bind(changeEvents.join(" "), function () {
+                    var v = $(this).prop("checked");
+                    onChange(v);
+                  }); 
+                }else{
+                  var observer = new PathObserver(ref, "value");
+                  observer.open(function(newValue, oldValue){
+                    onChange(newValue);
+                  });
+                }
               }else{
                 target.bind(changeEvents.join(" "), function () {
                   var v = $(this).val();
