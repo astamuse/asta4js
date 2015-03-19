@@ -18,7 +18,7 @@ $(function () {
     $scope.snippet("body").bind($scope.data, {
       name : [
         "#name-pre", {
-          _form : "name"
+          _form : {}
         }
       ],
       bloodType : [

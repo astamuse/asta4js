@@ -43,12 +43,17 @@ Aj = {
       }
     },
     metaFieldRewritter : {
-      _form : function (scope, root, meta) {
+      _form : function (scope, root, propertyPath, meta) {
         var formDef = meta._form;
         if (typeof formDef === "string") {
           formDef = {
             _name : formDef
           };
+        }
+        
+        if(!formDef._name){
+          var lastDotIndex = propertyPath.lastIndexOf(".");
+          formDef._name = propertyPath.substr(lastDotIndex+1);
         }
 
         if (!meta._selector) {
@@ -194,7 +199,7 @@ Aj = {
       _watch : function () {},
       _selector : {
         priority : 10000000 - 1, // a little smaller than bigger
-        fn : function (scope, root, meta) {
+        fn : function (scope, root,propertyPath, meta) {
           if (meta._selector) { // when(why) is it undefined?
             //rewrite selector to extract attr operations
             var attrOpIndex = meta._selector.indexOf("@>");
@@ -207,7 +212,7 @@ Aj = {
       },
       _attr_op : {
         priority : 10000000, // bigger than bigger
-        fn : function (scope, root, meta){
+        fn : function (scope, root, propertyPath, meta){
           var attrOp = meta._attr_op;
           //set default 1 way binding
           if (!meta._render && attrOp) {
@@ -321,7 +326,7 @@ Aj = {
   createSnippet : function (_scope, _root) {
     var reverseMetaKeys = ["_meta_type", "_meta_id", "_value", "_prop"];
     return {
-      rewriteMeta : function (originalMeta) {
+      rewriteMeta : function (propertyPath, originalMeta) {
 
         var meta = Aj.util.clone(originalMeta);
 
@@ -330,7 +335,7 @@ Aj = {
         console.log(Aj.config._ordered_metaFieldRewritter);
         Aj.config._ordered_metaFieldRewritter.forEach(function (mr) {
           if (meta[mr.key] !== undefined) {
-            mr.fn(_scope, _root, meta);
+            mr.fn(_scope, _root, propertyPath, meta);
             if (mr.key !== "_selector") {
               meta[mr.key] = null;
               delete meta[mr.key];
@@ -518,7 +523,7 @@ Aj = {
         }
 
         //rewrite meta
-        meta = this.rewriteMeta(meta);
+        meta = this.rewriteMeta(propertyPath, meta);
 
         //which means there is nothing about the value to do
         if (!meta._selector) {
