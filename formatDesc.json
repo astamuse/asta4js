@@ -1,5 +1,6 @@
-{
-  _selector: "",
+//basic binding
+"#x-xxx" ==> {
+  _selector: "#x-xxx",
   _render: function(){},
   _assign: function(){},
   _register_render: function(){},
@@ -34,6 +35,7 @@
   }
 }  
 
+//array binding
 {
   _duplicator: ""
   _item:{
@@ -71,7 +73,7 @@
   }
 } 
 
-// for recursive fields, 
+// recursive fields binding 
 {
   propa:{
     _selector: ""
@@ -119,16 +121,28 @@ color: "#target-table@>[class:(blue|red)?]", // switch the class in declared lis
 height: "#target-table@>[class:height40?]",  // add/remove target class by given value(treated as boolean)
 checked: "#check-box@>[checked?]" // add/remove target attribution by given value(treated as boolean)
 
+"#target-table@>[border=]" ==> {
+  _selector: "#target-table",
+  _attr_op: "[border=]"
+} => {
+  _selector: "#target-table",
+  _render: function(){...}, //default implementaion
+  _assign: function(){}, //should be empty
+  _register_render: function(){...}, //default implementation
+  _register_assign: function(){}, //should be empty
+}
+  
 
-// form element rewrite
+// form element 2w binding
 {
   name: {
-    _form: {} // (not implemented yet)name can be ignored , the leaf property name will be treated as name of form element
+    _form: {} // name can be ignored , the leaf property name will be treated as name of form element
   }
 } ==>
 {
   name: {
-    _form: "name"
+    _form: "name",
+    _single_check: true/false //optional for single checkbox/radio without option list. default false.
   }
 } ==> {
   name: {
