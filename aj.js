@@ -384,7 +384,10 @@ Aj = {
   },
 
   sync : function () {
-    Platform.performMicrotaskCheckpoint();
+   // setTimout(function(){
+      Platform.performMicrotaskCheckpoint();
+   // },0);
+    
   },
 
   obs : new Array(),
@@ -621,6 +624,7 @@ Aj = {
             propertyPath,
             function (newValue, oldValue) {
             meta._render(target, newValue, oldValue);
+            Aj.sync();
           });
           var currentValue = null;
           if(meta._first_time_value){
@@ -646,6 +650,12 @@ Aj = {
         meta._post_binding.forEach(function (pf) {
           pf(target);
         });
+        
+        if(meta._debug){
+          console.log("bind " + propertyPath + " as following:");
+          console.log(meta);
+          console.log(meta._render.toString());
+        }
       },
 
       bindArray : function (propertyPath, originalMeta) {
@@ -702,8 +712,14 @@ Aj = {
                 if (diff > 0) {
                   //we simply add the new child to the last of current children list,
                   //all the values will be synchronized correctly since we bind them
-                  //by a string value path rather than the real object reference.
-                  var insertPoint = $(existingNodes.get(existingLength - 1)); // the last one as insert point
+                  //by a string value path rather than the real object reference
+                  
+                  // the last one as insert point or the placeholder
+                  var insertPoint = $(existingNodes.get(existingLength - 1)); 
+                  if(insertPoint.length == 0){
+                    insertPoint = placeHolder;
+                  }
+                  
                   for (var i = 0; i < diff; i++) {
                     var newIndex = existingLength + i;
                     var childPath = propertyPath + "[" + newIndex + "]";
@@ -796,7 +812,7 @@ Aj = {
           observer.open(observerFunc);
 
           var currentValue = Path.get(propertyPath).getValueFrom(_scope);
-          observerFunc(Aj.util.regulateArray(currentValue), []);
+          observerFunc(Aj.util.regulateArray(currentValue, true), []);
 
         }); //target.each
       }, //bindArray
@@ -998,9 +1014,13 @@ Aj = {
       this.idSeq++;
       return "BISD-" + this.idSeq;
     },
-    regulateArray : function (v) {
+    regulateArray : function (v, tryKeepRef) {
       if ($.isArray(v)) {
-        return [].concat(v);
+        if(tryKeepRef){
+          return v;
+        }else{
+          return [].concat(v);
+        }
       } else if (v === null || v === undefined) {
         return new Array();
       } else {
