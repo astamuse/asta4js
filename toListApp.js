@@ -58,10 +58,10 @@ $(function () {
       }
       
       control.mainDisplay = list.length == 0 ? "none" : "block";
-      control.allCompleted = completeCount == list.length;
       control.clearDisplay = completeCount > 0 ? "block" : "none";
       control.completeCount = completeCount;
       control.unCompleteCount = list.length-completeCount;
+      control.allCompleted = completeCount == list.length;
     };
     
     $scope.snippet("#todoapp").bind($scope.controlData,{
@@ -74,7 +74,7 @@ $(function () {
     
     $("#toggle-all").click(function(){
       $scope.data.list.forEach(function(t){
-        t.complete = $("#toggle-all").prop("checked");
+        t.complete = $scope.controlData.allCompleted;
       });
       //this is necessary currently, but should can be ignored later
       Aj.sync();
