@@ -72,7 +72,7 @@ textarea {
     </textarea>
     <button id="set-option">set option</button>
 </div>
-
+<div>By default, the model's value will be changed at onblur, but onclick can be specified.</div>
 <table>
     <tr>
         <td class="c1">name: <input type="text" name="name"></td>
@@ -96,7 +96,7 @@ textarea {
         <td><pre id="sex-pre"></pre></td>
     </tr>
     <tr>
-        <td>language(also click): 
+        <td>language(also change by click): 
             <span class="x-lang-group">
                 <input id="lang-ck" type="checkbox" name="language">
                 <label for="lang-ck">xxx</label>
@@ -104,6 +104,17 @@ textarea {
         </td>
         <td><pre id="language-pre"></pre></td>
     </tr>
+    <!-- tr>  static option is not supported yet.
+        <td>language2(static option): 
+            <input id="lang2-ck-ja" type="checkbox" name="language2" value="ja">
+            <label for="lang2-ck-ja">Japanese</label>
+            <input id="lang2-ck-zh" type="checkbox" name="language2" value="zh">
+            <label for="lang2-ck-zh">Chinese</label>
+            <input id="lang2-ck-en" type="checkbox" name="language2" value="en">
+            <label for="lang2-ck-en">English</label>
+        </td>
+        <td><pre id="language2-pre"></pre></td>
+    </tr -->
     <tr>
         <td>set private: <input type=checkbox name="private"></td>
         <td>&nbsp;</td>

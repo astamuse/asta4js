@@ -52,13 +52,20 @@ $(function () {
           }
         }
       ],
+      /*
+      language2 : [
+        "#language2-pre", {
+          _form : {}
+        }
+      ],
+      */
       "private": {
         _form: {
           _name : "private",
           _single_check: true
         }
       },
-      "agree": {
+      agree: {
         _form: {
           _name : "agree",
           _single_check: true
