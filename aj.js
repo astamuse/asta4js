@@ -384,16 +384,18 @@ Aj = {
   },
 
   sync : function () {
-   // setTimout(function(){
+    //setTimeout(function(){
       Platform.performMicrotaskCheckpoint();
-   // },0);
-    
+    //},0);
   },
 
   obs : new Array(),
 
   init : function (init_func) {
     init_func(Aj.createScope());
+    setTimeout(function(){
+      Aj.sync();
+    }, 0);
   },
 
   createScope : function () {
@@ -823,8 +825,10 @@ Aj = {
       },
 
       on : function (event, selector, fn) {
-        _root.on(event, selector, fn);
-        Aj.sync();
+        _root.on(event, selector, function(){
+          fn.apply(this, arguments);
+          Aj.sync();
+        });
         return this;
       }
 

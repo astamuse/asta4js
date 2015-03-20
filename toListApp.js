@@ -101,7 +101,9 @@ $(function () {
     var listTodoEditBinding = function(selector){
       return {
         _selector: selector,
-        _form:{}
+        _form:{
+          _extra_change_events: ["keypress"]
+        }
       };
     };
 
