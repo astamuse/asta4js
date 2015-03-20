@@ -196,7 +196,85 @@ Aj = {
           };// end changeEvents.length > 0
         }// end !meta._register_assign
       },// end _form
-      _watch : function () {},
+      _watch : function (scope, root,propertyPath, meta) {
+        var watchMap = scope.__watch__map__;
+        if(!watchMap){
+          watchMap = {};
+          scope.__watch__map__ = watchMap;
+        }
+        
+        var watchDef = meta._watch;
+        
+        var parentPath = propertyPath;
+        var dotIdx = parentPath.lastIndexOf(".");
+        if(dotIdx >= 0){
+          parentPath = parentPath.substring(0, dotIdx);
+        }
+        
+        var observerTargets = watchDef._fields.map(function(f){
+          var path;
+          if(f.indexOf("@:") == 0){
+            path = f.substr(2);
+          }else{
+            path = parentPath + "." + f;
+          }
+          return path;
+        });
+        
+        if(!meta._assign){
+          meta._assign = function (_scope, propertyPath, value){
+            watchMap[propertyPath] = value;
+            if(watchDef._store){
+              Path.get(propertyPath).setValueFrom(_scope, value);
+            }
+          };
+        }
+        if (!meta._register_render) {
+          meta._register_render = function (_scope, propertyPath, onChange) {
+            var observer = new PathObserver(_scope, "__watch__map__['" + propertyPath + "']");
+            observer.open(function (newValue, oldValue) {
+              onChange(newValue, oldValue);
+            });
+          };
+        }
+        if(!meta._register_assign){
+          meta._register_assign = function (target, onChange){
+            var firstValues = [];
+            var observer = new CompoundObserver();
+            observerTargets.forEach(function(observerPath){
+              firstValues.push(Path.get(observerPath).getValueFrom(scope));
+              observer.addPath(scope, observerPath);
+            });
+
+            //before open observer, let's store the initial value
+            var initialValue;
+            if(watchDef._cal){
+              initialValue = watchDef._cal.apply(null, firstValues);
+            }else{
+              initialValue = newValues;
+            }
+            watchMap[propertyPath] = initialValue;
+            if(watchDef._store){
+              Path.get(propertyPath).setValueFrom(scope, initialValue);
+            }
+            
+            //open observer
+            observer.open(function(newValues, oldValues){
+              if(watchDef._cal){
+                onChange(watchDef._cal.apply(null, newValues));
+              }else{
+                onChange(newValues);
+              }
+            });
+          }
+        }
+        if(!meta._first_time_value){
+          meta._first_time_value = function(_scope, propertyPath, target){
+            return watchMap[propertyPath];
+          };
+        }
+
+      },
       _selector : {
         priority : 10000000 - 1, // a little smaller than bigger
         fn : function (scope, root,propertyPath, meta) {
@@ -545,10 +623,14 @@ Aj = {
             meta._render(target, newValue, oldValue);
           });
           var currentValue = null;
-          if (propertyPath === "_index") {
-            currentValue = arrayIndex;
-          } else {
-            currentValue = Path.get(propertyPath).getValueFrom(_scope);
+          if(meta._first_time_value){
+            currentValue = meta._first_time_value(_scope, propertyPath, target);
+          }else{
+            if (propertyPath === "_index") {
+              currentValue = arrayIndex;
+            } else {
+              currentValue = Path.get(propertyPath).getValueFrom(_scope);
+            }
           }
           meta._render(target, currentValue, undefined);
         }

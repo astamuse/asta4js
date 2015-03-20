@@ -35,45 +35,8 @@
   }
 }  
 
-//array binding
-{
-  _duplicator: ""
-  _item:{
-    _selector : "",
-    _index: "" 
-    a: {},
-    b: {}
-  },
-  length : ""
-}  ==>  {
-  _meta_type: "_root"
-  _value:{ // the array itself
-    _meta_type: "_value"
-    _duplicator: ""
-    _item : { // the element of the array
-      _meta_type: "_root",
-      // if stored, the index change can be watched, but this would be supported later, not now
-      _store_index: false, 
-      _value:{
-        _meta_type: "_value"
-        _selector : ""
-      },
-      _prop: {
-        _meta_type: "_prop",
-        // NOTE: the index can be rendered even not stored, maybe we need to clarify it more.
-        _index: {},
-        a: {},
-        b: {}
-      }
-    },
-  },
-  _prop : {
-    _meta_type : "_prop"
-    length : ""
-  }
-} 
 
-// recursive fields binding 
+//recursive fields binding 
 {
   propa:{
     _selector: ""
@@ -112,6 +75,48 @@
     }// propb 
   }// _prop
 }
+
+
+
+//array binding
+{
+  _duplicator: ""
+  _item:{
+    _selector : "",
+    _index: "" 
+    a: {},
+    b: {}
+  },
+  length : ""
+}  ==>  {
+  _meta_type: "_root"
+  _value:{ // the array itself
+    _meta_type: "_value"
+    _duplicator: ""
+    _item : { // the element of the array
+      _meta_type: "_root",
+      // if stored, the index change can be watched, but this would be supported later, not now
+      _store_index: false, 
+      _value:{
+        _meta_type: "_value"
+        _selector : ""
+      },
+      _prop: {
+        _meta_type: "_prop",
+        // NOTE: the index can be rendered even not stored, maybe we need to clarify it more.
+        _index: {},
+        a: {},
+        b: {}
+      }
+    },
+  },
+  _prop : {
+    _meta_type : "_prop"
+    length : ""
+  }
+} 
+
+
 
 //attr operations(1-way only),@> to suggest an operation of attribution
 
@@ -241,3 +246,47 @@ _option: Aj.optionBind($scope.dataOption,{
     }
   }
 }
+
+
+
+//watch same/lower layer field
+{
+  _selector: "",
+  _watch: {
+    _fields: ["a", "b"],
+    //optional, default is false, the calculated value will be stored implicitly rather 
+    //than being exposed as a property; true will add a property to the holder object.
+    _store: true/false,
+    //optional, can be ignored, default will pass the new array value 
+    //as calculated value
+    _cal: function(a, b){
+      return a+b;
+    }
+  }
+}  ==> {
+  _selector: "#x-xxx",
+  _render: function(){
+    //default by selector
+  },
+  _assign: function(){
+    //assign to current object or internal map
+  },
+  _register_render: function(){
+    //observer what?
+  },
+  _register_assign: function(){
+    //observer _watch._fields
+    //get value by _watch._cal
+  },
+}
+
+//watch full path from scope
+{
+  _selector: "",
+  _watch: {
+    _fields: ["@:data.a", "@:data.b"],
+    _cal: function(a, b){
+      return a + b;
+    }
+  }
+} 
