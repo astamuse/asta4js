@@ -76,6 +76,7 @@ $(function () {
       $scope.data.list.forEach(function(t){
         t.complete = $("#toggle-all").prop("checked");
       });
+      //this is necessary currently, but should can be ignored later
       Aj.sync();
     });
 
@@ -86,6 +87,8 @@ $(function () {
           list.splice(i, 1);
         }
       }
+      //this is necessary currently, but should can be ignored later
+      Aj.sync();
     });
     
     //now we begin to bind edit and list
