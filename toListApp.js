@@ -12,6 +12,16 @@ $(function () {
         }
       };
     };
+    
+    var doRecalOnChange = function(){
+      return {
+        _selector: ":root", //we will do nothing
+        _render: function(target, newValue){
+          //we simply do recal to invoke controls
+          $scope.recalControlData();
+        }
+      };
+    }
 
     //declare the basic data holder
     $scope.data={
@@ -95,6 +105,7 @@ $(function () {
     $scope.snippet("#todoapp").bind($scope.data, {
       newTodo: newTodoEditBinding,
       list:{
+        length: doRecalOnChange(),
         _duplicator: ".x-todo-item",
         _item:{
           _index: ".destroy@>[index=]",
@@ -105,22 +116,10 @@ $(function () {
           complete: [
             singleCheckBinding("[name=todo-complete]"),
             ".x-todo-item@>[class:done?]",
-            {
-              _selector: ":root", //we will do nothing
-              _render: function(target, newValue){
-                //we simply do recal to invoke controls
-                $scope.recalControlData();
-              }
-            }
+            doRecalOnChange()
           ]
         },
-        length: {
-          _selector: ":root", //we will do nothing
-          _render: function(target, newValue){
-            //we simply do recal to invoke controls
-            $scope.recalControlData();
-          }
-        }
+        
       }
     }).on("dblclick", ".x-todo-item", function(){//must use on for dynamically generated array items
       $(this).addClass("editing");
