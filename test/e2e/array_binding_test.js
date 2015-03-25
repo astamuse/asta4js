@@ -2,7 +2,7 @@ var assert = require('assert');
 
 describe('array binding tests', function() {
     
-    var page = browser.url('http://localhost:9001/devstub/array_binding.html');
+    var url = 'http://localhost:9001/devstub/array_binding.html';
     
     var getInputXPath = function(idx){
       return "//li[@class='row'][position()=" + idx + "]//input";
@@ -31,6 +31,7 @@ describe('array binding tests', function() {
     }
     
     it("title test", function(done){
+      var page = browser.url(url);
       page.getTitle(function(err,title) {
          assert.strictEqual(title,'array_binding');
       });
@@ -38,6 +39,9 @@ describe('array binding tests', function() {
     });
     
     it("array assign synchronize test", function(done){
+      var page = browser.url(url);
+      
+      //confirm set value
       page.setValue("#data-input", ["r1", "r2", "r3"].join("\n"));
       page.click("#set-value");
 
@@ -47,10 +51,6 @@ describe('array binding tests', function() {
       
       confirmItemValue(page, ["r1", "r2", "r3"]);
     
-      page.call(done);
-    });
-    
-    it("array item assign synchronize test", function(done){
       var newValues = ["r1", "r2", "r3"];
       for(var i=1;i<=3;i++){
         (function(idx){
@@ -64,28 +64,18 @@ describe('array binding tests', function() {
       //confirm again
       confirmItemValue(page, newValues);
 
-      page.call(done);
-    });
-    
-    it("array item add test", function(done){
+      //confirm add
       page.click(getButtonXPath(1, "x-add"));
       page.setValue(getInputXPath(2), "add" + 1);
       
       confirmItemValue(page, ["x1", "add1", "x2", "x3"]);
 
-      page.call(done);
-    });
-    
-    it("array item remove test", function(done){
+      //confirm remove
       page.click(getButtonXPath(1, "x-remove"));
       
       confirmItemValue(page, ["add1", "x2", "x3"]);
 
-      page.call(done);
-    });
-    
-    
-    it("array item go up test", function(done){
+      //confirm move up
       page.click(getButtonXPath(1, "x-go-up"));
       confirmItemValue(page, ["add1", "x2", "x3"]);
       
@@ -94,11 +84,8 @@ describe('array binding tests', function() {
 
       page.click(getButtonXPath(3, "x-go-up"));
       confirmItemValue(page, ["x2", "x3", "add1"]);
-      
-      page.call(done);
-    });
-    
-    it("array item go down test", function(done){
+
+      //confirm move down      
       page.click(getButtonXPath(3, "x-go-down"));
       confirmItemValue(page, ["x2", "x3", "add1"]);
 

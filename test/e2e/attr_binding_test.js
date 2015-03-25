@@ -2,9 +2,10 @@ var assert = require('assert');
 
 describe('attr binding tests', function() {
     
-    var page = browser.url('http://localhost:9001/devstub/attr_binding.html');
+    var url = 'http://localhost:9001/devstub/attr_binding.html';
     
     it("title test", function(done){
+      var page = browser.url(url);
       page.getTitle(function(err,title) {
          assert.strictEqual(title,'attr_binding');
       });
@@ -12,6 +13,7 @@ describe('attr binding tests', function() {
     });
     
     it("set attr test", function(done){
+      var page = browser.url(url);
       page.click("#set-value");
       page.getAttribute("#target-table", "border", function(err, attr){
         assert.strictEqual(attr,'1');

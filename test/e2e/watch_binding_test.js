@@ -2,9 +2,10 @@ var assert = require('assert');
 
 describe('watch binding tests', function() {
     
-    var page = browser.url('http://localhost:9001/devstub/watch_binding.html');
+    var url = 'http://localhost:9001/devstub/watch_binding.html';
     
     it("title test", function(done){
+      var page = browser.url(url);
       page.getTitle(function(err,title) {
          assert.strictEqual(title,'watch_binding');
       });
@@ -12,6 +13,7 @@ describe('watch binding tests', function() {
     });
     
     it("watch test", function(done){
+      var page = browser.url(url);
       page.setValue("[name=year]", "y");
       page.getText(".x-date-str", function(err, text){
         assert.strictEqual(text,'y-undefined-undefined:undefined');
