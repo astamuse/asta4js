@@ -37,7 +37,7 @@ $(function () {
     })
     .on("click", ".x-remove", function () {
       var currentIndex = parseInt($(this).attr("aIndex"));
-      $scope.data.list.splice(currentIndex, 0);
+      $scope.data.list.splice(currentIndex, 1);
     })
     .on("click", ".x-go-up", function () {
       var currentIndex = parseInt($(this).attr("aIndex"));

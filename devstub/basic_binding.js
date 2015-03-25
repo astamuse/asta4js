@@ -42,18 +42,6 @@ $(function(){
               rr: ".x-recursive-value"
             }
           });
-    
-    window.setTimeout(function(){
-      console.log("timeout trigger");
-      $scope.data = {
-        value: "timeout auto assign",
-        sub: {
-          rr: "recursive"
-        }
-      };
-      Platform.performMicrotaskCheckpoint();
-    }, 2000);
-    
   });
 
 });
