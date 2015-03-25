@@ -1,8 +1,11 @@
 //var sauceConfig = require('./grunt/sauce')
 
-var e2eTests = ['test/e2e/**/*.js'];
 
 module.exports = function (grunt) {
+
+  var targetFile = grunt.option("file") || '';
+
+  var e2eTests = targetFile ? [targetFile] : ['test/e2e/**/*.js'];
 
   grunt.initConfig({
 

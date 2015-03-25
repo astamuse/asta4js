@@ -25,4 +25,18 @@ describe('basic binding tests', function() {
       page.call(done);
     });
     
+    it("input2 synchronize test", function(done){
+      //page.click("[name=input1]");
+      //page.keys("fasdf");
+
+      page.setValue("[name=input2]", "bbn");
+      page.getValue("[name=input1]", function(err, value){
+        assert.strictEqual(value,'bbn');
+      });
+      page.getText("#preview", function(err, text){
+        assert.strictEqual(text,'bbn');
+      });
+      page.call(done);
+    });
+    
 });
