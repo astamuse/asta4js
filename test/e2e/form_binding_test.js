@@ -207,7 +207,6 @@ describe('form binding tests', function() {
       
       clickCheckBoxLabel(page, "language", "Chinese");
       page.getText("#language-pre", function(err, text){
-        console.log("text:", text);
         assert(text.indexOf("Japanese")>=0);
         assert(text.indexOf("Chinese")>=0);
       });
@@ -361,7 +360,6 @@ describe('form binding tests', function() {
       
       clickCheckBoxLabel(page, "language", "Chinese");
       page.getText("#language-pre", function(err, text){
-        console.log("text:", text);
         assert(text.indexOf("Japanese")>=0);
         assert(text.indexOf("Chinese")>=0);
       });
