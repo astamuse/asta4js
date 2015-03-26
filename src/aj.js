@@ -1,4 +1,6 @@
-Aj = {
+"use strict";
+
+var Aj = {
 
   config : {
     metaFieldClassifier : function (metaId, fieldName) {
@@ -14,7 +16,7 @@ Aj = {
     _order_metaFieldRewritter : function () {
       if (!this._ordered_metaFieldRewritter) {
         var array = new Array();
-        for (k in this.metaFieldRewritter) {
+        for (var k in this.metaFieldRewritter) {
           var def = this.metaFieldRewritter[k];
           var _priority = null;
           var _fn = null;
@@ -402,6 +404,54 @@ Aj = {
     return {
       snippet : function (selector) {
         return Aj.createSnippet(this, $(selector));
+      },
+      observe: function(varRef, meta){
+        var rewriteMeta = function(m){
+          var newMeta = {};
+          var maybeArray = false;
+          for(var p in m){
+            //we need to avoid scope issue
+            (function(){
+              var submeta = m[p];
+              var type = typeof submeta;
+              if( type === "function"){
+                newMeta[p] = {
+                  _selector: ":root",
+                  _render: function(target, newValue, oldValue){
+                    submeta(newValue, oldValue);
+                    Aj.sync();
+                  }
+                }
+              }else if (type === "object"){
+                if(Array.isArray(submeta)){
+                  newMeta[p] = submeta.map(function(a){
+                    if(typeof a === "function"){
+                      var dummy = {
+                        "x": a
+                      }
+                      return rewriteMeta(dummy)["x"];
+                    }else{
+                      return rewriteMeta(a);
+                    }
+                  });
+                }else{
+                  newMeta[p] = rewriteMeta(submeta);
+                }
+              }else{
+                throw "you can only declare function on observe"
+              }
+              if(p === "_item"){
+                maybeArray = true;
+              }
+            })();
+          }
+          if(maybeArray){
+            newMeta._duplicator = "#_for_observe#";//we will change this dirty things later
+          }
+          return newMeta;
+        }
+        var mmm = rewriteMeta(meta);
+        var dummySnippet = this.snippet("body").bind(varRef, mmm);
       }
     };
   },
@@ -659,37 +709,48 @@ Aj = {
           console.log(meta._render.toString());
         }
       },
-
+      
       bindArray : function (propertyPath, originalMeta) {
-        var target = Aj.util.findWithRoot(_root, originalMeta._duplicator);
-        if (target.length == 0) {
-          throw "could not find duplicator:" + originalMeta._duplicator;
+        var forObserverOnly = (originalMeta._duplicator === "#_for_observe#");
+        var target;
+        if(forObserverOnly){// for observer only
+          target = _root;
+        }else{
+          target = Aj.util.findWithRoot(_root, originalMeta._duplicator);
+          if (target.length == 0) {
+            throw "could not find duplicator:" + originalMeta._duplicator;
+          }
         }
 
         var THIS = this;
         var childMeta = Aj.util.clone(originalMeta["_item"]);
 
         target.each(function (index, elem) {
-
-          //create placle holder
-          var tagName = elem.tagName;
-          var placeHolderId = Aj.util.createUID();
-          if( (tagName === "OPTION" || tagName === "OPTGROUP") && $.browser !== "mozilla"){
-            tagName = "span";
-          }
-          var placeHolder = $("<" + tagName + " style='display:none' id='" + placeHolderId + "' value='SFDASF#$#RDFVC%&!#$%%2345sadfasfd'/>");
-          var $elem = $(elem);
-          $elem.after(placeHolder);
-
-          //$elem.attr("aj-placeholder-id",placeHolderId);
-          //remove the duplicate target
-          $elem.remove();
-          $elem.attr("aj-generated", placeHolderId);
-
-          var templateStr = $("<div>").append($elem).html();
           
-          //set the placeholder id to all the children input elements for the sake of checkbox/radio box option rendering
-          $elem.find("input").attr("aj-placeholder-id", placeHolderId);
+          var placeHolder;
+          var templateStr;
+
+          if(!forObserverOnly){
+            //create placle holder
+            var tagName = elem.tagName;
+            var placeHolderId = Aj.util.createUID();
+            if( (tagName === "OPTION" || tagName === "OPTGROUP") && $.browser !== "mozilla"){
+              tagName = "span";
+            }
+            placeHolder = $("<" + tagName + " style='display:none' id='" + placeHolderId + "' value='SFDASF#$#RDFVC%&!#$%%2345sadfasfd'/>");
+            var $elem = $(elem);
+            $elem.after(placeHolder);
+
+            //$elem.attr("aj-placeholder-id",placeHolderId);
+            //remove the duplicate target
+            $elem.remove();
+            $elem.attr("aj-generated", placeHolderId);
+
+            templateStr = $("<div>").append($elem).html();
+            
+            //set the placeholder id to all the children input elements for the sake of checkbox/radio box option rendering
+            $elem.find("input").attr("aj-placeholder-id", placeHolderId);
+          }
 
           var observerFunc = function (newValue, oldValue) {
             /*
@@ -698,6 +759,13 @@ Aj = {
             if ($.isArray(newValue)) { // only when the new value is not undefined/null
               var splicingObserver = new ArrayObserver(newValue);
               splicingObserver.open(function (splices) {
+                /*
+                if(forObserverOnly){
+                  //we need register the length onchange handler but we cannot get it right now.
+                  //we will address this after refactoring
+                  return;
+                }
+                */
                 var removedCount = 0;
                 var addedCount = 0;
 
@@ -707,40 +775,54 @@ Aj = {
                 });
 
                 var diff = addedCount - removedCount;
-
-                var existingNodes = _root.find("[aj-generated=" + placeHolderId + "]");
-                var existingLength = existingNodes.length;
-
-                if (diff > 0) {
-                  //we simply add the new child to the last of current children list,
-                  //all the values will be synchronized correctly since we bind them
-                  //by a string value path rather than the real object reference
-                  
-                  // the last one as insert point or the placeholder
-                  var insertPoint = $(existingNodes.get(existingLength - 1)); 
-                  if(insertPoint.length == 0){
-                    insertPoint = placeHolder;
+                
+                if(forObserverOnly){
+                  if(diff > 0){
+                    var currentLen = newValue.length;
+                    var oldLen = currentLen - diff;
+                    for(var i=oldLen;i<currentLen;i++){
+                      var childPath = propertyPath + "[" + i + "]";
+                      //recursive binding
+                      var childSnippet = Aj.createSnippet(_scope, target);
+                      childSnippet.bindMeta(childPath, childMeta);
+                    }
                   }
-                  
-                  for (var i = 0; i < diff; i++) {
-                    var newIndex = existingLength + i;
-                    var childPath = propertyPath + "[" + newIndex + "]";
-                    var childElem = $(templateStr);
-                    insertPoint.after(childElem);
+                }else{
 
-                    console.log("bind childpath:" + childPath);
-                    console.log(childMeta);
+                  var existingNodes = _root.find("[aj-generated=" + placeHolderId + "]");
+                  var existingLength = existingNodes.length;
 
-                    //recursive binding
-                    var childSnippet = Aj.createSnippet(_scope, childElem);
-                    childSnippet.bindMeta(childPath, childMeta, newIndex);
+                  if (diff > 0) {
+                    //we simply add the new child to the last of current children list,
+                    //all the values will be synchronized correctly since we bind them
+                    //by a string value path rather than the real object reference
+                    
+                    // the last one as insert point or the placeholder
+                    var insertPoint = $(existingNodes.get(existingLength - 1)); 
+                    if(insertPoint.length == 0){
+                      insertPoint = placeHolder;
+                    }
+                    
+                    for (var i = 0; i < diff; i++) {
+                      var newIndex = existingLength + i;
+                      var childPath = propertyPath + "[" + newIndex + "]";
+                      var childElem = $(templateStr);
+                      insertPoint.after(childElem);
 
-                    insertPoint = childElem;
-                  }
-                } else if (diff < 0) {
-                  diff = 0 - diff;
-                  for (var i = 1; i <= diff; i++) {
-                    $(existingNodes.get(existingLength - i)).remove();
+                      console.log("bind childpath:" + childPath);
+                      console.log(childMeta);
+
+                      //recursive binding
+                      var childSnippet = Aj.createSnippet(_scope, childElem);
+                      childSnippet.bindMeta(childPath, childMeta, newIndex);
+
+                      insertPoint = childElem;
+                    }
+                  } else if (diff < 0) {
+                    diff = 0 - diff;
+                    for (var i = 1; i <= diff; i++) {
+                      $(existingNodes.get(existingLength - i)).remove();
+                    }
                   }
                 }
 
@@ -750,14 +832,27 @@ Aj = {
                 }
               });
             }
+            
+            var regularOld = Aj.util.regulateArray(oldValue);
+            var regularNew = Aj.util.regulateArray(newValue);
+
+            if(forObserverOnly){
+              var len = regularNew.length;
+              for(var i=0;i<len;i++){
+                var childPath = propertyPath + "[" + i + "]";
+                //recursive binding
+                var childSnippet = Aj.createSnippet(_scope, target);
+                childSnippet.bindMeta(childPath, childMeta);
+              }
+              return;
+            }
 
             /*
              * following is for value assigning by whole array instance
              */
             var existingNodes = _root.find("[aj-generated=" + placeHolderId + "]");
 
-            var regularOld = Aj.util.regulateArray(oldValue);
-            var regularNew = Aj.util.regulateArray(newValue);
+
 
             var newLength = regularNew.length;
             var nodeLength = existingNodes.length;
@@ -1093,3 +1188,47 @@ Aj = {
     }
   }
 };
+
+/**
+ * [target]: string->name or selector. object->{_name: ""} or {_selector: ""}
+ * [event1]: string->default change event array->extra change events
+ * [event2]: array->extra change events
+ */
+Aj.form = function(target, event1, event2){
+  var selector;
+  var name;
+  if(target){
+    if(typeof target === "string"){
+      //treat as name or selector
+      selector = "[name="+target+"]"+ ", " + target;
+    }else{
+      selector = target["selector"];
+      name = target["name"];
+    }
+  }
+  var ret = {
+    _selector: selector,
+    _form: {
+      _name: name
+    }
+  };
+  var defaultChangeEvent;
+  var extraChangeEvents;
+  if(typeof event1 === "string"){
+    defaultChangeEvent = event1;
+    extraChangeEvents = event2;
+  }else if (Array.isArray(event1)){
+    extraChangeEvents = event2;
+  }
+  
+  if(defaultChangeEvent){
+    ret._form._default_change_event = defaultChangeEvent;
+  }
+  ret._form._extra_change_events = extraChangeEvents;
+  return ret;
+}
+Aj.form.singleCheck=function(){
+  var ret = Aj.form.apply(Aj, arguments);
+  ret._form._single_check = true;
+  return ret;
+}
