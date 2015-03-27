@@ -137,29 +137,33 @@ $(function () {
       list.push(todo);
       
       //due to 2w binding, we'd better change the value later
-      setTimeout(function(){
+      Aj.delay(function(){
         $scope.data.newTodo = "";
-        Aj.sync();
-      }, 0)
+      });
       
       //this is necessary currently, but should can be ignored later
       Aj.sync();
       
     });
-    
-    //simulating remote data initializing
-    setTimeout(function(){
+
+    $.ajax({
+      type: "get",
+      url: "test.json",
+    }).done(function(data){
+      var list = data;
+      $scope.data.list = list;
+    }).fail(function(){
+      //fallback
       var list = [
         {
-          text: "auto-1"
+          text: "auto-1-fallback"
         },
         {
-          text: "auto-2"
+          text: "auto-2-fallback"
         }
       ];
       $scope.data.list = list;
-      Aj.sync();
-    }, 2000);
+    });
     
     
   });

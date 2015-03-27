@@ -3,6 +3,7 @@
 var Aj = {
 
   config : {
+    autoSyncAfterJqueryAjax: true,
     metaFieldClassifier : function (metaId, fieldName) {
       if (fieldName === "_index") {
         return "_prop";
@@ -1231,4 +1232,18 @@ Aj.form.singleCheck=function(){
   var ret = Aj.form.apply(Aj, arguments);
   ret._form._single_check = true;
   return ret;
+}
+
+if(Aj.config.autoSyncAfterJqueryAjax){
+  $( document ).ajaxComplete(function() {
+    console.log("I am here");
+    Aj.sync();
+  });
+}
+
+Aj.delay=function(callback, timeout){
+  setTimeout(function(){
+    callback.apply();
+    Aj.sync();
+  }, timeout ? timeout : 0);
 }
