@@ -42,6 +42,17 @@ $(function(){
               rr: ".x-recursive-value"
             }
           });
+    
+    $scope.observe($scope.data, {
+      values : {
+        _splice: function(){},
+        _value: function(){},
+        _item: {
+          _index: function(){},
+        }
+      }
+    });
+    
   });
 
 });

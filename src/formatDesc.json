@@ -1,3 +1,165 @@
+//observer meta
+{
+  a : function(newValue, oldValue){},
+  b : [
+    function(newValue, oldValue){},
+    ...
+  ], //can be array
+  c : [
+    function(newValue, oldValue){},
+    {
+      c_1 : function(newValue, oldValue)
+    }
+  ],
+  d : {
+    _value : function(newArray, oldArray){}, //array assign(common path observer)
+    _item : {
+      _value : function(newItem, oldItem){}, //for array item assigned(by index),
+      _splice: function(splices){}, //for splice
+      d_1 : function(newValue, oldValue){}
+    }
+  }
+} ==> {
+  a : {
+    _value : [function(newValue, oldValue){}]
+  }
+  b : {
+    _value : [
+      function(newValue, oldValue){},
+      ...
+    ]
+  }, //can be array
+  c : {
+    _value : [function(newValue, oldValue){}],
+    c_1 : {
+      _value : [function(newValue, oldValue){}]
+    }
+  },
+  d : {
+    _value : [function(newArray, oldArray){}], //array assign(common path observer)
+    _item : {
+      _value : [function(newItem, oldItem){}], //array item assigned(by index),
+      _splice: [function(splices){}], //for splice
+      d_1 : {
+        _value : [function(newValue, oldValue){}]
+    }
+  }
+} ==> {
+  _meta_type : "_root",
+  _meta_id : "", //generated or specified
+  _value : [], //must be array
+  _prop : { //must be normal object
+    _meta_type : "_prop",
+    a : {
+      _meta_type : "_root",
+      _meta_id : "", //specified or extended from parent
+      _value : [
+        {
+          _meta_type : "_value", 
+          _target_path: "a",
+          _on_change: function(newValue, oldValue){},
+          _register_on_change: function(){}, //default built-in, can be overridden
+          _post_register: undefined //can be specified
+        }
+      ]
+    }
+    b : {
+      _meta_type : "_root",
+      _value : [
+        {
+          _meta_type: "_value",
+          _on_change: function(newValue, oldValue){},
+          _register_on_change: function(){},
+          _post_register: undefined
+        }
+        ...
+      ]
+    }, //can be array
+    c : {
+      _meta_type : "_root",
+      _value : [
+        {
+          _meta_type: "_value",
+          _on_change: function(newValue, oldValue){},
+          _register_on_change: function(){},
+          _post_register: undefined
+        }
+        ...
+      ],
+      _prop : {
+        _meta_type : "_prop",
+        c_1 : {
+          _meta_type : "_root",
+          _value : [
+            {
+              _meta_type: "_value",
+              _on_change: function(newValue, oldValue){},
+              _register_on_change: function(){},
+              _post_register: undefined
+            }
+          ]
+        }
+      }
+    },
+    d : {
+      _meta_type : "_root",
+      _value : [
+        {
+          _meta_type: "_value",
+          _on_change: function(newArray, oldArray){},
+          _register_on_change: function(){},
+          _post_register: undefined
+        },
+        
+        //_item can be treated as single binding in _value array or
+        //be treated as a part of existing _value binding
+        {
+          _meta_type: "_value",
+          _item : {
+            _meta_type: "_root",
+            _target_path: "d[?]", // ? will be replaced by real index at runtime
+            _value : [
+              {
+                _meta_type: "_value",
+                _on_change: function(newItem, oldItem){},
+                _register_on_change: function(){},
+                _post_register: undefined
+              }
+            ],
+            _splice : [
+              {
+                _meta_type: "_splice",
+                _on_change: function(splices){},
+                _register_on_change: function(){},
+                _post_register: undefined
+              }
+            ],
+            _prop:{
+              d_1 : {
+                meta_type : "_root",
+                _value : [
+                  {
+                    _meta_type: "_value",
+                    _on_change: function(newArray, oldArray){},
+                    _register_on_change: function(){},
+                    _post_register: undefined
+                  }
+                ],
+                _prop:{
+                  _meta_type: "_prop",
+                }
+              }
+            }
+          }
+        }
+      ], //array assign(common path observer)
+      _prop: {
+        _meta_type: "_prop",
+      }
+    }
+  }
+}
+
 //basic binding
 "#x-xxx" ==> {
   _selector: "#x-xxx",
@@ -98,7 +260,8 @@
       // if stored, the index change can be watched, but this would be supported later, not now
       _store_index: false, 
       _value:{
-        _meta_type: "_value"
+        _meta_type: "_value",
+        _target_path: "xxx[?]", // ? will be replaced by real index at runtime
         _selector : ""
       },
       _prop: {
