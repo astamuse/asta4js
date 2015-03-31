@@ -1,7 +1,13 @@
 "use strict";
 
 (function(){
-  var Aj = {};
+  var Aj = {
+    sync : function () {
+      //setTimeout(function(){
+      Platform.performMicrotaskCheckpoint();
+      //},0);
+    },
+  };
   Aj.config = {
     log : true,
     autoSyncAfterJqueryAjax: true,
@@ -34,7 +40,7 @@
     },
     metaRewritter: {
       _selector : {
-        priority : 10000000 - 500, // a little smaller than bigger
+        priority : 10000000 - 700, 
         fn : function (meta) {
           //rewrite selector to extract attr operations
           var attrOpIndex = meta._selector.indexOf("@>");
@@ -47,71 +53,88 @@
       },
       //missing _attr_op
       _selector_after_attr_op : {
-        priority : 10000000 - 500, // a little smaller than bigger
+        priority : 10000000 - 500, 
         fn : function (meta) {
           if (!meta._render) {
             meta._render = function (target, newValue, oldValue) {
               target.text(newValue);
             };
           }
+          if(!meta._register_render){
+            meta._register_render = function(scope, target, changeHandler){
+              var path = this._target_path;
+              var observer = scope.registerPathObserver(path, function(newValue, oldValue){
+                changeHandler(target, newValue, oldValue);
+              });
+              return function(){
+                changeHandler(target, Path.get(path).getValueFrom(scope), undefined);
+              }
+            }
+          }
+          if(!meta._on_dom_change){//even we do not need it
+            meta._on_dom_change = function(scope, value){
+              var path = Path.get(this._target_path);
+              path.setValueFrom(scope, value);
+            }
+          }
+          
+          //revive _selector because we will need it later
+          meta._selector = meta._selector_after_attr_op;
+          
+          
         }
       },
       _render : {
-        priority : 10000000 -300, // a little smaller than bigger
+        priority : 10000000 -400, // a little smaller than bigger
         fn : function (meta) {
           if(!meta._on_change){
-            meta._on_change = function(bindContext, newValue, oldValue){
-              var target = bindContext
-              meta._render(context, newValue, oldValue);
-            }
+            meta._on_change = meta._render;
           }
         }
       },
       _register_render : {
-        priority : 10000000 - 200, // a little smaller than bigger
+        priority : 10000000 - 300, // a little smaller than bigger
         fn : function (meta) {
           if(!meta._register_on_change){
-            meta._register_on_change = function(bindContext){
+            var _register_render = meta._register_render;
+            var _selector = meta._selector_keep_to_final;
+            meta._register_on_change = function(bindContext, changeHandler){
               var snippet = bindContext;
-              meta._register_render(snippet._scope, meta._target_path, ?);
-            }
-          }
-          if (meta._selector) {
-            //rewrite selector to extract attr operations
-            var attrOpIndex = meta._selector.indexOf("@>");
-            if (attrOpIndex >= 0) {
-              meta._attr_op = meta._selector.substr(attrOpIndex + 2);
-              meta._selector = meta._selector.substring(0, attrOpIndex);
+              var scope = snippet._scope;
+              var target = snippet._root.find(this._selector);
+              return _register_render.call(this, scope, target, changeHandler);
             }
           }
         }
       },
-      _assign : {
+      _on_dom_change : {
+        priority : 10000000 - 200, // a little smaller than bigger
+        fn : function (meta) {
+          if(!meta._assign){
+            meta._assign = meta._on_dom_change;
+          }
+        }
+      },
+      _register_on_dom_change : {
         priority : 10000000 - 100, // a little smaller than bigger
         fn : function (meta) {
-          if (meta._selector) {
-            //rewrite selector to extract attr operations
-            var attrOpIndex = meta._selector.indexOf("@>");
-            if (attrOpIndex >= 0) {
-              meta._attr_op = meta._selector.substr(attrOpIndex + 2);
-              meta._selector = meta._selector.substring(0, attrOpIndex);
+          if (!meta._register_assign) {
+            var _register_on_dom_change = meta._register_on_dom_change;
+            meta._register_assign = function(bindContext, changeHandler){
+              var snippet = bindContext;
+              var root = snippet._root;
+              var target = root.find(this._selector);
+              return _register_on_dom_change.call(this, target, changeHandler);
             }
           }
         }
       },
-      _register_assign : {
+      /*
+      _selector_keep_to_final : {
         priority : 10000000, // a little smaller than bigger
-        fn : function (meta) {
-          if (meta._selector) {
-            //rewrite selector to extract attr operations
-            var attrOpIndex = meta._selector.indexOf("@>");
-            if (attrOpIndex >= 0) {
-              meta._attr_op = meta._selector.substr(attrOpIndex + 2);
-              meta._selector = meta._selector.substring(0, attrOpIndex);
-            }
-          }
-        }
-      },
+        fn : function(){} //do nothing
+      }
+      */
     },
     scopeCreate: function(){
       return new Scope();
@@ -130,7 +153,7 @@
     
     var array = new Array();
     for (var k in Aj.config.metaRewritter) {
-      var def = Aj.config.metaFieldRewritter[k];
+      var def = Aj.config.metaRewritter[k];
       var _priority = null;
       var _fn = null;
       var _key = null;
@@ -333,34 +356,46 @@
       case "_value":
         //now we will call the registered meta rewritter to rewrite the meta
         
-        __getOrderedValueMetaRewritter().forEach(function (mr) {
-          var m = meta[mr.key];
+        __getOrderedMetaRewritter().forEach(function (mr) {
+          var m = newMeta[mr.key];
           if (m !== undefined && m !== null) {
-            mr.fn(meta);
-            meta[mr.key] = null;
-            delete meta[mr.key];
+            mr.fn(newMeta);
+            newMeta[mr.key] = null;
+            delete newMeta[mr.key];
           }
         });
-
-        /*
-        if (!meta._on_change) {
-          meta._render = function (target, newValue, oldValue) {
-            target.text(newValue);
-          };
-        }
-        */
         
-        if(!meta._register_on_change){
-          meta._register_on_change = function (bindContext, onChange) {
-            var snippet = bindContext;
-            var scope = snippet._scope;
-            var path = meta._target_path;
-            var observer = new PathObserver(scope, path);
-            observer.open(function (newValue, oldValue) {
-              onChange(newValue, oldValue);
-            });
+        if(newMeta._on_change){
+          if(!newMeta._register_on_change){
+            //by default, we treat the bindContext as scope
+            newMeta._register_on_change = function (bindContext, changeHandler) {
+              var scope = bindContext;
+              var observer = scope.registerPathObserver(this._target_path, function(newValue, oldValue){
+                changeHandler(bindContext, newValue, oldValue);
+              });
+              if(bindContext.addDiscardHook){
+                bindContext.addDiscardHook(function(){
+                  observer.close();
+                })
+              }
+              return function(){
+                var path = Path.get(this._target_path);
+                changeHandler(scope, path.getValueFrom(scope), undefined);
+              };
+            };
+          }
+        }
+        
+        if(!newMeta._assign){//set default assign even we do not need it
+          newMeta._assign = function (bindContext, value){
+            var scope = bindContext;
+            var path = Path.get(this._target_path);
+            path.setValueFrom(scope, value);
           };
         }
+        
+        
+        //if(meta._assign && !meta._)
       break;
       case "_prop":
         for(var p in newMeta){
@@ -375,24 +410,123 @@
     }
     return newMeta;
   };
-  var __bindMeta = function(scope, meta, bindContext){
+  var __bindMeta = function(meta, bindContext){
     console.log(meta);
+    if(Array.isArray(meta)){
+      meta.forEach(function(m){
+        __bindMeta(m, bindContext);
+      });
+      return;
+    }
+    var nonRecursive = ["_value", "_splice"];
+    for(var i in nonRecursive){
+      var sub = meta[nonRecursive[i]];
+      if(!sub){
+        continue;
+      }
+      sub.forEach(function(sm){
+        if(sm._register_on_change){
+          var force = sm._register_on_change(bindContext, sm._on_change);
+          force.apply();
+        }
+        if(sm._register_assign){
+          var force = sm._register_assign(bindContext, function(){
+            sm._assign.apply(sm, arguments);
+            Aj.sync();
+          });
+          //force.apply
+        }
+      });
+    }
+    
+    var propSub = meta._prop;
+    if(!propSub){
+      return;
+    }
+    propSub.forEach(function(ps){
+      for(var p in ps){
+        var pm = ps[p];
+        if(!pm){
+          continue;
+        }
+        __bindMeta(pm, bindContext);
+      }
+    });
+    
+
   };
   
-  var Scope = function(){};
-  Scope.prototype.snippet = function(){
-    
+  var ObserverMap = function(){
+    this.map = {};
   };
+  
+  ObserverMap.prototype.add = function(path, observer){
+    var item = {
+      prev: null,
+      next: null,
+      close: function(){
+        observer.close();
+        if(this.prev){
+          this.prev.next = this.next;
+        }
+        if(this.next){
+          this.next.prev = this.prev;
+        }
+      }
+    };
+    var head = this.map[path];
+    if(!head){
+      head = {
+        prev: null,
+        next: null,
+        close: function(){}
+      };
+      head.prev = head;
+      head.next = head;
+      this.map[path] = head;
+    }
+    var tail = head.prev;
+    
+    tail.next = item;
+    
+    item.prev = tail;
+    item.next = head;
+    
+    head.prev = item;
+    
+
+  }
+  
+  var Scope = function(){
+    this.observerMap = {
+      path: new ObserverMap(),
+      splice: new ObserverMap()
+    };
+  };
+
+  Scope.prototype.registerPathObserver = function(path, changeFn){
+    var observer = new PathObserver(this, path);
+    observer.open(changeFn);
+    return this.observerMap.path.add(path, observer);
+  };
+  
+  Scope.prototype.registerArrayObserver = function(path, targetObj, changeFn){
+    var observer = new ArrayObserver(targetObj);
+    observer.open(changeFn);
+    return this.observerMap.path.add(path, observe);
+  };
+
   Scope.prototype.observe = function(varRef, meta, bindContext){
     var refPath = __determineRefPath(this, varRef);
     var rewittenMeta = __rewriteObserverMeta(refPath, meta);
-    __bindMeta(this, rewittenMeta, bindContext);
-  }
+    __bindMeta(rewittenMeta, bindContext ? bindContext : this);
+  };
   
   Scope.prototype.snippet = function(selector){
     var root = $(selector);
     return new Snippet(this, root);
-  }
+  };
+  
   
   var Snippet = function(scope, root, parentSnippet, arrayIndex){
     this._scope = scope;
@@ -401,7 +535,7 @@
     this._index = arrayIndex;
     
     this._subSnippets = [];
-    this._observers = [];
+    this._discardHooks = [];
     
     if(parentSnippet){
       parentSnippet._subSnippets.push(this);
@@ -422,19 +556,23 @@
     }
   };
   
+  Snippet.prototype.addDiscardHook = function(hook){
+    this._discardHooks.push(hook);
+  }
+  
   Snippet.prototype.discard = function(){
     //_root.remove();
-    for(var i=0;i<this._observers.length){
-      this._observers[i].close();
+    for(var i=0;i<this._discardHooks.length;i++){
+      this._discardHooks[i]();
     }
-    for(var i=0;i<this._subSnippets.length){
+    for(var i=0;i<this._subSnippets.length;i++){
       this._subSnippets[i].discard();
     }
-  }
+  };
 
   Snippet.prototype.bind = function(varRef, meta){
     this._scope.observe(varRef, meta, this);
-  }
+  };
   
   var __determineRefPath = function (scope, varRef) {
     var searchKey = "ashfdpnasvdnoaisdfn3423#$%$#$%0as8d23nalsfdasdf";

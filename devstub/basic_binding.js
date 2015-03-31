@@ -3,7 +3,11 @@ $(function(){
   Aj.init(function($scope){
     console.log($scope);
     
-    $scope.data = {};
+    $scope.data = {
+      sub: {
+        rr: "rrr-haha"
+      }
+    };
     $scope.snippet("body")
           .bind($scope.data, {
             value:[
@@ -13,11 +17,10 @@ $(function(){
                 _render: function(target, newValue, oldValue){
                   target.val(newValue);
                 },
-                _register_assign: function(target, onChange){
+                _register_on_dom_change : function(target, changeHandler){
                   target.keyup(function(){
                     var v = $(this).val();
-                    onChange(v);
-                    Platform.performMicrotaskCheckpoint();
+                    changeHandler($scope, v);
                   });
                 }
               },
@@ -27,11 +30,10 @@ $(function(){
                 _render: function(target, newValue, oldValue){
                   target.val(newValue);
                 },
-                _register_assign: function(target, onChange){
+                _register_on_dom_change: function(target, changeHandler){
                   target.keyup(function(){
                     var v = $(this).val();
-                    onChange(v);
-                    Platform.performMicrotaskCheckpoint();
+                    changeHandler($scope, v);
                   });
                 }
               },
@@ -42,7 +44,7 @@ $(function(){
               rr: ".x-recursive-value"
             }
           });
-    
+    /*
     $scope.observe($scope.data, {
       values : {
         _splice: function(){},
@@ -52,6 +54,7 @@ $(function(){
         }
       }
     });
+    */
     
   });
 
