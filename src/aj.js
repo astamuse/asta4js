@@ -51,7 +51,98 @@
           meta._selector_after_attr_op = meta._selector;
         }
       },
-      //missing _attr_op
+      _attr_op : {
+        priority : 10000000 - 600, // bigger than bigger
+        fn : function (meta){
+          var attrOp = meta._attr_op;
+          //set default 1 way binding
+          if (!meta._render && attrOp) {
+            var attrRegs = [{
+                comment : "style equal",
+                reg : /^\[style\:(.+)=\]$/,
+                renderFn : function (matched) {
+                  return function (target, newValue, oldValue) {
+                    target.css(matched, newValue);
+                  };
+                }
+              }, {
+                comment : "class switch",
+                reg : /^\[class:\((.+)\)\?\]$/,
+                renderFn : function (matched) {
+                  var classes = matched.split("|");
+                  return function (target, newValue, oldValue) {
+                    if (newValue === undefined
+                       || newValue === ""
+                       || newValue == null
+                       || classes.indexOf(newValue) >= 0) {
+                      classes.forEach(function (c) {
+                        target.removeClass(c);
+                      });
+                      if (newValue) {
+                        target.addClass(newValue);
+                      }
+                    } else {
+                      throw "the specified css class name:'"
+                       + newValue
+                       + "' is not contained in the declared switching list:"
+                       + originalMeta._selector;
+                    }
+                  };
+                }
+              }, {
+                comment : "class existing",
+                reg : /^\[class:(.+)\?\]$/,
+                renderFn : function (matched) {
+                  return function (target, newValue, oldValue) {
+                    if (newValue) {
+                      target.addClass(matched);
+                    } else {
+                      target.removeClass(matched);
+                    }
+                  };
+                }
+              }, {
+                comment : "attr equal",
+                reg : /^\[(.+)=\]$/,
+                renderFn : function (matched) {
+                  return function (target, newValue, oldValue) {
+                    target.attr(matched, newValue);
+                  };
+                }
+              }, {
+                comment : "attr existing",
+                reg : /^\[(.+)\?\]$/,
+                renderFn : function (matched) {
+                  return function (target, newValue, oldValue) {
+                    target.prop(matched, newValue);
+                  };
+                }
+              }
+            ];
+
+            var renderFn = null;
+            console.log("attrOp=" + attrOp);
+            for (var i = 0; i < attrRegs.length; i++) {
+              var attrReg = attrRegs[i];
+              var matchResult = attrReg.reg.exec(attrOp);
+              if (matchResult) {
+                console.log("matched");
+                console.log(attrReg);
+                var matched = matchResult[1];
+                renderFn = attrReg.renderFn(matched);
+                break;
+              }
+              //console.log("not matched");
+            }
+
+            if (renderFn) {
+              meta._render = renderFn;
+            } else {
+              throw "not supported attr operation:" + attrOp;
+            }
+          }
+        }
+      }, // end _attr_op
       _selector_after_attr_op : {
         priority : 10000000 - 500, 
         fn : function (meta) {
