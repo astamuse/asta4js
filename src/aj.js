@@ -28,7 +28,9 @@
       }
     },
     metaFieldClassifier : function (fieldName, metaId) {
-      if (fieldName === "_index") {
+      if (fieldName === "_duplicator"){
+        return ["_value", "_splice"];
+      }else if (fieldName === "_index") {
         return "_prop";
       } else if (fieldName === "_splice"){
         return "_splice";
@@ -39,6 +41,127 @@
       }
     },
     metaRewritter: {
+      _duplicator : {
+        fn : function(meta){
+          var _duplicator = meta._duplicator;
+          if(!meta._register_on_change){
+            meta._register_on_change = function(bindContext, changeHandler){
+              var snippet = bindContext;
+              var scope = snippet._scope;
+              var path = this._target_path;
+              var forceChange = [];
+              if(meta._meta_type === "_value"){
+                var target = Aj.util.findWithRoot(snippet._root, _duplicator);
+                if (target.length == 0) {
+                  throw "could not find duplicator:" + originalMeta._duplicator;
+                }
+                
+                target.each(function(index. elem){
+                  var tagName = elem.tagName;
+                  var placeHolderId = Aj.util.createUID();
+                  if( (tagName === "OPTION" || tagName === "OPTGROUP") && $.browser !== "mozilla"){
+                    tagName = "span";
+                  }
+                  var placeHolder = $("<" + tagName + " style='display:none' id='" + placeHolderId + "' value='SFDASF#$#RDFVC%&!#$%%2345sadfasfd'/>");
+                  var $elem = $(elem);
+                  $elem.after(placeHolder);
+
+                  //$elem.attr("aj-placeholder-id",placeHolderId);
+                  //remove the duplicate target
+                  $elem.remove();
+                  $elem.attr("aj-generated", placeHolderId);
+
+                  var templateStr = $("<div>").append($elem).html();
+                  
+                  //set the placeholder id to all the children input elements for the sake of checkbox/radio box option rendering
+                  $elem.find("input").attr("aj-placeholder-id", placeHolderId);
+                  var changeContext = {
+                    _snippet: snippet,
+                    _target: target,
+                    _placeHolder: placeHolder,
+                    _temlateStr: templateStr,
+                  };
+                  var observer = scope.registerPathObserver(path, function(newValue, oldValue){
+                    changeHandler(changeContext, newValue, oldValue);
+                  });
+                  snippet._discardHooks.push(function(){
+                    observer.close();
+                  });
+                  forceChange.push(function(){
+                    var v = Path.get(path).getValueFrom(scope);
+                    changeHandler(changeContext, v, undefined);
+                  });
+                });//end target each
+              }
+
+              return function(){
+                forceChange.forEach(function(f){
+                  f.apply();
+                });
+              }
+            }
+          }
+          if(!meta._on_change){
+            meta._on_change = function(context, newValue, oldValue){
+              var snippet = context._snippet;
+              var target = context._target;
+              var placeHolder = context._placeHolder;
+              var templateStr = context._templateStr;
+              var currentPath = this._target_path;
+              
+              var regularOld = Aj.util.regulateArray(oldValue);
+              var regularNew = Aj.util.regulateArray(newValue);
+              
+              var existingNodes = snippet._root.find("[aj-generated=" + placeHolderId + "]");
+
+              var newLength = regularNew.length;
+              var nodeLength = existingNodes.length;
+
+              var i = 0; // loop for value
+              var j = 0; // loop for node
+
+              var insertPoint = placeHolder;
+
+              //we will diff the old and new and try our best to reuse the existing DOMs
+              for (; i < newLength && j < nodeLength; i++, j++) {
+                var childPath = propertyPath + "[" + i + "]";
+                var childElem = $(existingNodes.get(j));
+                //todo retrieve the existing observer and onChange event handler
+
+                console.log("bind childpath:" + childPath);
+                console.log(childMeta);
+
+                //recursive binding
+                var childSnippet = new Snippet(snippet._scope, childElem, snippet, i);
+                snippet._scope.bindMeta(this._item, childSnippet)
+
+                insertPoint = childElem;
+              } // end i,j
+
+              for (; i < newLength; i++) {
+                var childElem = $(templateStr);
+                insertPoint.after(childElem);
+
+                console.log("bind childpath:" + childPath);
+                console.log(childMeta);
+
+                //recursive binding
+                var childSnippet = new Snippet(snippet._scope, childElem, snippet, i);
+                snippet._scope.bindMeta(this._item, childSnippet)
+
+                insertPoint = childElem;
+              } // end i
+
+              for (; j < nodeLength; j++) {
+                var childElem = existingNodes.get(j);
+                //todo retrieve the existing observer and onChange event handler
+                childElem.remove();
+              }
+            }
+          }
+          
+        }
+      },
       _selector : {
         priority : 10000000 - 700, 
         fn : function (meta) {
@@ -152,10 +275,14 @@
             };
           }
           if(!meta._register_render){
-            meta._register_render = function(scope, target, changeHandler){
+            meta._register_render = function(snippet, target, changeHandler){
+              var scope = snippet._scope;
               var path = this._target_path;
               var observer = scope.registerPathObserver(path, function(newValue, oldValue){
                 changeHandler(target, newValue, oldValue);
+              });
+              snippet._discardHooks.push(function(){
+                observer.close();
               });
               return function(){
                 changeHandler(target, Path.get(path).getValueFrom(scope), undefined);
@@ -163,9 +290,9 @@
             }
           }
           if(!meta._on_dom_change){//even we do not need it
-            meta._on_dom_change = function(scope, value){
+            meta._on_dom_change = function(snippet, value){
               var path = Path.get(this._target_path);
-              path.setValueFrom(scope, value);
+              path.setValueFrom(snippet._scope, value);
             }
           }
           
@@ -191,9 +318,8 @@
             var _selector = meta._selector_keep_to_final;
             meta._register_on_change = function(bindContext, changeHandler){
               var snippet = bindContext;
-              var scope = snippet._scope;
               var target = snippet._root.find(this._selector);
-              return _register_render.call(this, scope, target, changeHandler);
+              return _register_render.call(this, snippet, target, changeHandler);
             }
           }
         }
@@ -215,7 +341,7 @@
               var snippet = bindContext;
               var root = snippet._root;
               var target = root.find(this._selector);
-              return _register_on_dom_change.call(this, target, changeHandler);
+              return _register_on_dom_change.call(this, snippet, target, changeHandler);
             }
           }
         }
@@ -316,6 +442,18 @@
       array[index1] = array[index2];
       array[index2] = tmp;
     },
+    findWithRoot: function(rootElem, selector){
+      if(selector === ":root"){
+        return rootElem;
+      }
+      var result = rootElem.find(selector);
+      if(result.length === 0){
+        if(rootElem.is(selector)){
+          return rootElem;
+        }
+      }
+      return result;
+    }
   };
   
   var __element_ref_map = {};
@@ -416,14 +554,24 @@
             continue;
           }
           var moveTarget = Aj.config.metaFieldClassifier(k);
-          var targetRef = subRefs[moveTarget];
-          if(targetRef){
-            targetRef[k] = newMeta[k];
-            newMeta[k] = null;
-            delete newMeta[k];
-          }else{
-            throw "metaFieldClassifier can only return '_value' or '_prop' or '_splice' rather than '" + moveTarget + "'";
+          
+          if(!Array.isArray(moveTarget)){
+            moveTarget = [moveTarget];
           }
+          for(var i=0;i<moveTarget.length;i++){
+            var targetRef = subRefs[moveTarget[i]];
+            if(targetRef){
+              if(i > 0){
+                targetRef[k] = Aj.util.clone(newMeta[k]);
+              }else{
+                targetRef[k] = newMeta[k];
+              }
+            }else{
+              throw "metaFieldClassifier can only return '_value' or '_prop' or '_splice' rather than '" + moveTarget[i] + "'";
+            }
+          }
+          newMeta[k] = null;
+          delete newMeta[k];
         }
         for(var subIdx in subMetas){
           var subMetak = subMetas[subIdx];
@@ -447,6 +595,15 @@
       case "_value":
         //now we will call the registered meta rewritter to rewrite the meta
         
+        if(newMeta._meta_type === "_value"){
+          //array binding
+          var itemMeta = newMeta._item;
+          if(itemMeta){
+            var itemPath = newMeta._target_path + "[?]";
+            newMeta._item = __rewriteObserverMeta(itemPath, itemMeta, newMeta._meta_id);
+          }
+        }
+        
         __getOrderedMetaRewritter().forEach(function (mr) {
           var m = newMeta[mr.key];
           if (m !== undefined && m !== null) {
@@ -461,9 +618,13 @@
             //by default, we treat the bindContext as scope
             newMeta._register_on_change = function (bindContext, changeHandler) {
               var scope = bindContext;
-              var observer = scope.registerPathObserver(this._target_path, function(newValue, oldValue){
-                changeHandler(bindContext, newValue, oldValue);
-              });
+              if(newMeta._meta_type === "_value"){
+                var observer = scope.registerPathObserver(this._target_path, function(newValue, oldValue){
+                  changeHandler(bindContext, newValue, oldValue);
+                });
+              }else{
+                
+              };
               if(bindContext.addDiscardHook){
                 bindContext.addDiscardHook(function(){
                   observer.close();
@@ -501,51 +662,7 @@
     }
     return newMeta;
   };
-  var __bindMeta = function(meta, bindContext){
-    console.log(meta);
-    if(Array.isArray(meta)){
-      meta.forEach(function(m){
-        __bindMeta(m, bindContext);
-      });
-      return;
-    }
-    var nonRecursive = ["_value", "_splice"];
-    for(var i in nonRecursive){
-      var sub = meta[nonRecursive[i]];
-      if(!sub){
-        continue;
-      }
-      sub.forEach(function(sm){
-        if(sm._register_on_change){
-          var force = sm._register_on_change(bindContext, sm._on_change);
-          force.apply();
-        }
-        if(sm._register_assign){
-          var force = sm._register_assign(bindContext, function(){
-            sm._assign.apply(sm, arguments);
-            Aj.sync();
-          });
-          //force.apply
-        }
-      });
-    }
-    
-    var propSub = meta._prop;
-    if(!propSub){
-      return;
-    }
-    propSub.forEach(function(ps){
-      for(var p in ps){
-        var pm = ps[p];
-        if(!pm){
-          continue;
-        }
-        __bindMeta(pm, bindContext);
-      }
-    });
-    
 
-  };
   
   var ObserverMap = function(){
     this.map = {};
@@ -610,7 +727,52 @@
   Scope.prototype.observe = function(varRef, meta, bindContext){
     var refPath = __determineRefPath(this, varRef);
     var rewittenMeta = __rewriteObserverMeta(refPath, meta);
-    __bindMeta(rewittenMeta, bindContext ? bindContext : this);
+    this.bindMeta(rewittenMeta, bindContext ? bindContext : this);
+  };
+  
+  Scope.prototype.bindMeta = function(meta, bindContext){
+    console.log(meta);
+    var THIS = this;
+    if(Array.isArray(meta)){
+      meta.forEach(function(m){
+        THIS.bindMeta(m, bindContext);
+      });
+      return;
+    }
+    var nonRecursive = ["_value", "_splice"];
+    for(var i in nonRecursive){
+      var sub = meta[nonRecursive[i]];
+      if(!sub){
+        continue;
+      }
+      sub.forEach(function(sm){
+        if(sm._register_on_change){
+          var force = sm._register_on_change(bindContext, sm._on_change);
+          force.apply();
+        }
+        if(sm._register_assign){
+          var force = sm._register_assign(bindContext, function(){
+            sm._assign.apply(sm, arguments);
+            Aj.sync();
+          });
+          //force.apply
+        }
+      });
+    }
+    
+    var propSub = meta._prop;
+    if(!propSub){
+      return;
+    }
+    propSub.forEach(function(ps){
+      for(var p in ps){
+        var pm = ps[p];
+        if(!pm){
+          continue;
+        }
+        THIS.bindMeta(pm, bindContext);
+      }
+    });
   };
   
   Scope.prototype.snippet = function(selector){
@@ -624,6 +786,7 @@
     this._root = root;
     this._parentSnippet = parentSnippet;
     this._index = arrayIndex;
+    this._discarded = false;
     
     this._subSnippets = [];
     this._discardHooks = [];
@@ -659,6 +822,7 @@
     for(var i=0;i<this._subSnippets.length;i++){
       this._subSnippets[i].discard();
     }
+    this._discarded = true;
   };
 
   Snippet.prototype.bind = function(varRef, meta){

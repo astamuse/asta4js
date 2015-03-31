@@ -14,10 +14,10 @@ $(function () {
             _render : function (target, newValue, oldValue) {
               target.val(newValue);
             },
-            _register_assign : function (target, onChange) {
+            _register_assign : function (target, changeHandler) {
               target.keyup(function () {
                 var v = $(this).val();
-                onChange(v);
+                changeHandler($scope, v);
               });
             }
           },
@@ -31,6 +31,7 @@ $(function () {
         length : ".x-length"
       }
     })
+    /*
     .on("click", ".x-add", function () {
       var currentIndex = parseInt($(this).attr("aIndex"));
       $scope.data.list.splice(currentIndex + 1, 0, "added value" + new Date());
@@ -51,6 +52,7 @@ $(function () {
         Aj.util.arraySwap($scope.data.list, currentIndex, currentIndex + 1);
       }
     });
+    */
 
     $("#set-value").click(function () {
       var v = $("#data-input").val();
