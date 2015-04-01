@@ -623,6 +623,9 @@ var Aj = {
             continue;
           }
           var m = originalMeta[p];
+          if(m.nonMeta){
+            continue;
+          }
           if (p === "_index") {
             this.bindMeta(p, m, arrayIndex);
           } else {
@@ -972,12 +975,20 @@ var Aj = {
 
     
     var valueFn = itemDef._value ? itemDef._value : function (v) {
-      return v;
+      if(v.value){
+        return v.value;
+      }else{
+        return v;
+      }
     };
     delete itemDef._value;
 
     var textFn = itemDef._text ? itemDef._text : function (v) {
-      return v;
+      if(v.text){
+        return v.text;
+      }else{
+        return v;
+      }
     };
     delete itemDef._text;
 
@@ -1226,6 +1237,14 @@ Aj.form = function(target, event1, event2){
     ret._form._default_change_event = defaultChangeEvent;
   }
   ret._form._extra_change_events = extraChangeEvents;
+  
+  ret.withOption = function(optionVarRef, optionMeta){
+    this._form._option = Aj.optionBind(optionVarRef, optionMeta);
+    return this;
+  }
+  
+  ret.withOption.nonMeta = true;
+  
   return ret;
 }
 Aj.form.singleCheck=function(){

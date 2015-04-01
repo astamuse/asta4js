@@ -30,18 +30,12 @@ $(function () {
         }
       ],
       sex : [
-        "#sex-pre", {
-          _form : {
-            _name: "sex",
-            _option: Aj.optionBind($scope.dataOption, {
-              genders: {
-                _duplicator: ".x-sex-group",
-                _value: function(v){return v.value;},
-                _text: function(v){return v.name;}
-              }
-            })
+        "#sex-pre", 
+        Aj.form().withOption($scope.dataOption,{
+          genders: {
+            _duplicator: ".x-sex-group"
           }
-        }
+        })
       ],
       language : [
         "#language-pre", {
