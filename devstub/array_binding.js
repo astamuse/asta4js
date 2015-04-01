@@ -14,7 +14,7 @@ $(function () {
             _render : function (target, newValue, oldValue) {
               target.val(newValue);
             },
-            _register_assign : function (target, changeHandler) {
+            _register_on_dom_change : function (snippet, target, changeHandler) {
               target.keyup(function () {
                 var v = $(this).val();
                 changeHandler($scope, v);

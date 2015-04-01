@@ -56,7 +56,7 @@
                   throw "could not find duplicator:" + originalMeta._duplicator;
                 }
                 
-                target.each(function(index. elem){
+                target.each(function(index, elem){
                   var tagName = elem.tagName;
                   var placeHolderId = Aj.util.createUID();
                   if( (tagName === "OPTION" || tagName === "OPTGROUP") && $.browser !== "mozilla"){
@@ -79,16 +79,17 @@
                     _snippet: snippet,
                     _target: target,
                     _placeHolder: placeHolder,
-                    _temlateStr: templateStr,
+                    _templateStr: templateStr,
                   };
-                  var observer = scope.registerPathObserver(path, function(newValue, oldValue){
+                  var observerPath = __replaceIndexesInPath(path, snippet._indexes);
+                  var observer = scope.registerPathObserver(observerPath, function(newValue, oldValue){
                     changeHandler(changeContext, newValue, oldValue);
                   });
                   snippet._discardHooks.push(function(){
                     observer.close();
                   });
                   forceChange.push(function(){
-                    var v = Path.get(path).getValueFrom(scope);
+                    var v = Path.get(observerPath).getValueFrom(scope);
                     changeHandler(changeContext, v, undefined);
                   });
                 });//end target each
@@ -102,66 +103,64 @@
             }
           }
           if(!meta._on_change){
-            meta._on_change = function(context, newValue, oldValue){
-              var snippet = context._snippet;
-              var target = context._target;
-              var placeHolder = context._placeHolder;
-              var templateStr = context._templateStr;
-              var currentPath = this._target_path;
-              
-              var regularOld = Aj.util.regulateArray(oldValue);
-              var regularNew = Aj.util.regulateArray(newValue);
-              
-              var existingNodes = snippet._root.find("[aj-generated=" + placeHolderId + "]");
+            if(meta._meta_type === "_value"){
+              meta._on_change = function(context, newValue, oldValue){
+                var snippet = context._snippet;
+                var target = context._target;
+                var placeHolder = context._placeHolder;
+                var templateStr = context._templateStr;
+                var currentPath = this._target_path;
+                
+                var regularOld = Aj.util.regulateArray(oldValue);
+                var regularNew = Aj.util.regulateArray(newValue);
+                
+                //var existingNodes = snippet._root.find("[aj-generated=" + placeHolderId + "]");
+                var existingSubSnippets = __getDataRef(placeHolder, "aj-place-holder-ref").subSnippets;
+                if(!existingSubSnippets){
+                  existingSubSnippets = [];
+                  __getDataRef(placeHolder, "aj-place-holder-ref").subSnippets = existingSubSnippets;
+                }
 
-              var newLength = regularNew.length;
-              var nodeLength = existingNodes.length;
+                var newLength = regularNew.length;
+                var existingLength = existingSubSnippets.length;
 
-              var i = 0; // loop for value
-              var j = 0; // loop for node
+   
 
-              var insertPoint = placeHolder;
+                var insertPoint = placeHolder;
+                if(existingLength > 0){
+                  insertPoint = existingSubSnippets[existingLength-1]._root;
+                }
+                
+                //add new snippets
+                for (var i=existingLength; i < newLength; i++) {
+                  var childElem = $(templateStr);
+                  insertPoint.after(childElem);
 
-              //we will diff the old and new and try our best to reuse the existing DOMs
-              for (; i < newLength && j < nodeLength; i++, j++) {
-                var childPath = propertyPath + "[" + i + "]";
-                var childElem = $(existingNodes.get(j));
-                //todo retrieve the existing observer and onChange event handler
+                  //recursive binding
+                  var childSnippet = new Snippet(snippet._scope, childElem, snippet, i);
+                  snippet._scope.bindMeta(this._item, childSnippet)
+                  insertPoint = childElem;
+                  
+                  existingSubSnippets.push(childSnippet);
 
-                console.log("bind childpath:" + childPath);
-                console.log(childMeta);
+                } // end i
 
-                //recursive binding
-                var childSnippet = new Snippet(snippet._scope, childElem, snippet, i);
-                snippet._scope.bindMeta(this._item, childSnippet)
-
-                insertPoint = childElem;
-              } // end i,j
-
-              for (; i < newLength; i++) {
-                var childElem = $(templateStr);
-                insertPoint.after(childElem);
-
-                console.log("bind childpath:" + childPath);
-                console.log(childMeta);
-
-                //recursive binding
-                var childSnippet = new Snippet(snippet._scope, childElem, snippet, i);
-                snippet._scope.bindMeta(this._item, childSnippet)
-
-                insertPoint = childElem;
-              } // end i
-
-              for (; j < nodeLength; j++) {
-                var childElem = existingNodes.get(j);
-                //todo retrieve the existing observer and onChange event handler
-                childElem.remove();
-              }
+                //remove redundant snippets
+                for (var j=existingLength-1; j >= newLength; j--) {
+                  existingSubSnippets[j].discard();
+                }
+                
+                if(existingLength>newLength){
+                  existingSubSnippets.splice(newLength-1, existingLength - newLength);
+                  snippet.removeDiscardedSubSnippets();
+                }
+              }//end meta._on_change
+            }else{
+              meta._on_change = function(){};
             }
           }
-          
-        }
-      },
+        }//end fn
+      },//end _duplicator
       _selector : {
         priority : 10000000 - 700, 
         fn : function (meta) {
@@ -278,20 +277,22 @@
             meta._register_render = function(snippet, target, changeHandler){
               var scope = snippet._scope;
               var path = this._target_path;
-              var observer = scope.registerPathObserver(path, function(newValue, oldValue){
+              var observerPath = __replaceIndexesInPath(path, snippet._indexes);
+              var observer = scope.registerPathObserver(observerPath, function(newValue, oldValue){
                 changeHandler(target, newValue, oldValue);
               });
               snippet._discardHooks.push(function(){
                 observer.close();
               });
               return function(){
-                changeHandler(target, Path.get(path).getValueFrom(scope), undefined);
+                changeHandler(target, Path.get(observerPath).getValueFrom(scope), undefined);
               }
             }
           }
           if(!meta._on_dom_change){//even we do not need it
             meta._on_dom_change = function(snippet, value){
-              var path = Path.get(this._target_path);
+              var observerPath = __replaceIndexesInPath(this._target_path, snippet._indexes);
+              var path = Path.get(observerPath);
               path.setValueFrom(snippet._scope, value);
             }
           }
@@ -711,6 +712,15 @@
       splice: new ObserverMap()
     };
   };
+  
+  var __replaceIndexesInPath=function(path, replaceIndexes){
+    if(replaceIndexes){
+      for(var i=0;i<replaceIndexes.length;i++){
+        path = path.replace("?", replaceIndexes[i]);
+      }
+    }
+    return path;
+  }
 
   Scope.prototype.registerPathObserver = function(path, changeFn){
     var observer = new PathObserver(this, path);
@@ -747,7 +757,9 @@
       }
       sub.forEach(function(sm){
         if(sm._register_on_change){
-          var force = sm._register_on_change(bindContext, sm._on_change);
+          var force = sm._register_on_change(bindContext, function(){
+            sm._on_change.apply(sm, arguments);
+          });
           force.apply();
         }
         if(sm._register_assign){
@@ -798,10 +810,11 @@
       }
     }
     
-    if(this._index){
-      if(this._indexes){
-        this._indexes.push(this._index);
+    if(this._index || this._index === 0){
+      if(!this._indexes){
+        this._indexes = [];
       }
+      this._indexes.push(this._index);
     }
 
     if(root.length == 0){
@@ -815,7 +828,7 @@
   }
   
   Snippet.prototype.discard = function(){
-    //_root.remove();
+    _root.remove();
     for(var i=0;i<this._discardHooks.length;i++){
       this._discardHooks[i]();
     }
@@ -823,6 +836,14 @@
       this._subSnippets[i].discard();
     }
     this._discarded = true;
+  };
+  
+  Snippet.prototype.removeDiscardedSubSnippets = function(){
+    for(var i=this._subSnippets.length-1;i>=0;i--){
+      if(this._subSnippets[i]._discarded){
+        this._subSnippets[i].splice(i, 1);
+      }
+    }
   };
 
   Snippet.prototype.bind = function(varRef, meta){
