@@ -18,3 +18,10 @@
     })
     
     
+    
+      name : Aj.form(),
+      bloodType : Aj.form().withOption($scope.dataOption,"bloodTypes"),
+      sex : Aj.form("sex", "click").withOption($scope.dataOption,"genders", ".x-sex-group"),
+      language : Aj.form({name:"language"}, "click").withOption($scope.dataOption,"languages", ".x-lang-group"),
+      "private": Aj.form({}, "click").asSingleCheck(),
+      desc : Aj.form({selector: "[name=desc]"})

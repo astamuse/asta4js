@@ -1286,11 +1286,13 @@ Aj.form.singleCheck=function(){
   return ret;
 }
 
+/*
 Aj.form.optionText=function(optionData, targetField, convertFns){
   return null;
 }
+*/
 
-Aj.form.optionTextSearch=function(optionData, searchValue, convertFns){
+Aj.form.optionText=function(optionData, searchValue, convertFns){
   if(!Array.isArray(optionData)){
     return undefined;
   }
