@@ -88,7 +88,11 @@ var Aj = {
               }
               if(type === "checkbox" || type === "radio"){
                 if(formDef._single_check){
-                  target.prop("checked", newValue);
+                  if(newValue){
+                    target.prop("checked", true);
+                  }else{
+                    target.prop("checked", false);
+                  }
                 }else{
                   var va = Aj.util.regulateArray(newValue);
                   if(type === "radio" && va.length > 1){
@@ -102,11 +106,17 @@ var Aj = {
                   root.find("[aj-diverge-value=" + placeHolderId + "]").remove();
                   
                   //find out all the existing options
-                  var ops = root.find("[aj-generated=" + placeHolderId + "]").prop("checked", false);
+                  var ops = root.find("[aj-generated=" + placeHolderId + "]");
+                  Aj.util.findWithRoot(ops, "input[type="+type+"]").prop("checked", false);
                   va.forEach(function(v){
-                    var foundInput = Aj.util.findWithRoot(ops, "input[value="+v+"]");
+                    if(v === null || v === undefined){
+                      v = "";
+                    }
+                    var foundInput = Aj.util.findWithRoot(ops, "input[value='"+v+"']");
                     if(foundInput.length === 0){
-                      unmatchedValue.push(v);
+                      if(v){
+                        unmatchedValue.push(v);
+                      }
                     }else{
                       foundInput.prop("checked", true);
                     }
@@ -479,6 +489,9 @@ var Aj = {
 
         if (!meta._render) {
           meta._render = function (target, newValue, oldValue) {
+            if(newValue === null || newValue === undefined){
+              newValue = "";
+            }
             target.text(newValue);
           };
         }
@@ -492,6 +505,9 @@ var Aj = {
           meta._register_render = function (_scope, propertyPath, onChange) {
             var observer = new PathObserver(_scope, propertyPath);
             observer.open(function (newValue, oldValue) {
+              if(newValue === null || newValue === undefined){
+                newValue = "";
+              }
               onChange(newValue, oldValue);
             });
           };
@@ -934,7 +950,12 @@ var Aj = {
     } //return snippet
   }, //create snippet
 
-  optionBind : function (_varRef, _meta) {
+  /**
+   * _varRef : binding reference
+   * _meta   : option meta or target binding property name
+   * _meta2  : _duplicator
+   */
+  optionBind : function (_varRef, _meta, _meta2) {
     var varRef = _varRef;
     var meta;
     if (typeof _meta === "string") {
@@ -943,6 +964,13 @@ var Aj = {
     } else {
       meta = Aj.util.clone(_meta);
     }
+    
+    if(typeof _meta2 === "string"){
+      for(var kk in meta){
+        meta[kk]._duplicator = _meta2;
+      }
+    }
+  
 
     var checkKeys = Object.keys(meta);
     if (checkKeys.length !== 1) {
@@ -975,19 +1003,19 @@ var Aj = {
 
     
     var valueFn = itemDef._value ? itemDef._value : function (v) {
-      if(v.value){
-        return v.value;
-      }else{
+      if(v.value === undefined){
         return v;
+      }else{
+        return v.value;
       }
     };
     delete itemDef._value;
 
     var textFn = itemDef._text ? itemDef._text : function (v) {
-      if(v.text){
-        return v.text;
-      }else{
+      if(v.text === undefined){
         return v;
+      }else{
+        return v.text;
       }
     };
     delete itemDef._text;
@@ -1238,19 +1266,81 @@ Aj.form = function(target, event1, event2){
   }
   ret._form._extra_change_events = extraChangeEvents;
   
-  ret.withOption = function(optionVarRef, optionMeta){
-    this._form._option = Aj.optionBind(optionVarRef, optionMeta);
+  ret.withOption = function(){
+    this._form._option = Aj.optionBind.apply(Aj, arguments);
+    return this;
+  }
+  ret.asSingleCheck = function(){
+    this._form._single_check = true;
     return this;
   }
   
   ret.withOption.nonMeta = true;
-  
+  ret.asSingleCheck.nonMeta = true;
+
   return ret;
 }
 Aj.form.singleCheck=function(){
   var ret = Aj.form.apply(Aj, arguments);
   ret._form._single_check = true;
   return ret;
+}
+
+Aj.form.optionText=function(optionData, targetField, convertFns){
+  return null;
+}
+
+Aj.form.optionTextSearch=function(optionData, searchValue, convertFns){
+  if(!Array.isArray(optionData)){
+    return undefined;
+  }
+  var valueArray;
+  if(Array.isArray(searchValue)){
+    valueArray = searchValue;
+  }else{
+    valueArray = [searchValue];
+  }
+  var searchValueFn, valueFn, textFn;
+  if(convertFns){
+    searchValueFn = convertFns._search;
+    valueFn = convertFns._value;
+    textFn = convertFns._text;
+  }
+  if(!valueFn){
+    valueFn = function(v){
+      if(v.value === undefined){
+        return v;
+      }else{
+        return v.value;
+      }
+    };
+  }
+  if(!textFn){
+    textFn = function(v){
+      if(v.text === undefined){
+        return v;
+      }else{
+        return v.text;
+      }
+    };
+  }
+  var resultArray = [];
+  for(var i=0;i<valueArray.length;i++){
+    var sv = valueArray[i];
+    for(var j=0;j<optionData.length;j++){
+      if(valueFn(optionData[j]) == sv){
+        resultArray.push(textFn(optionData[j]));
+        break;
+      }
+    }
+    resultArray.push(undefined);
+  }
+  
+  if(Array.isArray(searchValue)){
+    return resultArray;
+  }else{
+    return resultArray[0];
+  }
 }
 
 if(Aj.config.autoSyncAfterJqueryAjax){

@@ -6,13 +6,6 @@ $(function () {
    
     $scope.dataOption = {};
 
-    var langOption = function(duplicator){
-      return Aj.optionBind($scope.dataOption,{
-        languages:{
-          _duplicator: duplicator
-        }
-      });
-    };
 
     $scope.data = {};
     $scope.snippet("body").bind($scope.data, {
@@ -42,7 +35,11 @@ $(function () {
           _form : {
             _name: "language",
             _extra_change_events: ["click"],
-            _option:langOption(".x-lang-group")
+            _option: Aj.optionBind($scope.dataOption,{
+              languages:{
+                _duplicator: ".x-lang-group"
+              }
+            })
           }
         }
       ],

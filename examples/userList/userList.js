@@ -1,0 +1,61 @@
+$(function () {
+
+  Aj.init(function ($scope) {
+    console.log($scope);
+    $scope.dataOption = {
+      bloodTypes:["A", "B", "AB", "O"],
+      genders:[
+          {
+              "value": 0,
+              "text": "female"
+          },
+          {
+              "value": 1,
+              "text": "male"
+          }
+      ],
+      languages: ["English", "Japanese", "Chinese"]
+    };
+
+    $scope.editData = {};
+    $scope.snippet("body").bind($scope.editData, {
+      name : Aj.form(),
+      bloodType : Aj.form().withOption($scope.dataOption,"bloodTypes"),
+      sex : Aj.form("sex", "click").withOption($scope.dataOption,"genders", ".x-sex-group"),
+      language : Aj.form({name:"language"}, "click").withOption($scope.dataOption,"languages", ".x-lang-group"),
+      "private": Aj.form({}, "click").asSingleCheck(),
+      desc : Aj.form({selector: "[name=desc]"})
+    });
+    
+    $scope.data = {
+      //list : null
+    };
+    $scope.snippet("body").bind($scope.data, {
+      list: {
+        _duplicator: ".x-row",
+        _item: {
+          _index    : ".x-seq",
+          name      : ".x-name",
+          bloodType : ".x-bloodtype",
+          sex       : ".x-sex",
+          language  : ".x-lang",
+          "private" : ".x-private",
+          desc      : ".x-desc"
+        }
+      }
+    });
+    
+    $("#addBtn").click(function(){
+      var list = $scope.data.list;
+      if(!list){
+        list = [];
+        $scope.data.list = list;
+      }
+      list.push(Aj.util.clone($scope.editData));
+      $scope.editData={};
+      Aj.sync();
+    });
+
+  });
+
+});
