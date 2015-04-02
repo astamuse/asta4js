@@ -21,6 +21,7 @@ $(function () {
           _form : {}
         }
       ],
+      /*
       bloodType : [
         "#bloodType-pre", {
           _form : {
@@ -52,6 +53,7 @@ $(function () {
           }
         }
       ],
+      */
       /*
       language2 : [
         "#language2-pre", {
@@ -59,6 +61,7 @@ $(function () {
         }
       ],
       */
+      /*
       "private": {
         _form: {
           _name : "private",
@@ -79,6 +82,7 @@ $(function () {
           }
         }
       ]
+      */
     });
 
     $("#confirm-value").click(function () {

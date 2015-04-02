@@ -41,6 +41,169 @@
       }
     },
     metaRewritter: {
+      _form : function (meta) {
+        var formDef = meta._form;
+        var propertyPath = meta._target_path;
+        
+        if (typeof formDef === "string") {
+          formDef = {
+            _name : formDef
+          };
+        }
+        
+        if(!formDef._name){
+          var lastDotIndex = propertyPath.lastIndexOf(".");
+          formDef._name = propertyPath.substr(lastDotIndex+1);
+        }
+
+        if (!meta._selector) {
+          meta._selector = "[name=" + formDef._name + "]";
+        }
+
+        if (!meta._render) {
+          meta._render = function (target, newValue, oldValue) {
+            //TODO we need to do more for select/checkbox/radio
+            var tagName = target.prop("tagName");
+            switch (tagName) {
+            case "SELECT":
+              //move diverge value option at first
+              target.find("[aj-diverge-value]").remove();
+              target.val(newValue);
+              var domValue = target.val();
+              console.log("domValue=" + domValue);
+              if (domValue === null) { //which means there is no corresponding option
+                var op = $("<option aj-diverge-value>").val(newValue).text(newValue);
+                console.log(op);
+                target.append(op);
+                target.val(newValue);
+              }
+              break;
+            case "INPUT":
+              var type = target.attr("type");
+              if(type){
+                type = type.toLowerCase();
+              }
+              if(type === "checkbox" || type === "radio"){
+                if(formDef._single_check){
+                  target.prop("checked", newValue);
+                }else{
+                  var va = Aj.util.regulateArray(newValue);
+                  if(type === "radio" && va.length > 1){
+                    throw "There are over than one candidate value for radio:" + va;
+                  }
+                  var unmatchedValue = [];
+                  //there must be "aj-placeholder-id"
+                  var placeHolderId = target.attr("aj-placeholder-id");
+                  
+                  //remove the auto generated diverge elements
+                  root.find("[aj-diverge-value=" + placeHolderId + "]").remove();
+                  
+                  //find out all the existing options
+                  var ops = root.find("[aj-generated=" + placeHolderId + "]").prop("checked", false);
+                  va.forEach(function(v){
+                    var foundInput = Aj.util.findWithRoot(ops, "input[value="+v+"]");
+                    if(foundInput.length === 0){
+                      unmatchedValue.push(v);
+                    }else{
+                      foundInput.prop("checked", true);
+                    }
+                  });
+                  if(unmatchedValue.length > 0){
+                    var insertPoint = root.find("#" + placeHolderId);
+                    unmatchedValue.forEach(function(v){
+                      var uid = Aj.util.createUID();
+                      var clone = target.clone().attr("id", uid).val(v).prop("checked", true);
+                      var label = $("<label>").attr("for",uid).text(v);
+                      
+                      var diverge = $("<span>").attr("aj-diverge-value", placeHolderId);
+                      diverge.append(clone).append(label);
+                      
+                      insertPoint.after(diverge);
+                      insertPoint = diverge;
+                    });
+                  }
+                }
+                break;
+              }else{
+                //continue to default
+              }
+            default:
+              target.val(newValue);
+            } //end switch
+            
+            //save the current value to target as data attribute
+            __getDataRef(target, "aj-form-binding-ref").value = newValue;
+          } // end _render = function...
+        } // end !meta._render
+
+        if (formDef._option) {
+          meta._post_binding.push(function (target) {
+            formDef._option.bindAsSubSnippet(scope, root, target, function () {
+              var currentDomValue = Aj.util.getDataRef(target, "aj-form-binding-ref").value;
+              meta._render(target, currentDomValue, undefined);
+            });
+          });
+        }
+        
+        if (!meta._register_dom_change) {
+          var changeEvents = new Array();
+
+          var defaultChangeEvent = formDef._default_change_event;
+          if (defaultChangeEvent === undefined) {
+            changeEvents.push("blur");
+          } else if (defaultChangeEvent) {
+            changeEvents.push(defaultChangeEvent);
+          }
+
+          var extraChangeEvents = formDef._extra_change_events;
+          extraChangeEvents = Aj.util.regulateArray(extraChangeEvents);
+          Array.prototype.push.apply(changeEvents, extraChangeEvents);
+          
+
+          if (changeEvents.length > 0) {
+            meta._register_dom_change = function (scope, propertyPath, snippet, selector, changeHandler) {
+              var target = snippet.find(selector);
+              var ref = __getDataRef(target, "aj-form-binding-ref");
+              ref.changeEvents = changeEvents;
+
+              var inputType;
+              var tagName = target.prop("tagName");
+              if(tagName === "INPUT"){
+                inputType = target.attr("type");
+                if(inputType){
+                  inputType = inputType.toLowerCase();
+                }
+              }
+              
+              var observePath = Path.get(propertyPath);
+              var passToHandler = {
+                observePath: observePath,
+                scope: scope
+              };
+              if(inputType === "checkbox" || inputType === "radio"){
+                if(formDef._single_check){
+                  target.bind(changeEvents.join(" "), function () {
+                    var v = $(this).prop("checked");
+                    changeHandler(passToHandler, v);
+                  }); 
+                }else{
+                  /*
+                  var observer = new PathObserver(ref, "value");
+                  observer.open(function(newValue, oldValue){
+                    changeHandler(passToHandler, newValue);
+                  });
+                  */
+                }
+              }else{
+                target.bind(changeEvents.join(" "), function () {
+                  var v = $(this).val();
+                  changeHandler(passToHandler, v);
+                }); 
+              }
+            }// end meta._register_assign
+          };// end changeEvents.length > 0
+        }// end !meta._register_assign
+      },// end _form
       _duplicator : {
         fn : function(meta){
           var _duplicator = meta._duplicator;
