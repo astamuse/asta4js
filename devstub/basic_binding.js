@@ -17,11 +17,21 @@ $(function(){
                 _render: function(target, newValue, oldValue){
                   target.val(newValue);
                 },
-                _register_on_dom_change : function(snippet, target, changeHandler){
+                _register_dom_change : function(scope, propertyPath, snippet, selector, changeHandler){
+                  var target = snippet.find(selector);
+                  var observePath = Path.get(propertyPath);
+                  var passToHandler = {
+                    setValue: function(v){
+                      observePath.setValueFrom(scope, v);
+                    }
+                  };
                   target.keyup(function(){
                     var v = $(this).val();
-                    changeHandler(snippet, v);
+                    changeHandler(passToHandler, v);
                   });
+                  return function(){
+                    changeHandler(passToHandler, target.val());
+                  };
                 }
               },
               //2 way on input
@@ -30,11 +40,20 @@ $(function(){
                 _render: function(target, newValue, oldValue){
                   target.val(newValue);
                 },
-                _register_on_dom_change: function(snippet, target, changeHandler){
+                _register_dom_change : function(scope, propertyPath, snippet, selector, changeHandler){
+                  var target = snippet.find(selector);
+                  var observePath = Path.get(propertyPath);
+                  var passToHandler = {
+                    observePath: observePath,
+                    scope: scope
+                  };
                   target.keyup(function(){
                     var v = $(this).val();
-                    changeHandler(snippet, v);
+                    changeHandler(passToHandler, v);
                   });
+                  return function(){
+                    changeHandler(passToHandler, target.val());
+                  }
                 }
               },
               //1 way

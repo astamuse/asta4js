@@ -44,14 +44,14 @@
       _duplicator : {
         fn : function(meta){
           var _duplicator = meta._duplicator;
+          var propertyPath = meta._target_path;
           if(!meta._register_on_change){
             meta._register_on_change = function(bindContext, changeHandler){
-              var snippet = bindContext;
-              var scope = snippet._scope;
-              var path = this._target_path;
+              var snippet = bindContext._snippet;
+              var scope = bindContext._scope;
               var forceChange = [];
               if(meta._meta_type === "_value"){
-                var target = Aj.util.findWithRoot(snippet._root, _duplicator);
+                var target = snippet.find(_duplicator);
                 if (target.length == 0) {
                   throw "could not find duplicator:" + originalMeta._duplicator;
                 }
@@ -75,21 +75,19 @@
                   
                   //set the placeholder id to all the children input elements for the sake of checkbox/radio box option rendering
                   $elem.find("input").attr("aj-placeholder-id", placeHolderId);
-                  var changeContext = {
-                    _snippet: snippet,
-                    _target: target,
-                    _placeHolder: placeHolder,
-                    _templateStr: templateStr,
-                  };
-                  var observerPath = __replaceIndexesInPath(path, snippet._indexes);
-                  var observer = scope.registerPathObserver(observerPath, function(newValue, oldValue){
+                  var changeContext = Aj.util.shallowCopy(bindContext);
+                  changeContext._placeHolder = placeHolder;
+                  changeContext._templateStr = templateStr;
+                  changeContext._indexedPath = __replaceIndexesInPath(propertyPath, bindContext._indexes);
+                  var observer = scope.registerPathObserver(changeContext._indexedPath, function(newValue, oldValue){
                     changeHandler(changeContext, newValue, oldValue);
                   });
                   snippet._discardHooks.push(function(){
                     observer.close();
                   });
+                  var observePath = Path.get(changeContext._indexedPath);
                   forceChange.push(function(){
-                    var v = Path.get(observerPath).getValueFrom(scope);
+                    var v = observePath.getValueFrom(scope);
                     changeHandler(changeContext, v, undefined);
                   });
                 });//end target each
@@ -105,11 +103,13 @@
           if(!meta._on_change){
             if(meta._meta_type === "_value"){
               meta._on_change = function(context, newValue, oldValue){
+                var scope = context._scope;
                 var snippet = context._snippet;
                 var target = context._target;
                 var placeHolder = context._placeHolder;
                 var templateStr = context._templateStr;
-                var currentPath = this._target_path;
+                var currentPath = context._indexedPath;
+                var itemMeta = this._item;
                 
                 var regularOld = Aj.util.regulateArray(oldValue);
                 var regularNew = Aj.util.regulateArray(newValue);
@@ -138,7 +138,7 @@
 
                   //recursive binding
                   var childSnippet = new Snippet(snippet._scope, childElem, snippet, i);
-                  snippet._scope.bindMeta(this._item, childSnippet)
+                  childSnippet.bindMeta(itemMeta);
                   insertPoint = childElem;
                   
                   existingSubSnippets.push(childSnippet);
@@ -153,6 +153,52 @@
                 if(existingLength>newLength){
                   existingSubSnippets.splice(newLength-1, existingLength - newLength);
                   snippet.removeDiscardedSubSnippets();
+                }
+                if(oldValue){
+                  scope.removeArrayObserver(currentPath, oldValue);
+                }
+                if(newValue){
+                  scope.registerArrayObserver(currentPath, newValue, function(splices){
+                    var removedCount = 0;
+                    var addedCount = 0;
+
+                    splices.forEach(function (s) {
+                      removedCount += s.removed.length;
+                      addedCount += s.addedCount;
+                    });
+
+                    var diff = addedCount - removedCount;
+                    var existingLength = existingSubSnippets.length;
+                    if(diff > 0){
+                      //we simply add the new child to the last of current children list,
+                      //all the values will be synchronized correctly since we bind them
+                      //by a string value path rather than the real object reference
+                      var insertPoint;
+                      if(existingLength>0){
+                        insertPoint = existingSubSnippets[existingLength-1]._root;
+                      }else{
+                        insertPoint = placeHolder;
+                      }
+                      for (var i = 0; i < diff; i++) {
+                        var childElem = $(templateStr);
+                        insertPoint.after(childElem);
+
+                        //recursive binding
+                        var childSnippet = new Snippet(snippet._scope, childElem, snippet, existingLength+i);
+                        childSnippet.bindMeta(itemMeta);
+                        insertPoint = childElem;
+                        
+                        existingSubSnippets.push(childSnippet);
+                      }
+                    }else if (diff < 0){
+                      diff = 0 - diff;
+                      for (var i = 1; i <= diff; i++) {
+                        existingSubSnippets[existingLength - i].discard();
+                      }
+                      existingSubSnippets.splice(existingLength-diff, diff);
+                      snippet.removeDiscardedSubSnippets();
+                    }
+                  });
                 }
               }//end meta._on_change
             }else{
@@ -207,7 +253,7 @@
                       throw "the specified css class name:'"
                        + newValue
                        + "' is not contained in the declared switching list:"
-                       + originalMeta._selector;
+                       + meta._selector;
                     }
                   };
                 }
@@ -243,18 +289,18 @@
             ];
 
             var renderFn = null;
-            console.log("attrOp=" + attrOp);
+            Aj.log("attrOp=" + attrOp);
             for (var i = 0; i < attrRegs.length; i++) {
               var attrReg = attrRegs[i];
               var matchResult = attrReg.reg.exec(attrOp);
               if (matchResult) {
-                console.log("matched");
-                console.log(attrReg);
+                Aj.log("matched");
+                Aj.log(attrReg);
                 var matched = matchResult[1];
                 renderFn = attrReg.renderFn(matched);
                 break;
               }
-              //console.log("not matched");
+              //Aj.log("not matched");
             }
 
             if (renderFn) {
@@ -274,33 +320,49 @@
             };
           }
           if(!meta._register_render){
-            meta._register_render = function(snippet, target, changeHandler){
-              var scope = snippet._scope;
-              var path = this._target_path;
-              var observerPath = __replaceIndexesInPath(path, snippet._indexes);
-              var observer = scope.registerPathObserver(observerPath, function(newValue, oldValue){
-                changeHandler(target, newValue, oldValue);
-              });
-              snippet._discardHooks.push(function(){
-                observer.close();
-              });
-              return function(){
-                changeHandler(target, Path.get(observerPath).getValueFrom(scope), undefined);
+            meta._register_render = function(scope, propertyPath, snippet, selector, changeHandler){
+              var target = snippet.find(selector);
+              if(propertyPath === "_index"){
+                //we do not need to observe anything, just return a force render handler
+                return function(){
+                  changeHandler(target, snippet._index, undefined);
+                }
+              }else if (propertyPath == "_indexes"){
+                //we do not need to observe anything, just return a force render handler
+                return function(){
+                  changeHandler(target, snippet._indexes, undefined);
+                }
+              }else{
+                var observer = scope.registerPathObserver(propertyPath, function(newValue, oldValue){
+                  changeHandler(target, newValue, oldValue);
+                });
+                
+                snippet._discardHooks.push(function(){
+                  observer.close();
+                });
+                
+                var observePath = Path.get(propertyPath);
+                return function(){
+                  changeHandler(target, observePath.getValueFrom(scope), undefined);
+                }
               }
             }
           }
           if(!meta._on_dom_change){//even we do not need it
-            meta._on_dom_change = function(snippet, value){
-              var observerPath = __replaceIndexesInPath(this._target_path, snippet._indexes);
-              var path = Path.get(observerPath);
-              path.setValueFrom(snippet._scope, value);
+            meta._on_dom_change = function(target, value){
+              //try our best to 
+              if(target.setValue){
+                target.setValue(value);
+              }else if(target.observePath && target.scope){
+                target.observePath.setValueFrom(target.scope, value);
+              }else if(target.propertyPath && target.scope){
+                Pat.get(target.propertyPath).setValueFrom(target.scope, value);
+              }
             }
           }
           
           //revive _selector because we will need it later
           meta._selector = meta._selector_after_attr_op;
-          
-          
         }
       },
       _render : {
@@ -316,11 +378,13 @@
         fn : function (meta) {
           if(!meta._register_on_change){
             var _register_render = meta._register_render;
-            var _selector = meta._selector_keep_to_final;
+            var selector = meta._selector;
+            var propertyPath = meta._target_path;
             meta._register_on_change = function(bindContext, changeHandler){
-              var snippet = bindContext;
-              var target = snippet._root.find(this._selector);
-              return _register_render.call(this, snippet, target, changeHandler);
+              var scope = bindContext._scope;
+              var snippet = bindContext._snippet;
+              var arrayedPath = __replaceIndexesInPath(propertyPath, bindContext._indexes);
+              return _register_render(scope, arrayedPath, snippet, selector, changeHandler);
             }
           }
         }
@@ -333,16 +397,18 @@
           }
         }
       },
-      _register_on_dom_change : {
+      _register_dom_change : {
         priority : 10000000 - 100, // a little smaller than bigger
         fn : function (meta) {
           if (!meta._register_assign) {
-            var _register_on_dom_change = meta._register_on_dom_change;
+            var _register_dom_change = meta._register_dom_change;
+            var selector = meta._selector;
+            var propertyPath = meta._target_path;
             meta._register_assign = function(bindContext, changeHandler){
-              var snippet = bindContext;
-              var root = snippet._root;
-              var target = root.find(this._selector);
-              return _register_on_dom_change.call(this, snippet, target, changeHandler);
+              var scope = bindContext._scope;
+              var snippet = bindContext._snippet;
+              var arrayedPath = __replaceIndexesInPath(propertyPath, bindContext._indexes);
+              return _register_dom_change(scope, arrayedPath, snippet, selector, changeHandler);
             }
           }
         }
@@ -437,6 +503,13 @@
     },
     clone : function (obj) {
       return clone(obj);
+    },
+    shallowCopy: function(obj){
+      var ret = {};
+      for(var k in obj){
+        ret[k] = obj[k];
+      }
+      return ret;
     },
     arraySwap : function (array, index1, index2) {
       var tmp = array[index1];
@@ -655,7 +728,11 @@
           if(__reverseMetaKeys.indexOf(p) >= 0){
             continue;
           }
-          newMeta[p] = __rewriteObserverMeta(propertyPath + "." + p, newMeta[p]);
+          if(p === "_index"){
+            newMeta[p] = __rewriteObserverMeta(p, newMeta[p]);
+          }else{
+            newMeta[p] = __rewriteObserverMeta(propertyPath + "." + p, newMeta[p]);
+          }
         }
       break;
       default :
@@ -669,8 +746,9 @@
     this.map = {};
   };
   
-  ObserverMap.prototype.add = function(path, observer){
+  ObserverMap.prototype.add = function(path, observer, extraInfo){
     var item = {
+      extraInfo: extraInfo,
       prev: null,
       next: null,
       close: function(){
@@ -703,7 +781,24 @@
     
     head.prev = item;
     
-
+    return item;
+  }
+  
+  ObserverMap.prototype.getObserverList = function(path, extraInfo){
+    var list = [];
+    var head = this.map[path];
+    var item = head.next;
+    while(item && item != head){
+      if(extraInfo){
+        if(item.extraInfo == extraInfo){
+          list.push(item);
+        }
+      }else{
+        list.push(item);
+      }
+      item = item.next;
+    }
+    return list;
   }
   
   var Scope = function(){
@@ -731,17 +826,33 @@
   Scope.prototype.registerArrayObserver = function(path, targetObj, changeFn){
     var observer = new ArrayObserver(targetObj);
     observer.open(changeFn);
-    return this.observerMap.path.add(path, observe);
+    return this.observerMap.splice.add(path, observer, targetObj);
+  };
+  
+  Scope.prototype.removeArrayObserver = function(path, targetObj){
+    var list = this.observerMap.splice.getObserverList(path, targetObj);
+    for(var i=0;i<list.length;i++){
+      list[i].close();
+    }
   };
 
   Scope.prototype.observe = function(varRef, meta, bindContext){
     var refPath = __determineRefPath(this, varRef);
     var rewittenMeta = __rewriteObserverMeta(refPath, meta);
-    this.bindMeta(rewittenMeta, bindContext ? bindContext : this);
+    var context = {};
+    if(bindContext){
+      //we do not do deep copy, only the first layer
+      for(var k in bindContext){
+        context[k] = bindContext[k];
+      }
+    }
+    //make sure the scope is current scope
+    context._scope = this;
+    this.bindMeta(rewittenMeta, context);
   };
   
   Scope.prototype.bindMeta = function(meta, bindContext){
-    console.log(meta);
+    Aj.log(meta);
     var THIS = this;
     if(Array.isArray(meta)){
       meta.forEach(function(m){
@@ -819,7 +930,7 @@
 
     if(root.length == 0){
       var err = new Error("Snippet was not found for given selector:" + selector);
-      console.log(err);
+      Aj.log(err);
     }
   };
   
@@ -828,12 +939,14 @@
   }
   
   Snippet.prototype.discard = function(){
-    _root.remove();
-    for(var i=0;i<this._discardHooks.length;i++){
-      this._discardHooks[i]();
-    }
-    for(var i=0;i<this._subSnippets.length;i++){
-      this._subSnippets[i].discard();
+    if(!this._discarded){
+      for(var i=0;i<this._discardHooks.length;i++){
+        this._discardHooks[i]();
+      }
+      for(var i=0;i<this._subSnippets.length;i++){
+        this._subSnippets[i].discard();
+      }
+      this._root.remove();
     }
     this._discarded = true;
   };
@@ -841,14 +954,38 @@
   Snippet.prototype.removeDiscardedSubSnippets = function(){
     for(var i=this._subSnippets.length-1;i>=0;i--){
       if(this._subSnippets[i]._discarded){
-        this._subSnippets[i].splice(i, 1);
+        this._subSnippets.splice(i, 1);
       }
     }
   };
 
   Snippet.prototype.bind = function(varRef, meta){
-    this._scope.observe(varRef, meta, this);
+    var context = {};
+    context._indexes = this._indexes;
+    context._snippet= this;
+    this._scope.observe(varRef, meta, context);
+    return this;
   };
+  
+  Snippet.prototype.bindMeta = function(meta){
+    var context = {};
+    context._indexes = this._indexes;
+    context._scope = this._scope;
+    context._snippet= this;
+    this._scope.bindMeta(meta, context);
+  };
+  
+  Snippet.prototype.find = function(selector){
+    return Aj.util.findWithRoot(this._root, selector);
+  }
+  
+  Snippet.prototype.on = function (event, selector, fn) {
+    this._root.on(event, selector, function(){
+      fn.apply(this, arguments);
+      Aj.sync();
+    });
+    return this;
+  }
   
   var __determineRefPath = function (scope, varRef) {
     var searchKey = "ashfdpnasvdnoaisdfn3423#$%$#$%0as8d23nalsfdasdf";

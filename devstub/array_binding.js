@@ -14,11 +14,20 @@ $(function () {
             _render : function (target, newValue, oldValue) {
               target.val(newValue);
             },
-            _register_on_dom_change : function (snippet, target, changeHandler) {
-              target.keyup(function () {
+            _register_dom_change : function(scope, propertyPath, snippet, selector, changeHandler){
+              var target = snippet.find(selector);
+              var observePath = Path.get(propertyPath);
+              var passToHandler = {
+                observePath: observePath,
+                scope: scope
+              };
+              target.keyup(function(){
                 var v = $(this).val();
-                changeHandler($scope, v);
+                changeHandler(passToHandler, v);
               });
+              return function(){
+                changeHandler(passToHandler, target.val());
+              }
             }
           },
           //1 way
@@ -31,10 +40,12 @@ $(function () {
         length : ".x-length"
       }
     })
-    /*
     .on("click", ".x-add", function () {
       var currentIndex = parseInt($(this).attr("aIndex"));
       $scope.data.list.splice(currentIndex + 1, 0, "added value" + new Date());
+      setTimeout(function(){
+        console.log("console.log($scope.data.list):", $scope.data.list);
+      });
     })
     .on("click", ".x-remove", function () {
       var currentIndex = parseInt($(this).attr("aIndex"));
@@ -52,7 +63,6 @@ $(function () {
         Aj.util.arraySwap($scope.data.list, currentIndex, currentIndex + 1);
       }
     });
-    */
 
     $("#set-value").click(function () {
       var v = $("#data-input").val();
