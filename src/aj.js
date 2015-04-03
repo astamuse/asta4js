@@ -240,7 +240,7 @@
               if(meta._meta_type === "_value"){
                 var target = snippet.find(_duplicator);
                 if (target.length == 0) {
-                  throw "could not find duplicator:" + originalMeta._duplicator;
+                  throw "could not find duplicator:" + _duplicator;
                 }
                 
                 target.each(function(index, elem){
@@ -872,15 +872,16 @@
             var itemPath = newMeta._target_path + "[?]";
             newMeta._item = __rewriteObserverMeta(itemPath, itemMeta, newMeta._meta_id);
           }
-          //post binding
-          if(newMeta._post_binding){
-            if(!Array.isArray(newMeta._post_binding)){
-              throw "_post_binding must be array but we got:" + JSON.stringify(newMeta._post_binding);
-            }
-            //else is OK
-          }else{
-            newMeta._post_binding = [];
+        }
+        
+        //post binding
+        if(newMeta._post_binding){
+          if(!Array.isArray(newMeta._post_binding)){
+            throw "_post_binding must be array but we got:" + JSON.stringify(newMeta._post_binding);
           }
+          //else is OK
+        }else{
+          newMeta._post_binding = [];
         }
         
         __getOrderedMetaRewritter().forEach(function (mr) {
@@ -895,25 +896,39 @@
         if(newMeta._on_change){
           if(!newMeta._register_on_change){
             //by default, we treat the bindContext as scope
+            var propertyPath = newMeta._target_path;
             newMeta._register_on_change = function (bindContext, changeHandler) {
-              var scope = bindContext;
-              if(newMeta._meta_type === "_value"){
-                var observer = scope.registerPathObserver(this._target_path, function(newValue, oldValue){
-                  changeHandler(bindContext, newValue, oldValue);
-                });
-              }else{
-                
-              };
+              var scope = bindContext._scope;
+              var arrayIndexedPath = __replaceIndexesInPath(propertyPath, bindContext._indexes);
+              var observer = scope.registerPathObserver(arrayIndexedPath, function(newValue, oldValue){
+                changeHandler(newValue, oldValue, bindContext);
+              });
               if(bindContext.addDiscardHook){
                 bindContext.addDiscardHook(function(){
                   observer.close();
                 })
               }
+              var observePath = Path.get(arrayIndexedPath);
               return function(){
-                var path = Path.get(this._target_path);
-                changeHandler(scope, path.getValueFrom(scope), undefined);
+                changeHandler(observePath.getValueFrom(scope), undefined, bindContext);
               };
             };
+            if(newMeta._meta_type == "_splice"){
+              var spliceFn = newMeta._on_change;
+              newMeta._on_change = function(newValue, oldValue, bindContext){
+                var scope = bindContext._scope;
+                var arrayIndexedPath = __replaceIndexesInPath(propertyPath, bindContext._indexes);
+                if(oldValue){
+                  scope.removeArrayObserver(arrayIndexedPath, oldValue);
+                }
+                if(newValue){
+                  scope.registerArrayObserver(arrayIndexedPath, newValue, function(splices){
+                    spliceFn.call(newMeta, splices, bindContext);
+                  });
+                };
+              }
+            }
+            
           }
         }
         
