@@ -61,7 +61,7 @@
         }
 
         if (!meta._render) {
-          meta._render = function (target, newValue, oldValue) {
+          meta._render = function (target, newValue, oldValue, bindContext) {
             //TODO we need to do more for select/checkbox/radio
             var tagName = target.prop("tagName");
             switch (tagName) {
@@ -85,7 +85,11 @@
               }
               if(type === "checkbox" || type === "radio"){
                 if(formDef._single_check){
-                  target.prop("checked", newValue);
+                  if(newValue){
+                    target.prop("checked", true);
+                  }else{
+                    target.prop("checked", false);
+                  }
                 }else{
                   var va = Aj.util.regulateArray(newValue);
                   if(type === "radio" && va.length > 1){
@@ -95,21 +99,33 @@
                   //there must be "aj-placeholder-id"
                   var placeHolderId = target.attr("aj-placeholder-id");
                   
+                  if(!placeHolderId){//option bind has not been called yet or static option
+                    return;
+                  }
+                  
+                  var snippet = bindContext._snippet;
+                  
                   //remove the auto generated diverge elements
-                  root.find("[aj-diverge-value=" + placeHolderId + "]").remove();
+                  snippet.find("[aj-diverge-value=" + placeHolderId + "]").remove();
                   
                   //find out all the existing options
-                  var ops = root.find("[aj-generated=" + placeHolderId + "]").prop("checked", false);
+                  var ops = snippet.find("[aj-generated=" + placeHolderId + "]");
+                  Aj.util.findWithRoot(ops, "input[type="+type+"]").prop("checked", false);
                   va.forEach(function(v){
-                    var foundInput = Aj.util.findWithRoot(ops, "input[value="+v+"]");
+                    if(v === null || v === undefined){
+                      v = "";
+                    }
+                    var foundInput = Aj.util.findWithRoot(ops, "input[value='"+v+"']");
                     if(foundInput.length === 0){
-                      unmatchedValue.push(v);
+                      if(v){
+                        unmatchedValue.push(v);
+                      }
                     }else{
                       foundInput.prop("checked", true);
                     }
                   });
                   if(unmatchedValue.length > 0){
-                    var insertPoint = root.find("#" + placeHolderId);
+                    var insertPoint = snippet.find("#" + placeHolderId);
                     unmatchedValue.forEach(function(v){
                       var uid = Aj.util.createUID();
                       var clone = target.clone().attr("id", uid).val(v).prop("checked", true);
@@ -137,10 +153,17 @@
         } // end !meta._render
 
         if (formDef._option) {
-          meta._post_binding.push(function (target) {
-            formDef._option.bindAsSubSnippet(scope, root, target, function () {
-              var currentDomValue = Aj.util.getDataRef(target, "aj-form-binding-ref").value;
-              meta._render(target, currentDomValue, undefined);
+          var renderFn = meta._render;
+          meta._post_binding.push(function (context) {
+            var scope = context._scope;
+            var ownerSnippet = context._snippet;
+            var target = ownerSnippet.find(meta._selector);
+            var optionSnippet = formDef._option.bindAsSubSnippet(scope, target, function () {
+              var currentDomValue = __getDataRef(target, "aj-form-binding-ref").value;
+              renderFn(target, currentDomValue, undefined, context);
+            });
+            ownerSnippet._discardHooks.push(function(){
+              optionSnippet.discard();
             });
           });
         }
@@ -161,7 +184,7 @@
           
 
           if (changeEvents.length > 0) {
-            meta._register_dom_change = function (scope, propertyPath, snippet, selector, changeHandler) {
+            meta._register_dom_change = function (scope, propertyPath, snippet, selector, changeHandler, bindContext) {
               var target = snippet.find(selector);
               var ref = __getDataRef(target, "aj-form-binding-ref");
               ref.changeEvents = changeEvents;
@@ -187,12 +210,13 @@
                     changeHandler(passToHandler, v);
                   }); 
                 }else{
-                  /*
                   var observer = new PathObserver(ref, "value");
                   observer.open(function(newValue, oldValue){
                     changeHandler(passToHandler, newValue);
                   });
-                  */
+                  snippet._discardHooks.push(function(){
+                    observer.close();
+                  });
                 }
               }else{
                 target.bind(changeEvents.join(" "), function () {
@@ -361,7 +385,13 @@
                       existingSubSnippets.splice(existingLength-diff, diff);
                       snippet.removeDiscardedSubSnippets();
                     }
-                  });
+                    if(meta._post_render){
+                      meta._post_render();
+                    }
+                  });//end array(splice) observe
+                }
+                if(meta._post_render){
+                  meta._post_render();
                 }
               }//end meta._on_change
             }else{
@@ -478,26 +508,29 @@
         priority : 10000000 - 500, 
         fn : function (meta) {
           if (!meta._render) {
-            meta._render = function (target, newValue, oldValue) {
+            meta._render = function (target, newValue, oldValue, bindContext) {
+              if(newValue === null || newValue === undefined){
+                newValue = "";
+              }
               target.text(newValue);
             };
           }
           if(!meta._register_render){
-            meta._register_render = function(scope, propertyPath, snippet, selector, changeHandler){
+            meta._register_render = function(scope, propertyPath, snippet, selector, changeHandler, bindContext){
               var target = snippet.find(selector);
               if(propertyPath === "_index"){
                 //we do not need to observe anything, just return a force render handler
                 return function(){
-                  changeHandler(target, snippet._index, undefined);
+                  changeHandler(target, snippet._index, undefined, bindContext);
                 }
               }else if (propertyPath == "_indexes"){
                 //we do not need to observe anything, just return a force render handler
                 return function(){
-                  changeHandler(target, snippet._indexes, undefined);
+                  changeHandler(target, snippet._indexes, undefined, bindContext);
                 }
               }else{
                 var observer = scope.registerPathObserver(propertyPath, function(newValue, oldValue){
-                  changeHandler(target, newValue, oldValue);
+                  changeHandler(target, newValue, oldValue, bindContext);
                 });
                 
                 snippet._discardHooks.push(function(){
@@ -506,13 +539,13 @@
                 
                 var observePath = Path.get(propertyPath);
                 return function(){
-                  changeHandler(target, observePath.getValueFrom(scope), undefined);
+                  changeHandler(target, observePath.getValueFrom(scope), undefined, bindContext);
                 }
               }
             }
           }
           if(!meta._on_dom_change){//even we do not need it
-            meta._on_dom_change = function(target, value){
+            meta._on_dom_change = function(target, value, bindContext){
               //try our best to 
               if(target.setValue){
                 target.setValue(value);
@@ -547,7 +580,7 @@
               var scope = bindContext._scope;
               var snippet = bindContext._snippet;
               var arrayedPath = __replaceIndexesInPath(propertyPath, bindContext._indexes);
-              return _register_render(scope, arrayedPath, snippet, selector, changeHandler);
+              return _register_render(scope, arrayedPath, snippet, selector, changeHandler, bindContext);
             }
           }
         }
@@ -571,7 +604,7 @@
               var scope = bindContext._scope;
               var snippet = bindContext._snippet;
               var arrayedPath = __replaceIndexesInPath(propertyPath, bindContext._indexes);
-              return _register_dom_change(scope, arrayedPath, snippet, selector, changeHandler);
+              return _register_dom_change(scope, arrayedPath, snippet, selector, changeHandler, bindContext);
             }
           }
         }
@@ -839,6 +872,15 @@
             var itemPath = newMeta._target_path + "[?]";
             newMeta._item = __rewriteObserverMeta(itemPath, itemMeta, newMeta._meta_id);
           }
+          //post binding
+          if(newMeta._post_binding){
+            if(!Array.isArray(newMeta._post_binding)){
+              throw "_post_binding must be array but we got:" + JSON.stringify(newMeta._post_binding);
+            }
+            //else is OK
+          }else{
+            newMeta._post_binding = [];
+          }
         }
         
         __getOrderedMetaRewritter().forEach(function (mr) {
@@ -891,10 +933,14 @@
           if(__reverseMetaKeys.indexOf(p) >= 0){
             continue;
           }
+          var ppm = newMeta[p];
+          if(ppm.nonMeta){
+            continue;
+          }
           if(p === "_index"){
-            newMeta[p] = __rewriteObserverMeta(p, newMeta[p]);
+            newMeta[p] = __rewriteObserverMeta(p, ppm);
           }else{
-            newMeta[p] = __rewriteObserverMeta(propertyPath + "." + p, newMeta[p]);
+            newMeta[p] = __rewriteObserverMeta(propertyPath + "." + p, ppm);
           }
         }
       break;
@@ -1043,6 +1089,11 @@
           });
           //force.apply
         }
+        if(sm._post_binding){
+          sm._post_binding.forEach(function(pb){
+            pb.call(sm, bindContext)
+          });
+        }
       });
     }
     
@@ -1169,6 +1220,332 @@
     return refPath;
   };
   
+  /**
+   * _varRef : binding reference
+   * _meta   : option meta or target binding property name
+   * _meta2  : _duplicator
+   */
+  Aj.optionBind = function (_varRef, _meta, _meta2) {
+    var varRef = _varRef;
+    var meta;
+    if (typeof _meta === "string") {
+      meta = {};
+      meta[_meta] = {};
+    } else {
+      meta = Aj.util.clone(_meta);
+    }
+    
+    if(typeof _meta2 === "string"){
+      for(var kk in meta){
+        meta[kk]._duplicator = _meta2;
+      }
+    }
+
+    var checkKeys = Object.keys(meta);
+    if (checkKeys.length !== 1) {
+      throw "There can only be one property declaration in option binding, but got:" + checkKeys;
+    }
+
+    var optionMeta = meta[checkKeys[0]];
+    var itemDef = optionMeta._item; 
+    if (!optionMeta._item) {
+      optionMeta._item = {};
+    }
+    var itemDef = optionMeta._item;
+    
+    //move all the properties to _item
+    for (var p in optionMeta) {
+      if (p === "_duplicator" || p === "_item") {
+        continue;
+      }
+      itemDef[p] = optionMeta[p];
+      delete optionMeta[p];
+    }
+
+    //we do not want there are other properties from "_duplicator" and "_item"
+    for (var p in optionMeta) {
+      if (p === "_duplicator" || p === "_item") {
+        continue;
+      }
+      throw "Only _duplicator and _item are allowed under option binding but found:" + p;
+    }
+
+    
+    var valueFn = itemDef._value ? itemDef._value : function (v) {
+      if(v.value === undefined){
+        return v;
+      }else{
+        return v.value;
+      }
+    };
+    delete itemDef._value;
+
+    var textFn = itemDef._text ? itemDef._text : function (v) {
+      if(v.text === undefined){
+        return v;
+      }else{
+        return v.text;
+      }
+    };
+    delete itemDef._text;
+
+    var op = {};
+    op.bindAsSubSnippet = function (scope, ownerFormInputTarget, onOptionChange) {
+      var snippetRoot;
+      
+      //rewrite post render
+      //it should be rewritten to simple object observe, but right now, we simply hack it.
+      if(optionMeta._post_render){
+        var pr = optionMeta._post_render;
+        optionMeta._post_render = function(){
+          onOptionChange();
+          pr();
+        }
+      }else{
+        optionMeta._post_render = onOptionChange;
+      }
+      
+      //rewrite render by type
+      var tagName = ownerFormInputTarget.prop("tagName");
+      switch (tagName) {
+      case "SELECT":
+        snippetRoot = ownerFormInputTarget;
+        if (!optionMeta._duplicator) {
+          optionMeta._duplicator = "option:first"; //we will always use the first option as template
+        }
+
+        if (!itemDef._selector) {
+          itemDef._selector = ":root";
+        }
+        if (itemDef._render) {
+          var renderFn = itemDef._render;
+          itemDef._render = function (target, newValue, oldValue) {
+            renderFn(target, newValue, oldValue);
+          }
+        } else {
+          itemDef._render = function (target, newValue) {
+            target.val(valueFn(newValue));
+            target.text(textFn(newValue));
+          };
+        }
+        break;
+      case "INPUT":
+        var type = ownerFormInputTarget.attr("type");
+        if(type){
+          type = type.toLowerCase();
+        }
+        if(type=== "checkbox" || type === "radio"){
+          if (!optionMeta._duplicator) {
+            throw "_duplicator must be specified for options of checkbox or radio";
+          }
+
+          //find out the parent of duplicator
+          var parent = ownerFormInputTarget;
+          while(!parent.is(optionMeta._duplicator)){
+            parent = parent.parent();
+          }
+          snippetRoot = parent.parent();
+          
+          if (!itemDef._selector) {
+            itemDef._selector = ":root";
+          }
+          if(itemDef._register_dom_change || itemDef._dom_change){
+            throw "_register_dom_change/_dom_change cannot be specified for checkbox/radio option";
+          }else{
+            var ref = __getDataRef(ownerFormInputTarget, "aj-form-binding-ref");
+            if(ref.changeEvents.length > 0){
+              itemDef._register_dom_change = function (scope, propertyPath, snippet, selector, changeHandler, bindContext){
+                var events = ref.changeEvents.join(" ");
+                var targetInput = snippet.find("input");
+                targetInput.bind(events, function () {
+                  var je = $(this);
+                  var value = je.val();
+                  var checked = je.prop("checked");
+                  changeHandler(value, checked);
+                });
+                snippet.find("label").bind(events, function(){
+                  var je= $(this);
+                  var id = je.attr("for");
+                  var input = targetInput.filter("#" + id);
+                  var eventHandler = input[ref.changeEvents[0]];
+                  eventHandler.apply(input);
+                });
+              }
+              itemDef._on_dom_change = function (value, checked) {
+                  if(type === "checkbox"){
+                    var newResult = Aj.util.regulateArray(ref.value);
+                    var vidx = newResult.indexOf(value);
+                    if(checked && vidx>= 0){
+                      //it is ok
+                    }else if(checked && vidx < 0){
+                      //add
+                      newResult.push(value);
+                    }else if(!checked && vidx >= 0){
+                      //remove
+                      newResult.splice(vidx, 1);
+                    }else{// !checked && vidx < 0
+                      //it is ok
+                    }
+                    ref.value = newResult;
+                  }else{
+                    ref.value = value;
+                  }
+                  
+                  Aj.sync();
+              } //_assign
+            } // ref.changeEvents.length > 0
+          } // else of (itemDef._register_assign || itemDef._assign)
+          if (!itemDef._render) {
+            itemDef._render = function (target, newValue, oldValue, bindContext) {
+              var snippet = bindContext._snippet;
+              var uid = Aj.util.createUID();
+              snippet.find("input[type="+type+"]").attr("id", uid).val(valueFn(newValue));;
+              snippet.find("label").attr("for", uid).text(textFn(newValue));
+            };
+          }
+          break;
+        }else{
+          // continue to the default
+        }
+      default:
+        throw "Only select, checkbox or radio can declare _option but found:" + target[0].outerHTML;
+      }
+      var optionSnippet = new Snippet(scope, snippetRoot);
+      optionSnippet.bind(varRef, meta);
+      return optionSnippet;
+    };
+    return op;
+  }, //end optionBind
+
+  /**
+   * [target]: string->name or selector. object->{_name: ""} or {_selector: ""}
+   * [event1]: string->default change event array->extra change events
+   * [event2]: array->extra change events
+   */
+  Aj.form = function(target, event1, event2){
+    var selector;
+    var name;
+    if(target){
+      if(typeof target === "string"){
+        //treat as name or selector
+        selector = "[name="+target+"]"+ ", " + target;
+      }else{
+        selector = target["selector"];
+        name = target["name"];
+      }
+    }
+    var ret = {
+      _selector: selector,
+      _form: {
+        _name: name
+      }
+    };
+    var defaultChangeEvent;
+    var extraChangeEvents;
+    if(typeof event1 === "string"){
+      defaultChangeEvent = event1;
+      extraChangeEvents = event2;
+    }else if (Array.isArray(event1)){
+      extraChangeEvents = event2;
+    }
+    
+    if(defaultChangeEvent){
+      ret._form._default_change_event = defaultChangeEvent;
+    }
+    ret._form._extra_change_events = extraChangeEvents;
+    
+    ret.withOption = function(){
+      this._form._option = Aj.optionBind.apply(Aj, arguments);
+      return this;
+    }
+    ret.asSingleCheck = function(){
+      this._form._single_check = true;
+      return this;
+    }
+    
+    ret.withOption.nonMeta = true;
+    ret.asSingleCheck.nonMeta = true;
+
+    return ret;
+  }
+  Aj.form.singleCheck=function(){
+    var ret = Aj.form.apply(Aj, arguments);
+    ret._form._single_check = true;
+    return ret;
+  }
+
+  /*
+  Aj.form.optionText=function(optionData, targetField, convertFns){
+    return null;
+  }
+  */
+
+  Aj.form.optionText=function(optionData, searchValue, convertFns){
+    if(!Array.isArray(optionData)){
+      return undefined;
+    }
+    var valueArray;
+    if(Array.isArray(searchValue)){
+      valueArray = searchValue;
+    }else{
+      valueArray = [searchValue];
+    }
+    var searchValueFn, valueFn, textFn;
+    if(convertFns){
+      searchValueFn = convertFns._search;
+      valueFn = convertFns._value;
+      textFn = convertFns._text;
+    }
+    if(!valueFn){
+      valueFn = function(v){
+        if(v.value === undefined){
+          return v;
+        }else{
+          return v.value;
+        }
+      };
+    }
+    if(!textFn){
+      textFn = function(v){
+        if(v.text === undefined){
+          return v;
+        }else{
+          return v.text;
+        }
+      };
+    }
+    var resultArray = [];
+    for(var i=0;i<valueArray.length;i++){
+      var sv = valueArray[i];
+      for(var j=0;j<optionData.length;j++){
+        if(valueFn(optionData[j]) == sv){
+          resultArray.push(textFn(optionData[j]));
+          break;
+        }
+      }
+      resultArray.push(undefined);
+    }
+    
+    if(Array.isArray(searchValue)){
+      return resultArray;
+    }else{
+      return resultArray[0];
+    }
+  }
+
+  if(Aj.config.autoSyncAfterJqueryAjax){
+    $( document ).ajaxComplete(function() {
+      console.log("I am here");
+      Aj.sync();
+    });
+  }
+
+  Aj.delay=function(callback, timeout){
+    setTimeout(function(){
+      callback.apply();
+      Aj.sync();
+    }, timeout ? timeout : 0);
+  }
   //export
   window.Aj = Aj;
 })();

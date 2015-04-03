@@ -6,14 +6,6 @@ $(function () {
    
     $scope.dataOption = {};
 
-    var langOption = function(duplicator){
-      return Aj.optionBind($scope.dataOption,{
-        languages:{
-          _duplicator: duplicator
-        }
-      });
-    };
-
     $scope.data = {};
     $scope.snippet("body").bind($scope.data, {
       name : [
@@ -21,7 +13,6 @@ $(function () {
           _form : {}
         }
       ],
-      /*
       bloodType : [
         "#bloodType-pre", {
           _form : {
@@ -31,29 +22,26 @@ $(function () {
         }
       ],
       sex : [
-        "#sex-pre", {
-          _form : {
-            _name: "sex",
-            _option: Aj.optionBind($scope.dataOption, {
-              genders: {
-                _duplicator: ".x-sex-group",
-                _value: function(v){return v.value;},
-                _text: function(v){return v.name;}
-              }
-            })
+        "#sex-pre", 
+        Aj.form().withOption($scope.dataOption,{
+          genders: {
+            _duplicator: ".x-sex-group"
           }
-        }
+        })
       ],
       language : [
         "#language-pre", {
           _form : {
             _name: "language",
             _extra_change_events: ["click"],
-            _option:langOption(".x-lang-group")
+            _option: Aj.optionBind($scope.dataOption,{
+              languages:{
+                _duplicator: ".x-lang-group"
+              }
+            })
           }
         }
       ],
-      */
       /*
       language2 : [
         "#language2-pre", {
@@ -61,7 +49,6 @@ $(function () {
         }
       ],
       */
-      /*
       "private": {
         _form: {
           _name : "private",
@@ -82,7 +69,6 @@ $(function () {
           }
         }
       ]
-      */
     });
 
     $("#confirm-value").click(function () {
