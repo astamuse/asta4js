@@ -41,6 +41,104 @@
       }
     },
     metaRewritter: {
+      _watch : function (meta) {
+        var watchMap = scope.__watch__map__;
+        if(!watchMap){
+          watchMap = {};
+          scope.__watch__map__ = watchMap;
+        }
+        
+        var watchDef = meta._watch;
+        var watchPropPath = meta._target_path;
+        var watchPropMapPath = watchPropPath + ":" + meta._meta_trace_id;
+        
+        var parentPath = meta._target_path;
+        var dotIdx = parentPath.lastIndexOf(".");
+        if(dotIdx >= 0){
+          parentPath = parentPath.substring(0, dotIdx);
+        }else{
+          parentPath = "";
+        }
+        
+        var observerTargets = watchDef._fields.map(function(f){
+          var path;
+          if(f.indexOf("@:") == 0){
+            path = f.substr(2);
+          }else{
+            path = parentPath + "." + f;
+          }
+          return path;
+        });
+        
+        if (!meta._register_on_change) {
+          meta._register_on_change = function(bindContext, changeHandler) {
+            var scope = bindContext._scope;
+            var observer = new PathObserver(scope, "__watch__map__['" + watchPropMapPath + "']");
+            observer.open(function (newValue, oldValue) {
+              changeHandler(newValue, oldValue, bindContext);
+            });
+          };
+        }
+        
+        if(!meta._assign){
+          meta._assign = function (newValues, bindContext){
+            watchMap[watchPropMapPath] = value;
+            if(watchDef._store){
+              Path.get(propertyPath).setValueFrom(bindContext._scope, value);
+            }
+          };
+        }
+        
+        if(!meta._register_assign){
+          meta._register_assign = function (bindContext, changeHandler){
+            var scope = bindContext._scope;
+            var firstValues = [];
+            var observer = new CompoundObserver();
+            observerTargets.forEach(function(observerPath){
+              firstValues.push(Path.get(observerPath).getValueFrom(scope));
+              observer.addPath(scope, observerPath);
+            });
+            if(bindContext._snippet){
+              bindContext._snippet.addDiscardHook(function(){
+                observer.close();
+                delete watchMap[watchPropMapPath];
+              });
+            }
+
+            //before open observer, let's store the initial value
+            var initialValue;
+            if(watchDef._cal){
+              initialValue = watchDef._cal.apply(null, firstValues);
+            }else{
+              initialValue = firstValues;
+            }
+            watchMap[watchPropMapPath] = initialValue;
+            if(watchDef._store){
+              Path.get(watchPropPath).setValueFrom(scope, initialValue);
+            }
+            
+            //open observer
+            observer.open(function(newValues, oldValues){
+              if(watchDef._cal){
+                changeHandler(watchDef._cal.apply(null, newValues), bindContext);
+              }else{
+                changeHandler(newValues, bindContext);
+              }
+            });
+            
+            return function(){
+              changeHandler(initialValue, bindContext);
+            };
+
+          }
+        }
+        if(!meta._first_time_value){
+          meta._first_time_value = function(_scope, propertyPath, target){
+            return watchMap[propertyPath];
+          };
+        }
+ 
+      },
       _form : function (meta) {
         var formDef = meta._form;
         var propertyPath = meta._target_path;
@@ -184,8 +282,8 @@
           
 
           if (changeEvents.length > 0) {
-            meta._register_dom_change = function (scope, propertyPath, snippet, selector, changeHandler, bindContext) {
-              var target = snippet.find(selector);
+            meta._register_dom_change = function (target, changeHandler, bindContext) {
+              var snippet = bindContext._snippet;
               var ref = __getDataRef(target, "aj-form-binding-ref");
               ref.changeEvents = changeEvents;
 
@@ -197,22 +295,16 @@
                   inputType = inputType.toLowerCase();
                 }
               }
-              
-              var observePath = Path.get(propertyPath);
-              var passToHandler = {
-                observePath: observePath,
-                scope: scope
-              };
               if(inputType === "checkbox" || inputType === "radio"){
                 if(formDef._single_check){
                   target.bind(changeEvents.join(" "), function () {
                     var v = $(this).prop("checked");
-                    changeHandler(passToHandler, v);
+                    changeHandler(v, bindContext);
                   }); 
                 }else{
                   var observer = new PathObserver(ref, "value");
                   observer.open(function(newValue, oldValue){
-                    changeHandler(passToHandler, newValue);
+                    changeHandler(newValue, bindContext);
                   });
                   snippet._discardHooks.push(function(){
                     observer.close();
@@ -221,7 +313,7 @@
               }else{
                 target.bind(changeEvents.join(" "), function () {
                   var v = $(this).val();
-                  changeHandler(passToHandler, v);
+                  changeHandler(v, bindContext);
                 }); 
               }
             }// end meta._register_assign
@@ -263,19 +355,20 @@
                   //set the placeholder id to all the children input elements for the sake of checkbox/radio box option rendering
                   $elem.find("input").attr("aj-placeholder-id", placeHolderId);
                   var changeContext = Aj.util.shallowCopy(bindContext);
+                  changeContext._observeTraceId = meta._trace_id + ":" + placeHolderId;
                   changeContext._placeHolder = placeHolder;
                   changeContext._templateStr = templateStr;
                   changeContext._indexedPath = __replaceIndexesInPath(propertyPath, bindContext._indexes);
                   var observer = scope.registerPathObserver(changeContext._indexedPath, function(newValue, oldValue){
-                    changeHandler(changeContext, newValue, oldValue);
-                  });
+                    changeHandler(newValue, oldValue, changeContext);
+                  }, changeContext._observeTraceId);
                   snippet._discardHooks.push(function(){
                     observer.close();
                   });
                   var observePath = Path.get(changeContext._indexedPath);
                   forceChange.push(function(){
                     var v = observePath.getValueFrom(scope);
-                    changeHandler(changeContext, v, undefined);
+                    changeHandler(v, undefined, changeContext);
                   });
                 });//end target each
               }
@@ -289,10 +382,11 @@
           }
           if(!meta._on_change){
             if(meta._meta_type === "_value"){
-              meta._on_change = function(context, newValue, oldValue){
+              meta._on_change = function(newValue, oldValue, context){
                 var scope = context._scope;
                 var snippet = context._snippet;
                 var target = context._target;
+                var observeTraceId = context._observeTraceId;
                 var placeHolder = context._placeHolder;
                 var templateStr = context._templateStr;
                 var currentPath = context._indexedPath;
@@ -342,7 +436,7 @@
                   snippet.removeDiscardedSubSnippets();
                 }
                 if(oldValue){
-                  scope.removeArrayObserver(currentPath, oldValue);
+                  scope.removeArrayObserver(currentPath, oldValue, observeTraceId);
                 }
                 if(newValue){
                   scope.registerArrayObserver(currentPath, newValue, function(splices){
@@ -388,7 +482,7 @@
                     if(meta._post_render){
                       meta._post_render();
                     }
-                  });//end array(splice) observe
+                  }, observeTraceId);//end array(splice) observe
                 }
                 if(meta._post_render){
                   meta._post_render();
@@ -515,47 +609,6 @@
               target.text(newValue);
             };
           }
-          if(!meta._register_render){
-            meta._register_render = function(scope, propertyPath, snippet, selector, changeHandler, bindContext){
-              var target = snippet.find(selector);
-              if(propertyPath === "_index"){
-                //we do not need to observe anything, just return a force render handler
-                return function(){
-                  changeHandler(target, snippet._index, undefined, bindContext);
-                }
-              }else if (propertyPath == "_indexes"){
-                //we do not need to observe anything, just return a force render handler
-                return function(){
-                  changeHandler(target, snippet._indexes, undefined, bindContext);
-                }
-              }else{
-                var observer = scope.registerPathObserver(propertyPath, function(newValue, oldValue){
-                  changeHandler(target, newValue, oldValue, bindContext);
-                });
-                
-                snippet._discardHooks.push(function(){
-                  observer.close();
-                });
-                
-                var observePath = Path.get(propertyPath);
-                return function(){
-                  changeHandler(target, observePath.getValueFrom(scope), undefined, bindContext);
-                }
-              }
-            }
-          }
-          if(!meta._on_dom_change){//even we do not need it
-            meta._on_dom_change = function(target, value, bindContext){
-              //try our best to 
-              if(target.setValue){
-                target.setValue(value);
-              }else if(target.observePath && target.scope){
-                target.observePath.setValueFrom(target.scope, value);
-              }else if(target.propertyPath && target.scope){
-                Pat.get(target.propertyPath).setValueFrom(target.scope, value);
-              }
-            }
-          }
           
           //revive _selector because we will need it later
           meta._selector = meta._selector_after_attr_op;
@@ -564,32 +617,29 @@
       _render : {
         priority : 10000000 -400, // a little smaller than bigger
         fn : function (meta) {
-          if(!meta._on_change){
-            meta._on_change = meta._render;
-          }
-        }
-      },
-      _register_render : {
-        priority : 10000000 - 300, // a little smaller than bigger
-        fn : function (meta) {
-          if(!meta._register_on_change){
-            var _register_render = meta._register_render;
+          if(!meta._change_handler_creator){
+            var renderFn = meta._render;
             var selector = meta._selector;
             var propertyPath = meta._target_path;
-            meta._register_on_change = function(bindContext, changeHandler){
-              var scope = bindContext._scope;
+            meta._change_handler_creator = function(bindContext){
               var snippet = bindContext._snippet;
-              var arrayedPath = __replaceIndexesInPath(propertyPath, bindContext._indexes);
-              return _register_render(scope, arrayedPath, snippet, selector, changeHandler, bindContext);
+              var target = snippet.find(selector);
+              if(propertyPath === "_index"){
+                //we do not need to observe anything, just return a force render handler
+                return function(){
+                  renderFn(target, snippet._index, undefined, bindContext);
+                }
+              }else if (propertyPath == "_indexes"){
+                //we do not need to observe anything, just return a force render handler
+                return function(){
+                  renderFn(target, snippet._indexes, undefined, bindContext);
+                }
+              }else{
+                return function(newValue, oldValue, bindContext){
+                  renderFn(target, newValue, oldValue, bindContext);
+                }
+              }
             }
-          }
-        }
-      },
-      _on_dom_change : {
-        priority : 10000000 - 200, // a little smaller than bigger
-        fn : function (meta) {
-          if(!meta._assign){
-            meta._assign = meta._on_dom_change;
           }
         }
       },
@@ -599,16 +649,40 @@
           if (!meta._register_assign) {
             var _register_dom_change = meta._register_dom_change;
             var selector = meta._selector;
-            var propertyPath = meta._target_path;
             meta._register_assign = function(bindContext, changeHandler){
-              var scope = bindContext._scope;
               var snippet = bindContext._snippet;
-              var arrayedPath = __replaceIndexesInPath(propertyPath, bindContext._indexes);
-              return _register_dom_change(scope, arrayedPath, snippet, selector, changeHandler, bindContext);
+              var target = snippet.find(selector);
+              return _register_dom_change(target, changeHandler, bindContext);
             }
           }
         }
       },
+      _on_change: {
+        priority: 10000000 + 100,
+        fn : function(meta){
+          var changeFn = meta._on_change;
+          //if _on_change is specified, the _change_handler_creator will be forced to handle _on_change
+          meta._change_handler_creator = function(bindContext){
+            return changeFn;
+          }
+        }
+      },
+      _assign : {
+        priority: 10000000 + 100,
+        fn : function(meta){
+          var changeFn = meta._assign;
+          var propertyPath = meta._target_path;
+          //if _assign is specified, the _assign_change_handler_creator will be forced to handle _on_change
+          meta._assign_change_handler_creator = function(bindContext){
+            var scope = bindContext;
+            var arrayedPath = __replaceIndexesInPath(propertyPath, bindContext._indexes);
+            var path = Path.get(arrayedPath);
+            return function(value, bindContext){
+              changeFn(path, value, bindContext);
+            };
+          }
+        }
+      }
       /*
       _selector_keep_to_final : {
         priority : 10000000, // a little smaller than bigger
@@ -678,11 +752,16 @@
     return __ordered_metaRewritter;
   };
   
+  var __uidTimestamp = Date.now();
   var __uidSeq = 0;
   Aj.util = {
     createUID : function () {
+      if(__uidSeq >= 1000000){
+        __uidTimestamp = Date.now();
+        __uidSeq = 0;
+      }
       __uidSeq++;
-      return "AJUID-" + __uidSeq;
+      return "aj-" + __uidSeq + "-"+ __uidTimestamp;
     },
     regulateArray : function (v, tryKeepRef) {
       if ($.isArray(v)) {
@@ -782,7 +861,7 @@
     }
     return ref;
   };
-  var __reverseMetaKeys = ["_meta_type", "_meta_id", "_value", "_prop", "_splice", "_target_path"];
+  var __reverseMetaKeys = ["_meta_type", "_meta_id", "_meta_trace_id", "_value", "_prop", "_splice", "_target_path"];
   var __rewriteObserverMeta = function(propertyPath, meta, metaId){
     
     if(Array.isArray(meta)){
@@ -810,6 +889,8 @@
         newMeta._meta_id = Aj.util.createUID();
       }
     }
+    
+    newMeta._meta_trace_id = Aj.util.createUID();
 
     switch(newMeta._meta_type){
       case "_root":
@@ -893,7 +974,7 @@
           }
         });
         
-        if(newMeta._on_change){
+        if(newMeta._change_handler_creator || newMeta._item){
           if(!newMeta._register_on_change){
             //by default, we treat the bindContext as scope
             var propertyPath = newMeta._target_path;
@@ -902,7 +983,7 @@
               var arrayIndexedPath = __replaceIndexesInPath(propertyPath, bindContext._indexes);
               var observer = scope.registerPathObserver(arrayIndexedPath, function(newValue, oldValue){
                 changeHandler(newValue, oldValue, bindContext);
-              });
+              }, newMeta._meta_trace_id);
               if(bindContext.addDiscardHook){
                 bindContext.addDiscardHook(function(){
                   observer.close();
@@ -913,35 +994,114 @@
                 changeHandler(observePath.getValueFrom(scope), undefined, bindContext);
               };
             };
-            if(newMeta._meta_type == "_splice"){
-              var spliceFn = newMeta._on_change;
-              newMeta._on_change = function(newValue, oldValue, bindContext){
-                var scope = bindContext._scope;
-                var arrayIndexedPath = __replaceIndexesInPath(propertyPath, bindContext._indexes);
-                if(oldValue){
-                  scope.removeArrayObserver(arrayIndexedPath, oldValue);
-                }
-                if(newValue){
-                  scope.registerArrayObserver(arrayIndexedPath, newValue, function(splices){
-                    spliceFn.call(newMeta, splices, bindContext);
-                  });
+            if(newMeta._item){
+              var changeHandlerCreator = newMeta._change_handler_creator;
+              var itemMeta = newMeta._item;
+              newMeta._change_handler_creator = function(bindContext){
+                var existingChangeFn = changeHandlerCreator ? changeHandlerCreator.call(this, bindContext) : undefined;
+                return function(newValue, oldValue, bindContext){
+                  var scope = bindContext._scope;
+                  if(existingChangeFn){
+                    existingChangeFn.call(this, arguments);
+                  }
+                  //regiser _item change
+                  
+                  var regularOld = Aj.util.regulateArray(oldValue);
+                  var regularNew = Aj.util.regulateArray(newValue);
+                  
+                  for(var i=regularOld.length;i<regularNew.length;i++){
+                    var arrayedContext = Aj.util.shallowCopy(bindContext);
+                    if(!arrayedContext._indexes){
+                      arrayedContext._indexes = [];
+                    }
+                    arrayedContext._indexes.push(i);
+                    //var itemPath = __replaceIndexesInPath(itemMeta._target_path, arrayedContext.__indexes);
+                    //scope.removePathObserver(itemPath, )
+                    scope.bindMeta(itemMeta, arrayedContext);
+                  }
+                  //currently we have no way to unbound them....
+                  /*
+                  for(var i=regularNew.length;i<regularOld.length;i++){
+                    var arrayedContext = Aj.util.shallowCopy(bindContext);
+                    if(!arrayedContext.__indexes){
+                      arrayedContext.__indexes = [];
+                    }
+                    arrayedContext.__index.push(i);
+                    var itemPath = __replaceIndexesInPath(itemMeta._target_path, arrayedContext.__indexes);
+                    scope.removePathObserver(itemPath, )
+                  }
+                  */
+                  
+                  var arrayIndexedPath = __replaceIndexesInPath(propertyPath, bindContext._indexes);
+                  if(oldValue){
+                    scope.removeArrayObserver(arrayIndexedPath, newMeta._meta_trace_id);
+                  }
+                  if(newValue){
+                    scope.registerArrayObserver(arrayIndexedPath, newValue, function(splices){
+                      //Aj.delay(function(){;
+                        var removedCount = 0;
+                        var addedCount = 0;
+
+                        splices.forEach(function (s) {
+                          removedCount += s.removed.length;
+                          addedCount += s.addedCount;
+                        });
+
+                        var diff = addedCount - removedCount;
+                        var newLength = newValue.length;
+                        if(diff > 0){
+                          for (var i = diff; i >0; i--) {
+                            var newIndex = newLength - i;
+                            var arrayedContext = Aj.util.shallowCopy(bindContext);
+                            if(!arrayedContext._indexes){
+                              arrayedContext._indexes = [];
+                            }
+                            arrayedContext._indexes.push(newIndex);
+                            //var itemPath = __replaceIndexesInPath(itemMeta._target_path, arrayedContext.__indexes);
+                            //scope.removePathObserver(itemPath, )
+                            scope.bindMeta(itemMeta, arrayedContext);
+                          }
+                        }
+                      //});
+                    }, newMeta._meta_trace_id);
+                  };
                 };
+              };
+            }
+
+            if(newMeta._meta_type == "_splice"){
+              var spliceChangeHandlerCreator = newMeta._change_handler_creator;
+              newMeta._change_handler_creator = function(bindContext){
+                var spliceFn = spliceChangeHandlerCreator.call(this, bindContext);
+                return function(newValue, oldValue, bindContext){
+                  var scope = bindContext._scope;
+                  var arrayIndexedPath = __replaceIndexesInPath(propertyPath, bindContext._indexes);
+                  if(oldValue){
+                    scope.removeArrayObserver(arrayIndexedPath, newMeta._meta_trace_id);
+                  }
+                  if(newValue){
+                    scope.registerArrayObserver(arrayIndexedPath, newValue, function(splices){
+                      spliceFn.call(newMeta, splices, bindContext);
+                    }, newMeta._meta_trace_id);
+                  };
+                }
               }
             }
-            
+          }
+        }
+        //set default assign even we do not need it
+        if(!newMeta._assign_change_handler_creator){
+          var propertyPath = newMeta._target_path;
+          newMeta._assign_change_handler_creator = function(bindContext){
+            var scope = bindContext._scope;
+            var arrayedPath = __replaceIndexesInPath(propertyPath, bindContext._indexes);
+            var path = Path.get(arrayedPath);
+            return function(value, bindContext){
+              path.setValueFrom(scope, value);
+            };
           }
         }
         
-        if(!newMeta._assign){//set default assign even we do not need it
-          newMeta._assign = function (bindContext, value){
-            var scope = bindContext;
-            var path = Path.get(this._target_path);
-            path.setValueFrom(scope, value);
-          };
-        }
-        
-        
-        //if(meta._assign && !meta._)
       break;
       case "_prop":
         for(var p in newMeta){
@@ -970,9 +1130,9 @@
     this.map = {};
   };
   
-  ObserverMap.prototype.add = function(path, observer, extraInfo){
+  ObserverMap.prototype.add = function(path, observer, identifier){
     var item = {
-      extraInfo: extraInfo,
+      identifier: identifier,
       prev: null,
       next: null,
       close: function(){
@@ -1008,13 +1168,13 @@
     return item;
   }
   
-  ObserverMap.prototype.getObserverList = function(path, extraInfo){
+  ObserverMap.prototype.getObserverList = function(path, identifier){
     var list = [];
     var head = this.map[path];
     var item = head.next;
     while(item && item != head){
-      if(extraInfo){
-        if(item.extraInfo == extraInfo){
+      if(identifier){
+        if(item.identifier == identifier){
           list.push(item);
         }
       }else{
@@ -1041,20 +1201,27 @@
     return path;
   }
 
-  Scope.prototype.registerPathObserver = function(path, changeFn){
+  Scope.prototype.registerPathObserver = function(path, changeFn, identifier){
     var observer = new PathObserver(this, path);
     observer.open(changeFn);
-    return this.observerMap.path.add(path, observer);
+    return this.observerMap.path.add(path, observer, identifier);
   };
   
-  Scope.prototype.registerArrayObserver = function(path, targetObj, changeFn){
+  Scope.prototype.registerArrayObserver = function(path, targetObj, changeFn, identifier){
     var observer = new ArrayObserver(targetObj);
     observer.open(changeFn);
-    return this.observerMap.splice.add(path, observer, targetObj);
+    return this.observerMap.splice.add(path, observer, identifier);
   };
   
-  Scope.prototype.removeArrayObserver = function(path, targetObj){
-    var list = this.observerMap.splice.getObserverList(path, targetObj);
+  Scope.prototype.removeArrayObserver = function(path, identifier){
+    var list = this.observerMap.splice.getObserverList(path, identifier);
+    for(var i=0;i<list.length;i++){
+      list[i].close();
+    }
+  };
+  
+  Scope.prototype.removePathObserver = function(path, identifier){
+    var list = this.observerMap.path.getObserverList(path, identifier);
     for(var i=0;i<list.length;i++){
       list[i].close();
     }
@@ -1092,14 +1259,16 @@
       }
       sub.forEach(function(sm){
         if(sm._register_on_change){
-          var force = sm._register_on_change(bindContext, function(){
-            sm._on_change.apply(sm, arguments);
+          var changeHandler = sm._change_handler_creator.call(sm, bindContext, sm._on_change);
+          var force = sm._register_on_change.call(sm, bindContext, function(){
+            changeHandler.apply(sm, arguments);
           });
           force.apply();
         }
         if(sm._register_assign){
-          var force = sm._register_assign(bindContext, function(){
-            sm._assign.apply(sm, arguments);
+          var assignChangeHandler = sm._assign_change_handler_creator.call(sm, bindContext, sm._assign);
+          var force = sm._register_assign.call(sm, bindContext, function(){
+            assignChangeHandler.apply(sm, arguments);
             Aj.sync();
           });
           //force.apply
@@ -1369,14 +1538,18 @@
           }else{
             var ref = __getDataRef(ownerFormInputTarget, "aj-form-binding-ref");
             if(ref.changeEvents.length > 0){
-              itemDef._register_dom_change = function (scope, propertyPath, snippet, selector, changeHandler, bindContext){
+              itemDef._register_dom_change = function (target, changeHandler, bindContext){
+                var snippet = bindContext._snippet;
                 var events = ref.changeEvents.join(" ");
                 var targetInput = snippet.find("input");
                 targetInput.bind(events, function () {
                   var je = $(this);
                   var value = je.val();
                   var checked = je.prop("checked");
-                  changeHandler(value, checked);
+                  changeHandler({
+                    "value": value,
+                    "checked": checked
+                  }, bindContext);
                 });
                 snippet.find("label").bind(events, function(){
                   var je= $(this);
@@ -1386,27 +1559,27 @@
                   eventHandler.apply(input);
                 });
               }
-              itemDef._on_dom_change = function (value, checked) {
-                  if(type === "checkbox"){
-                    var newResult = Aj.util.regulateArray(ref.value);
-                    var vidx = newResult.indexOf(value);
-                    if(checked && vidx>= 0){
-                      //it is ok
-                    }else if(checked && vidx < 0){
-                      //add
-                      newResult.push(value);
-                    }else if(!checked && vidx >= 0){
-                      //remove
-                      newResult.splice(vidx, 1);
-                    }else{// !checked && vidx < 0
-                      //it is ok
-                    }
-                    ref.value = newResult;
-                  }else{
-                    ref.value = value;
+              itemDef._assign = function (path, changedValue, bindContext) {
+                var value = changedValue.value;
+                var checked = changedValue.checked;
+                if(type === "checkbox"){
+                  var newResult = Aj.util.regulateArray(ref.value);
+                  var vidx = newResult.indexOf(value);
+                  if(checked && vidx>= 0){
+                    //it is ok
+                  }else if(checked && vidx < 0){
+                    //add
+                    newResult.push(value);
+                  }else if(!checked && vidx >= 0){
+                    //remove
+                    newResult.splice(vidx, 1);
+                  }else{// !checked && vidx < 0
+                    //it is ok
                   }
-                  
-                  Aj.sync();
+                  ref.value = newResult;
+                }else{
+                  ref.value = value;
+                }
               } //_assign
             } // ref.changeEvents.length > 0
           } // else of (itemDef._register_assign || itemDef._assign)

@@ -14,19 +14,13 @@ $(function () {
             _render : function (target, newValue, oldValue) {
               target.val(newValue);
             },
-            _register_dom_change : function(scope, propertyPath, snippet, selector, changeHandler){
-              var target = snippet.find(selector);
-              var observePath = Path.get(propertyPath);
-              var passToHandler = {
-                observePath: observePath,
-                scope: scope
-              };
+            _register_dom_change : function(target, changeHandler, bindContext){
               target.keyup(function(){
                 var v = $(this).val();
-                changeHandler(passToHandler, v);
+                changeHandler(v, bindContext);
               });
               return function(){
-                changeHandler(passToHandler, target.val());
+                changeHandler(target.val(), bindContext);
               }
             }
           },

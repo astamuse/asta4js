@@ -18,28 +18,26 @@ $(function () {
           $scope.observeData.list = copyArray;
         },
         _splice: function(splices){
+          var removedCount = 0;
+          var addedCount = 0;
+
           splices.forEach(function (s) {
-            var diff = s.addedCount - s.removed.length;
-            if(diff > 0){
-              var callParam = [];
-              callParam.push(s.index);
-              callParam.push(0);
-              for(var i=0;i<diff;i++){
-                callParam.push(undefined);
-              }
-              Array.prototype.splice.apply($scope.observeData.list, callParam);
-            }else{
-              $scope.observeData.list.splice(s.index, 0-diff);
-            }
+            removedCount += s.removed.length;
+            addedCount += s.addedCount;
           });
 
-         
-         
+          var diff = addedCount - removedCount;
+          if(diff<0){
+            diff = 0-diff;
+            var len = $scope.observeData.list.length;
+            $scope.observeData.list(len-diff-1, diff);
+          }
         },
+        //we do not need to handle splice because the following assign will splice our target array automatically
         _item: {
           _value: function(newValue, oldValue, bindContext){
             var targetIndex = bindContext._indexes[0];
-            $scope.observeData.list[targetIndex] = $scope.data.list[targetIndex] + "-observed-changed";
+            $scope.observeData.list[targetIndex] = $scope.data.list[targetIndex] + "-observed-changed" + (new Date());
           }
         }
       }
@@ -59,19 +57,13 @@ $(function () {
             _render : function (target, newValue, oldValue) {
               target.val(newValue);
             },
-            _register_dom_change : function(scope, propertyPath, snippet, selector, changeHandler){
-              var target = snippet.find(selector);
-              var observePath = Path.get(propertyPath);
-              var passToHandler = {
-                observePath: observePath,
-                scope: scope
-              };
+            _register_dom_change : function(target, changeHandler, bindContext){
               target.keyup(function(){
                 var v = $(this).val();
-                changeHandler(passToHandler, v);
+                changeHandler(v, bindContext);
               });
               return function(){
-                changeHandler(passToHandler, target.val());
+                changeHandler(target.val(), bindContext);
               }
             }
           },
