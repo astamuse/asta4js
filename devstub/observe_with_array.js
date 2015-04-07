@@ -27,17 +27,30 @@ $(function () {
           });
 
           var diff = addedCount - removedCount;
-          if(diff<0){
+          var len = $scope.observeData.list.length;
+          if(diff >0){
+            var callParam=[];
+            callParam.push(len-1);
+            callParam.push(0);
+            for(var i=0;i<diff;i++){
+              callParam.push(undefined);
+            }
+            Array.prototype.splice.apply($scope.observeData.list, callParam);
+          }else if(diff<0){
             diff = 0-diff;
-            var len = $scope.observeData.list.length;
-            $scope.observeData.list(len-diff-1, diff);
+            $scope.observeData.list.splice(len-diff-1, diff);
           }
         },
         //we do not need to handle splice because the following assign will splice our target array automatically
         _item: {
           _value: function(newValue, oldValue, bindContext){
             var targetIndex = bindContext._indexes[0];
-            $scope.observeData.list[targetIndex] = $scope.data.list[targetIndex] + "-observed-changed" + (new Date());
+            Aj.delay(function(){
+              var len = $scope.observeData.list.length;
+              if(targetIndex<len){
+                $scope.observeData.list[targetIndex] = $scope.data.list[targetIndex] + "-observed-changed" + (new Date());
+              }
+            });
           }
         }
       }
