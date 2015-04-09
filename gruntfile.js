@@ -185,11 +185,11 @@ module.exports = function (grunt) {
   grunt.loadNpmTasks('grunt-contrib-connect');
 
   // load custom tasks
-  /*
+  
   grunt.file.recurse('grunt', function (path) {
     require('./' + path)(grunt)
   })
-  */
+  
 
   grunt.registerTask('unit', ['karma:browsers'])
   grunt.registerTask('cover', ['karma:coverage'])
