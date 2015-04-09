@@ -76,7 +76,8 @@
         if (!meta._register_on_change) {
           meta._register_on_change = function(bindContext, changeHandler) {
             var scope = bindContext._scope;
-            var observePath = "__watch__map__['" + watchPropMapPath + "']";
+            var arrayedPath = __replaceIndexesInPath(watchPropMapPath, bindContext._indexes);
+            var observePath = "__watch__map__['" + arrayedPath + "']";
             var observer = new PathObserver(scope, observePath);
             observer.open(function (newValue, oldValue) {
               changeHandler(newValue, oldValue, bindContext);
@@ -92,7 +93,10 @@
           meta._assign = function (path, value, bindContext){
             var scope = bindContext._scope;
             var watchMap = retrieveWatchMap(scope);
-            watchMap[watchPropMapPath] = value;
+            
+            var arrayedPath = __replaceIndexesInPath(watchPropMapPath, bindContext._indexes);
+            
+            watchMap[arrayedPath] = value;
             if(watchDef._store){
               path.setValueFrom(bindContext._scope, value);
             }
@@ -106,13 +110,15 @@
             var targetValuePathes = [];
             var observer = new CompoundObserver();
             observerTargets.forEach(function(observerPath){
-              targetValuePathes.push(Path.get(observerPath));
-              observer.addPath(scope, observerPath);
+              var arrayedObservePath = __replaceIndexesInPath(observerPath, bindContext._indexes);
+              targetValuePathes.push(Path.get(arrayedObservePath));
+              observer.addPath(scope, arrayedObservePath);
             });
+            var arrayedPath = __replaceIndexesInPath(watchPropMapPath, bindContext._indexes);
             if(bindContext._snippet){
               bindContext._snippet.addDiscardHook(function(){
                 observer.close();
-                delete watchMap[watchPropMapPath];
+                delete watchMap[arrayedPath];
               });
             }
             
@@ -131,8 +137,9 @@
               targetValuePathes.forEach(function(p){
                 values.push(p.getValueFrom(scope));
               });
+              return values;
             };
-            return function(){
+            var force = function(){
               var targetValues = getCurrentTargetValue();
               var value;
               if(watchDef._cal){
@@ -142,6 +149,8 @@
               }
               changeHandler(value, bindContext);
             };
+            force.apply();
+            return force;
           }
         }
       },
@@ -642,6 +651,7 @@
                 }
               }else{
                 return function(newValue, oldValue, bindContext){
+                  //TODO we should convert old value too.
                   renderFn(target, newValue, oldValue, bindContext);
                 }
               }
@@ -1557,13 +1567,22 @@
                     "checked": checked
                   }, bindContext);
                 });
+                /*
                 snippet.find("label").bind(events, function(){
                   var je= $(this);
                   var id = je.attr("for");
                   var input = targetInput.filter("#" + id);
-                  var eventHandler = input[ref.changeEvents[0]];
-                  eventHandler.apply(input);
+                  //var eventHandler = input[ref.changeEvents[0]];
+                  //eventHandler.apply(input);
+                  var value = input.val();
+                  //label click may before checkbox "being clicked"
+                  var checked = !input.prop("checked");
+                  changeHandler({
+                    "value": value,
+                    "checked": checked
+                  }, bindContext);
                 });
+                */
               }
               itemDef._assign = function (path, changedValue, bindContext) {
                 var value = changedValue.value;

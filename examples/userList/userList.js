@@ -63,6 +63,7 @@ $(function () {
               }
             }
           },
+          //sex: ".x-sex",
           language  : ".x-lang",
           "private" : ".x-private",
           desc      : ".x-desc"
