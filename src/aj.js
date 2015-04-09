@@ -42,15 +42,18 @@
     },
     metaRewritter: {
       _watch : function (meta) {
-        var watchMap = scope.__watch__map__;
-        if(!watchMap){
-          watchMap = {};
-          scope.__watch__map__ = watchMap;
-        }
+        var retrieveWatchMap=function(scope){
+          var watchMap = scope.__watch__map__;
+          if(!watchMap){
+            watchMap = {};
+            scope.__watch__map__ = watchMap;
+          }
+          return watchMap;
+        };
+        
         
         var watchDef = meta._watch;
-        var watchPropPath = meta._target_path;
-        var watchPropMapPath = watchPropPath + ":" + meta._meta_trace_id;
+        var watchPropMapPath = meta._target_path + ":" + meta._meta_trace_id;
         
         var parentPath = meta._target_path;
         var dotIdx = parentPath.lastIndexOf(".");
@@ -73,18 +76,25 @@
         if (!meta._register_on_change) {
           meta._register_on_change = function(bindContext, changeHandler) {
             var scope = bindContext._scope;
-            var observer = new PathObserver(scope, "__watch__map__['" + watchPropMapPath + "']");
+            var observePath = "__watch__map__['" + watchPropMapPath + "']";
+            var observer = new PathObserver(scope, observePath);
             observer.open(function (newValue, oldValue) {
               changeHandler(newValue, oldValue, bindContext);
             });
+            var path = Path.get(observePath);
+            return function(){
+              changeHandler(path.getValueFrom(scope), undefined, bindContext);
+            }
           };
         }
         
         if(!meta._assign){
-          meta._assign = function (newValues, bindContext){
+          meta._assign = function (path, value, bindContext){
+            var scope = bindContext._scope;
+            var watchMap = retrieveWatchMap(scope);
             watchMap[watchPropMapPath] = value;
             if(watchDef._store){
-              Path.get(propertyPath).setValueFrom(bindContext._scope, value);
+              path.setValueFrom(bindContext._scope, value);
             }
           };
         }
@@ -92,10 +102,11 @@
         if(!meta._register_assign){
           meta._register_assign = function (bindContext, changeHandler){
             var scope = bindContext._scope;
-            var firstValues = [];
+            var watchMap = retrieveWatchMap(scope);
+            var targetValuePathes = [];
             var observer = new CompoundObserver();
             observerTargets.forEach(function(observerPath){
-              firstValues.push(Path.get(observerPath).getValueFrom(scope));
+              targetValuePathes.push(Path.get(observerPath));
               observer.addPath(scope, observerPath);
             });
             if(bindContext._snippet){
@@ -103,18 +114,6 @@
                 observer.close();
                 delete watchMap[watchPropMapPath];
               });
-            }
-
-            //before open observer, let's store the initial value
-            var initialValue;
-            if(watchDef._cal){
-              initialValue = watchDef._cal.apply(null, firstValues);
-            }else{
-              initialValue = firstValues;
-            }
-            watchMap[watchPropMapPath] = initialValue;
-            if(watchDef._store){
-              Path.get(watchPropPath).setValueFrom(scope, initialValue);
             }
             
             //open observer
@@ -126,18 +125,25 @@
               }
             });
             
-            return function(){
-              changeHandler(initialValue, bindContext);
+            //force retrieve current value
+            var getCurrentTargetValue = function(){
+              var values = [];
+              targetValuePathes.forEach(function(p){
+                values.push(p.getValueFrom(scope));
+              });
             };
-
+            return function(){
+              var targetValues = getCurrentTargetValue();
+              var value;
+              if(watchDef._cal){
+                value = watchDef._cal.apply(null, targetValues);
+              }else{
+                value = firstValues;
+              }
+              changeHandler(value, bindContext);
+            };
           }
         }
-        if(!meta._first_time_value){
-          meta._first_time_value = function(_scope, propertyPath, target){
-            return watchMap[propertyPath];
-          };
-        }
- 
       },
       _form : function (meta) {
         var formDef = meta._form;
