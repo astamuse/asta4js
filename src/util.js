@@ -1,9 +1,7 @@
-var _lib_observe=require("../lib/observe.js");
-
 var util = {};
 
 util.sync = function(){
-  _lib_observe.Platform.performMicrotaskCheckpoint();
+  Platform.performMicrotaskCheckpoint();
 };
 
 var __uidTimestamp = Date.now();

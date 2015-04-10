@@ -116,12 +116,10 @@ return /******/ (function(modules) { // webpackBootstrap
 /* 1 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var _lib_observe=__webpack_require__(7);
-
 	var util = {};
 
 	util.sync = function(){
-	  _lib_observe.Platform.performMicrotaskCheckpoint();
+	  Platform.performMicrotaskCheckpoint();
 	};
 
 	var __uidTimestamp = Date.now();
@@ -149,7 +147,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  }
 	};
 
-	util.clone = __webpack_require__(8);
+	util.clone = __webpack_require__(7);
 
 	util.shallowCopy = function(arg1, arg2, arg3){
 	  var from = arg1;
@@ -253,7 +251,7 @@ return /******/ (function(modules) { // webpackBootstrap
 /* 3 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var _lib_observe = __webpack_require__(7);
+	var _lib_observe = __webpack_require__(8);
 
 	var config = __webpack_require__(2);
 	var Snippet = __webpack_require__(9);
@@ -451,8 +449,12 @@ return /******/ (function(modules) { // webpackBootstrap
 /* 4 */
 /***/ function(module, exports, __webpack_require__) {
 
+	var _lib_observe = __webpack_require__(8);
+
+	var util = __webpack_require__(1);
 	var config = __webpack_require__(2);
 	var constant = __webpack_require__(11)
+	var Snippet = __webpack_require__(9);
 
 	var _duplicator = function(meta){
 	  var _duplicator = meta._duplicator;
@@ -470,7 +472,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	        
 	        target.each(function(index, elem){
 	          var tagName = elem.tagName;
-	          var placeHolderId = Aj.util.createUID();
+	          var placeHolderId = util.createUID();
 	          if( (tagName === "OPTION" || tagName === "OPTGROUP") && $.browser !== "mozilla"){
 	            tagName = "span";
 	          }
@@ -487,18 +489,18 @@ return /******/ (function(modules) { // webpackBootstrap
 	          
 	          //set the placeholder id to all the children input elements for the sake of checkbox/radio box option rendering
 	          $elem.find("input").attr("aj-placeholder-id", placeHolderId);
-	          var changeContext = Aj.util.shallowCopy(bindContext);
+	          var changeContext = util.shallowCopy(bindContext);
 	          changeContext._observeTraceId = meta._trace_id + ":" + placeHolderId;
 	          changeContext._placeHolder = placeHolder;
 	          changeContext._templateStr = templateStr;
-	          changeContext._indexedPath = __replaceIndexesInPath(propertyPath, bindContext._indexes);
+	          changeContext._indexedPath = util.replaceIndexesInPath(propertyPath, bindContext._indexes);
 	          var observer = scope.registerPathObserver(changeContext._indexedPath, function(newValue, oldValue){
 	            changeHandler(newValue, oldValue, changeContext);
 	          }, changeContext._observeTraceId);
 	          snippet._discardHooks.push(function(){
 	            observer.close();
 	          });
-	          var observePath = Path.get(changeContext._indexedPath);
+	          var observePath = _lib_observe.Path.get(changeContext._indexedPath);
 	          forceChange.push(function(){
 	            var v = observePath.getValueFrom(scope);
 	            changeHandler(v, undefined, changeContext);
@@ -525,14 +527,14 @@ return /******/ (function(modules) { // webpackBootstrap
 	        var currentPath = context._indexedPath;
 	        var itemMeta = this._item;
 	        
-	        var regularOld = Aj.util.regulateArray(oldValue);
-	        var regularNew = Aj.util.regulateArray(newValue);
+	        var regularOld = util.regulateArray(oldValue);
+	        var regularNew = util.regulateArray(newValue);
 	        
 	        //var existingNodes = snippet._root.find("[aj-generated=" + placeHolderId + "]");
-	        var existingSubSnippets = __getDataRef(placeHolder, "aj-place-holder-ref").subSnippets;
+	        var existingSubSnippets = util.getDataRef(placeHolder, "aj-place-holder-ref").subSnippets;
 	        if(!existingSubSnippets){
 	          existingSubSnippets = [];
-	          __getDataRef(placeHolder, "aj-place-holder-ref").subSnippets = existingSubSnippets;
+	          util.getDataRef(placeHolder, "aj-place-holder-ref").subSnippets = existingSubSnippets;
 	        }
 
 	        var newLength = regularNew.length;
@@ -942,8 +944,12 @@ return /******/ (function(modules) { // webpackBootstrap
 /* 6 */
 /***/ function(module, exports, __webpack_require__) {
 
+	var _lib_observe = __webpack_require__(8);
+
+	var util = __webpack_require__(1);
 	var config = __webpack_require__(2);
 	var constant = __webpack_require__(11)
+	var Snippet = __webpack_require__(9)
 
 	var _form = function (meta) {
 	  var formDef = meta._form;
@@ -1106,7 +1112,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	              changeHandler(v, bindContext);
 	            }); 
 	          }else{
-	            var observer = new PathObserver(ref, "value");
+	            var observer = new _lib_observe.PathObserver(ref, "value");
 	            observer.open(function(newValue, oldValue){
 	              changeHandler(newValue, bindContext);
 	            });
@@ -1375,7 +1381,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  ret._form._extra_change_events = extraChangeEvents;
 	  
 	  ret.withOption = function(){
-	    this._form._option = optionBind.apply(Aj, arguments);
+	    this._form._option = api.optionBind.apply(Aj, arguments);
 	    return this;
 	  }
 	  ret.asSingleCheck = function(){
@@ -1465,6 +1471,176 @@ return /******/ (function(modules) { // webpackBootstrap
 
 /***/ },
 /* 7 */
+/***/ function(module, exports, __webpack_require__) {
+
+	/* WEBPACK VAR INJECTION */(function(global, Buffer, module) {'use strict';
+
+	var clone = (function(global) {
+
+	/**
+	 * Clones (copies) an Object using deep copying.
+	 *
+	 * This function supports circular references by default, but if you are certain
+	 * there are no circular references in your object, you can save some CPU time
+	 * by calling clone(obj, false).
+	 *
+	 * Caution: if `circular` is false and `parent` contains circular references,
+	 * your program may enter an infinite loop and crash.
+	 *
+	 * @param `parent` - the object to be cloned
+	 * @param `circular` - set to true if the object to be cloned may contain
+	 *    circular references. (optional - true by default)
+	 * @param `depth` - set to a number if the object is only to be cloned to
+	 *    a particular depth. (optional - defaults to Infinity)
+	 * @param `prototype` - sets the prototype to be used when cloning an object.
+	 *    (optional - defaults to parent prototype).
+	*/
+
+	function clone(parent, circular, depth, prototype) {
+	  var filter;
+	  if (typeof circular === 'object') {
+	    depth = circular.depth;
+	    prototype = circular.prototype;
+	    filter = circular.filter;
+	    circular = circular.circular
+	  }
+	  // maintain two arrays for circular references, where corresponding parents
+	  // and children have the same index
+	  var allParents = [];
+	  var allChildren = [];
+
+	  var useBuffer = typeof Buffer != 'undefined';
+
+	  if (typeof circular == 'undefined')
+	    circular = true;
+
+	  if (typeof depth == 'undefined')
+	    depth = Infinity;
+
+	  // recurse this function so we don't reset allParents and allChildren
+	  function _clone(parent, depth) {
+	    // cloning null always returns null
+	    if (parent === null)
+	      return null;
+
+	    if (depth == 0)
+	      return parent;
+
+	    var child;
+	    var proto;
+	    if (typeof parent != 'object') {
+	      return parent;
+	    }
+
+	    if (isArray(parent)) {
+	      child = [];
+	    } else if (isRegExp(parent)) {
+	      child = new RegExp(parent.source, getRegExpFlags(parent));
+	      if (parent.lastIndex) child.lastIndex = parent.lastIndex;
+	    } else if (isDate(parent)) {
+	      child = new Date(parent.getTime());
+	    } else if (useBuffer && Buffer.isBuffer(parent)) {
+	      child = new Buffer(parent.length);
+	      parent.copy(child);
+	      return child;
+	    } else {
+	      if (typeof prototype == 'undefined') {
+	        proto = Object.getPrototypeOf(parent);
+	        child = Object.create(proto);
+	      }
+	      else {
+	        child = Object.create(prototype);
+	        proto = prototype;
+	      }
+	    }
+
+	    if (circular) {
+	      var index = allParents.indexOf(parent);
+
+	      if (index != -1) {
+	        return allChildren[index];
+	      }
+	      allParents.push(parent);
+	      allChildren.push(child);
+	    }
+
+	    for (var i in parent) {
+	      var attrs;
+	      if (proto) {
+	        attrs = Object.getOwnPropertyDescriptor(proto, i);
+	      }
+	      
+	      if (attrs && attrs.set == null) {
+	        continue;
+	      }
+	      child[i] = _clone(parent[i], depth - 1);
+	    }
+
+	    return child;
+	  }
+
+	  return _clone(parent, depth);
+	}
+
+	/**
+	 * Simple flat clone using prototype, accepts only objects, usefull for property
+	 * override on FLAT configuration object (no nested props).
+	 *
+	 * USE WITH CAUTION! This may not behave as you wish if you do not know how this
+	 * works.
+	 */
+	clone.clonePrototype = function(parent) {
+	  if (parent === null)
+	    return null;
+
+	  var c = function () {};
+	  c.prototype = parent;
+	  return new c();
+	};
+
+	function getRegExpFlags(re) {
+	  var flags = '';
+	  re.global && (flags += 'g');
+	  re.ignoreCase && (flags += 'i');
+	  re.multiline && (flags += 'm');
+	  return flags;
+	}
+
+	function objectToString(o) {
+	  return Object.prototype.toString.call(o);
+	}
+
+	function isDate(o) {
+	  return typeof o === 'object' && objectToString(o) === '[object Date]';
+	}
+
+	function isArray(o) {
+	  return typeof o === 'object' && objectToString(o) === '[object Array]';
+	}
+
+	function isRegExp(o) {
+	  return typeof o === 'object' && objectToString(o) === '[object RegExp]';
+	}
+
+	if (global.TESTING) {
+	  clone.getRegExpFlags = getRegExpFlags;
+	  clone.objectToString = objectToString;
+	  clone.isDate   = isDate;
+	  clone.isArray  = isArray;
+	  clone.isRegExp = isRegExp;
+	}
+
+	return clone;
+
+	})( typeof(global) === 'object' ? global :
+	    typeof(window) === 'object' ? window : this);
+
+	if (module && module.exports)
+	  module.exports = clone;
+	/* WEBPACK VAR INJECTION */}.call(exports, (function() { return this; }()), __webpack_require__(12).Buffer, __webpack_require__(13)(module)))
+
+/***/ },
+/* 8 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(global, module) {/*
@@ -3182,176 +3358,6 @@ return /******/ (function(modules) { // webpackBootstrap
 	/* WEBPACK VAR INJECTION */}.call(exports, (function() { return this; }()), __webpack_require__(13)(module)))
 
 /***/ },
-/* 8 */
-/***/ function(module, exports, __webpack_require__) {
-
-	/* WEBPACK VAR INJECTION */(function(global, Buffer, module) {'use strict';
-
-	var clone = (function(global) {
-
-	/**
-	 * Clones (copies) an Object using deep copying.
-	 *
-	 * This function supports circular references by default, but if you are certain
-	 * there are no circular references in your object, you can save some CPU time
-	 * by calling clone(obj, false).
-	 *
-	 * Caution: if `circular` is false and `parent` contains circular references,
-	 * your program may enter an infinite loop and crash.
-	 *
-	 * @param `parent` - the object to be cloned
-	 * @param `circular` - set to true if the object to be cloned may contain
-	 *    circular references. (optional - true by default)
-	 * @param `depth` - set to a number if the object is only to be cloned to
-	 *    a particular depth. (optional - defaults to Infinity)
-	 * @param `prototype` - sets the prototype to be used when cloning an object.
-	 *    (optional - defaults to parent prototype).
-	*/
-
-	function clone(parent, circular, depth, prototype) {
-	  var filter;
-	  if (typeof circular === 'object') {
-	    depth = circular.depth;
-	    prototype = circular.prototype;
-	    filter = circular.filter;
-	    circular = circular.circular
-	  }
-	  // maintain two arrays for circular references, where corresponding parents
-	  // and children have the same index
-	  var allParents = [];
-	  var allChildren = [];
-
-	  var useBuffer = typeof Buffer != 'undefined';
-
-	  if (typeof circular == 'undefined')
-	    circular = true;
-
-	  if (typeof depth == 'undefined')
-	    depth = Infinity;
-
-	  // recurse this function so we don't reset allParents and allChildren
-	  function _clone(parent, depth) {
-	    // cloning null always returns null
-	    if (parent === null)
-	      return null;
-
-	    if (depth == 0)
-	      return parent;
-
-	    var child;
-	    var proto;
-	    if (typeof parent != 'object') {
-	      return parent;
-	    }
-
-	    if (isArray(parent)) {
-	      child = [];
-	    } else if (isRegExp(parent)) {
-	      child = new RegExp(parent.source, getRegExpFlags(parent));
-	      if (parent.lastIndex) child.lastIndex = parent.lastIndex;
-	    } else if (isDate(parent)) {
-	      child = new Date(parent.getTime());
-	    } else if (useBuffer && Buffer.isBuffer(parent)) {
-	      child = new Buffer(parent.length);
-	      parent.copy(child);
-	      return child;
-	    } else {
-	      if (typeof prototype == 'undefined') {
-	        proto = Object.getPrototypeOf(parent);
-	        child = Object.create(proto);
-	      }
-	      else {
-	        child = Object.create(prototype);
-	        proto = prototype;
-	      }
-	    }
-
-	    if (circular) {
-	      var index = allParents.indexOf(parent);
-
-	      if (index != -1) {
-	        return allChildren[index];
-	      }
-	      allParents.push(parent);
-	      allChildren.push(child);
-	    }
-
-	    for (var i in parent) {
-	      var attrs;
-	      if (proto) {
-	        attrs = Object.getOwnPropertyDescriptor(proto, i);
-	      }
-	      
-	      if (attrs && attrs.set == null) {
-	        continue;
-	      }
-	      child[i] = _clone(parent[i], depth - 1);
-	    }
-
-	    return child;
-	  }
-
-	  return _clone(parent, depth);
-	}
-
-	/**
-	 * Simple flat clone using prototype, accepts only objects, usefull for property
-	 * override on FLAT configuration object (no nested props).
-	 *
-	 * USE WITH CAUTION! This may not behave as you wish if you do not know how this
-	 * works.
-	 */
-	clone.clonePrototype = function(parent) {
-	  if (parent === null)
-	    return null;
-
-	  var c = function () {};
-	  c.prototype = parent;
-	  return new c();
-	};
-
-	function getRegExpFlags(re) {
-	  var flags = '';
-	  re.global && (flags += 'g');
-	  re.ignoreCase && (flags += 'i');
-	  re.multiline && (flags += 'm');
-	  return flags;
-	}
-
-	function objectToString(o) {
-	  return Object.prototype.toString.call(o);
-	}
-
-	function isDate(o) {
-	  return typeof o === 'object' && objectToString(o) === '[object Date]';
-	}
-
-	function isArray(o) {
-	  return typeof o === 'object' && objectToString(o) === '[object Array]';
-	}
-
-	function isRegExp(o) {
-	  return typeof o === 'object' && objectToString(o) === '[object RegExp]';
-	}
-
-	if (global.TESTING) {
-	  clone.getRegExpFlags = getRegExpFlags;
-	  clone.objectToString = objectToString;
-	  clone.isDate   = isDate;
-	  clone.isArray  = isArray;
-	  clone.isRegExp = isRegExp;
-	}
-
-	return clone;
-
-	})( typeof(global) === 'object' ? global :
-	    typeof(window) === 'object' ? window : this);
-
-	if (module && module.exports)
-	  module.exports = clone;
-	/* WEBPACK VAR INJECTION */}.call(exports, (function() { return this; }()), __webpack_require__(12).Buffer, __webpack_require__(13)(module)))
-
-/***/ },
 /* 9 */
 /***/ function(module, exports, __webpack_require__) {
 
@@ -3446,22 +3452,26 @@ return /******/ (function(modules) { // webpackBootstrap
 /* 10 */
 /***/ function(module, exports, __webpack_require__) {
 
+	var _lib_observe = __webpack_require__(8);
+
 	var config=__webpack_require__(2);
 	var constant = __webpack_require__(11)
+
 
 	var util=__webpack_require__(1);
 
 	var __reverseMetaKeys = ["_meta_type", "_meta_id", "_meta_trace_id", "_value", "_prop", "_splice", "_target_path"];
 
-	var ordered_metaRewritter = null;
+	var __ordered_metaRewritter = null;
+
 	var getOrderedMetaRewritter = function(){
-	  if(ordered_metaRewritter){
-	    return ordered_metaRewritter;
+	  if(__ordered_metaRewritter){
+	    return __ordered_metaRewritter;
 	  }
 	  
 	  var array = new Array();
-	  for (var k in Aj.config.metaRewritter) {
-	    var def = Aj.config.metaRewritter[k];
+	  for (var k in config.meta.rewritterMap) {
+	    var def = config.meta.rewritterMap[k];
 	    var _priority = null;
 	    var _fn = null;
 	    var _key = null;
@@ -3661,7 +3671,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	                observer.close();
 	              })
 	            }
-	            var observePath = Path.get(arrayIndexedPath);
+	            var observePath = _lib_observe.Path.get(arrayIndexedPath);
 	            return function(){
 	              changeHandler(observePath.getValueFrom(scope), undefined, bindContext);
 	            };
@@ -3767,7 +3777,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	        newMeta._assign_change_handler_creator = function(bindContext){
 	          var scope = bindContext._scope;
 	          var arrayedPath = util.replaceIndexesInPath(propertyPath, bindContext._indexes);
-	          var path = Path.get(arrayedPath);
+	          var path = _lib_observe.Path.get(arrayedPath);
 	          return function(value, bindContext){
 	            path.setValueFrom(scope, value);
 	          };
@@ -3812,7 +3822,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  meta._assign_change_handler_creator = function(bindContext){
 	    var scope = bindContext;
 	    var arrayedPath = __replaceIndexesInPath(propertyPath, bindContext._indexes);
-	    var path = Path.get(arrayedPath);
+	    var path = _lib_observe.Path.get(arrayedPath);
 	    return function(value, bindContext){
 	      changeFn(path, value, bindContext);
 	    };

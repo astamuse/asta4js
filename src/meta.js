@@ -1,19 +1,23 @@
+var _lib_observe = require("../lib/observe");
+
 var config=require("./config");
 var constant = require("./constant")
+
 
 var util=require("./util");
 
 var __reverseMetaKeys = ["_meta_type", "_meta_id", "_meta_trace_id", "_value", "_prop", "_splice", "_target_path"];
 
-var ordered_metaRewritter = null;
+var __ordered_metaRewritter = null;
+
 var getOrderedMetaRewritter = function(){
-  if(ordered_metaRewritter){
-    return ordered_metaRewritter;
+  if(__ordered_metaRewritter){
+    return __ordered_metaRewritter;
   }
   
   var array = new Array();
-  for (var k in Aj.config.metaRewritter) {
-    var def = Aj.config.metaRewritter[k];
+  for (var k in config.meta.rewritterMap) {
+    var def = config.meta.rewritterMap[k];
     var _priority = null;
     var _fn = null;
     var _key = null;
@@ -213,7 +217,7 @@ var rewriteObserverMeta = function(propertyPath, meta, metaId){
                 observer.close();
               })
             }
-            var observePath = Path.get(arrayIndexedPath);
+            var observePath = _lib_observe.Path.get(arrayIndexedPath);
             return function(){
               changeHandler(observePath.getValueFrom(scope), undefined, bindContext);
             };
@@ -319,7 +323,7 @@ var rewriteObserverMeta = function(propertyPath, meta, metaId){
         newMeta._assign_change_handler_creator = function(bindContext){
           var scope = bindContext._scope;
           var arrayedPath = util.replaceIndexesInPath(propertyPath, bindContext._indexes);
-          var path = Path.get(arrayedPath);
+          var path = _lib_observe.Path.get(arrayedPath);
           return function(value, bindContext){
             path.setValueFrom(scope, value);
           };
@@ -364,7 +368,7 @@ var _assign = function(meta){
   meta._assign_change_handler_creator = function(bindContext){
     var scope = bindContext;
     var arrayedPath = __replaceIndexesInPath(propertyPath, bindContext._indexes);
-    var path = Path.get(arrayedPath);
+    var path = _lib_observe.Path.get(arrayedPath);
     return function(value, bindContext){
       changeFn(path, value, bindContext);
     };

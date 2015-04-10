@@ -1,5 +1,9 @@
+var _lib_observe = require("../lib/observe");
+
+var util = require("./util");
 var config = require("./config");
 var constant = require("./constant")
+var Snippet = require("./snippet");
 
 var _duplicator = function(meta){
   var _duplicator = meta._duplicator;
@@ -17,7 +21,7 @@ var _duplicator = function(meta){
         
         target.each(function(index, elem){
           var tagName = elem.tagName;
-          var placeHolderId = Aj.util.createUID();
+          var placeHolderId = util.createUID();
           if( (tagName === "OPTION" || tagName === "OPTGROUP") && $.browser !== "mozilla"){
             tagName = "span";
           }
@@ -34,18 +38,18 @@ var _duplicator = function(meta){
           
           //set the placeholder id to all the children input elements for the sake of checkbox/radio box option rendering
           $elem.find("input").attr("aj-placeholder-id", placeHolderId);
-          var changeContext = Aj.util.shallowCopy(bindContext);
+          var changeContext = util.shallowCopy(bindContext);
           changeContext._observeTraceId = meta._trace_id + ":" + placeHolderId;
           changeContext._placeHolder = placeHolder;
           changeContext._templateStr = templateStr;
-          changeContext._indexedPath = __replaceIndexesInPath(propertyPath, bindContext._indexes);
+          changeContext._indexedPath = util.replaceIndexesInPath(propertyPath, bindContext._indexes);
           var observer = scope.registerPathObserver(changeContext._indexedPath, function(newValue, oldValue){
             changeHandler(newValue, oldValue, changeContext);
           }, changeContext._observeTraceId);
           snippet._discardHooks.push(function(){
             observer.close();
           });
-          var observePath = Path.get(changeContext._indexedPath);
+          var observePath = _lib_observe.Path.get(changeContext._indexedPath);
           forceChange.push(function(){
             var v = observePath.getValueFrom(scope);
             changeHandler(v, undefined, changeContext);
@@ -72,14 +76,14 @@ var _duplicator = function(meta){
         var currentPath = context._indexedPath;
         var itemMeta = this._item;
         
-        var regularOld = Aj.util.regulateArray(oldValue);
-        var regularNew = Aj.util.regulateArray(newValue);
+        var regularOld = util.regulateArray(oldValue);
+        var regularNew = util.regulateArray(newValue);
         
         //var existingNodes = snippet._root.find("[aj-generated=" + placeHolderId + "]");
-        var existingSubSnippets = __getDataRef(placeHolder, "aj-place-holder-ref").subSnippets;
+        var existingSubSnippets = util.getDataRef(placeHolder, "aj-place-holder-ref").subSnippets;
         if(!existingSubSnippets){
           existingSubSnippets = [];
-          __getDataRef(placeHolder, "aj-place-holder-ref").subSnippets = existingSubSnippets;
+          util.getDataRef(placeHolder, "aj-place-holder-ref").subSnippets = existingSubSnippets;
         }
 
         var newLength = regularNew.length;

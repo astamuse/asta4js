@@ -1,5 +1,9 @@
+var _lib_observe = require("../lib/observe");
+
+var util = require("./util");
 var config = require("./config");
 var constant = require("./constant")
+var Snippet = require("./snippet")
 
 var _form = function (meta) {
   var formDef = meta._form;
@@ -162,7 +166,7 @@ var _form = function (meta) {
               changeHandler(v, bindContext);
             }); 
           }else{
-            var observer = new PathObserver(ref, "value");
+            var observer = new _lib_observe.PathObserver(ref, "value");
             observer.open(function(newValue, oldValue){
               changeHandler(newValue, bindContext);
             });
@@ -431,7 +435,7 @@ api.form = function(target, event1, event2){
   ret._form._extra_change_events = extraChangeEvents;
   
   ret.withOption = function(){
-    this._form._option = optionBind.apply(Aj, arguments);
+    this._form._option = api.optionBind.apply(Aj, arguments);
     return this;
   }
   ret.asSingleCheck = function(){
