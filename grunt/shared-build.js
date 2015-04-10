@@ -3,6 +3,10 @@
  */
 
 module.exports = function (grunt, cb) {
+  
+  //console.log("here", process.cwd())
+  
+  //console.log("aaa", __dirname)
 
   var webpack = require('webpack')
   var banner =
@@ -12,6 +16,7 @@ module.exports = function (grunt, cb) {
     ' */\n'
 
   webpack({
+    bail: true,
     entry: './src/aj-build.js',
     output: {
       path: './dist',
