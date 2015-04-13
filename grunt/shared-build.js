@@ -17,7 +17,7 @@ module.exports = function (grunt, cb) {
 
   webpack({
     bail: true,
-    entry: './src/aj-build.js',
+    entry: './src/aj.js',
     output: {
       path: './dist',
       filename: 'aj.js',

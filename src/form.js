@@ -1,3 +1,5 @@
+"use strict";
+
 var _lib_observe = require("../lib/observe");
 
 var util = require("./util");

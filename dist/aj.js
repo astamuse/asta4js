@@ -58,6 +58,8 @@ return /******/ (function(modules) { // webpackBootstrap
 /* 0 */
 /***/ function(module, exports, __webpack_require__) {
 
+	"use strict";
+
 	//var config=
 	//var clone=require('../lib/clone.js')
 
@@ -115,6 +117,8 @@ return /******/ (function(modules) { // webpackBootstrap
 /***/ },
 /* 1 */
 /***/ function(module, exports, __webpack_require__) {
+
+	"use strict";
 
 	var util = {};
 
@@ -232,6 +236,8 @@ return /******/ (function(modules) { // webpackBootstrap
 /* 2 */
 /***/ function(module, exports, __webpack_require__) {
 
+	"use strict";
+
 	module.exports = {
 	  log : true,
 	  autoSyncAfterJqueryAjax: true,
@@ -251,11 +257,13 @@ return /******/ (function(modules) { // webpackBootstrap
 /* 3 */
 /***/ function(module, exports, __webpack_require__) {
 
+	"use strict";
+
 	var _lib_observe = __webpack_require__(8);
 
 	var config = __webpack_require__(2);
-	var Snippet = __webpack_require__(10);
-	var rewriteObserverMeta = __webpack_require__(11);
+	var Snippet = __webpack_require__(9);
+	var rewriteObserverMeta = __webpack_require__(10);
 
 	var ObserverMap = function(){
 	  this.map = {};
@@ -449,12 +457,14 @@ return /******/ (function(modules) { // webpackBootstrap
 /* 4 */
 /***/ function(module, exports, __webpack_require__) {
 
+	"use strict";
+
 	var _lib_observe = __webpack_require__(8);
 
 	var util = __webpack_require__(1);
 	var config = __webpack_require__(2);
-	var constant = __webpack_require__(9)
-	var Snippet = __webpack_require__(10);
+	var constant = __webpack_require__(11)
+	var Snippet = __webpack_require__(9);
 
 	var _duplicator = function(meta){
 	  var _duplicator = meta._duplicator;
@@ -816,11 +826,13 @@ return /******/ (function(modules) { // webpackBootstrap
 /* 5 */
 /***/ function(module, exports, __webpack_require__) {
 
+	"use strict";
+
 	var _lib_observe = __webpack_require__(8);
 
 	var util = __webpack_require__(1);
 	var config = __webpack_require__(2);
-	var constant = __webpack_require__(9)
+	var constant = __webpack_require__(11)
 
 	var retrieveWatchMap=function(scope){
 	  var watchMap = scope.__watch__map__;
@@ -947,12 +959,14 @@ return /******/ (function(modules) { // webpackBootstrap
 /* 6 */
 /***/ function(module, exports, __webpack_require__) {
 
+	"use strict";
+
 	var _lib_observe = __webpack_require__(8);
 
 	var util = __webpack_require__(1);
 	var config = __webpack_require__(2);
-	var constant = __webpack_require__(9)
-	var Snippet = __webpack_require__(10)
+	var constant = __webpack_require__(11)
+	var Snippet = __webpack_require__(9)
 
 	var _form = function (meta) {
 	  var formDef = meta._form;
@@ -3364,27 +3378,7 @@ return /******/ (function(modules) { // webpackBootstrap
 /* 9 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var constant={};
-
-	constant.metaRewritterPriority={
-	  _watch: 10000,
-	  _form : 20000,
-	  _duplicator: 30000,
-	  _selector : 40000,
-	  _attr_op : 50000,
-	  _selector_after_attr_op : 60000,
-	  _render : 70000,
-	  _register_dom_change: 80000,
-	  _on_change: 90000,
-	  _assign : 100000
-	};
-
-
-	module.exports = constant;
-
-/***/ },
-/* 10 */
-/***/ function(module, exports, __webpack_require__) {
+	"use strict";
 
 	var util = __webpack_require__(1);
 
@@ -3474,14 +3468,16 @@ return /******/ (function(modules) { // webpackBootstrap
 	module.exports = Snippet;
 
 /***/ },
-/* 11 */
+/* 10 */
 /***/ function(module, exports, __webpack_require__) {
+
+	"use strict";
 
 	var _lib_observe = __webpack_require__(8);
 
 	var util=__webpack_require__(1);
 	var config=__webpack_require__(2);
-	var constant = __webpack_require__(9)
+	var constant = __webpack_require__(11)
 
 	var __reverseMetaKeys = ["_meta_type", "_meta_id", "_meta_trace_id", "_value", "_prop", "_splice", "_target_path"];
 
@@ -3895,6 +3891,30 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 	module.exports = rewriteObserverMeta;
+
+/***/ },
+/* 11 */
+/***/ function(module, exports, __webpack_require__) {
+
+	"use strict";
+
+	var constant={};
+
+	constant.metaRewritterPriority={
+	  _watch: 10000,
+	  _form : 20000,
+	  _duplicator: 30000,
+	  _selector : 40000,
+	  _attr_op : 50000,
+	  _selector_after_attr_op : 60000,
+	  _render : 70000,
+	  _register_dom_change: 80000,
+	  _on_change: 90000,
+	  _assign : 100000
+	};
+
+
+	module.exports = constant;
 
 /***/ },
 /* 12 */

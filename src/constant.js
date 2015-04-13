@@ -1,3 +1,5 @@
+"use strict";
+
 var constant={};
 
 constant.metaRewritterPriority={

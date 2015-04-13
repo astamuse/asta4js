@@ -1,3 +1,5 @@
+"use strict";
+
 var util = require("./util");
 
 var Snippet = function(scope, root, parentSnippet, arrayIndex){

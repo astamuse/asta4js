@@ -1,3 +1,5 @@
+"use strict";
+
 var util = {};
 
 util.sync = function(){
