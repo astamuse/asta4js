@@ -2,9 +2,13 @@
 
 var _lib_observe = require("../lib/observe");
 
+
 var config = require("./config");
 var Snippet = require("./snippet");
 var rewriteObserverMeta = require("./meta");
+
+var BindContext = require("./bind-context");
+var ValueMonitor = require("./value-monitor");
 
 var ObserverMap = function(){
   this.map = {};
@@ -98,96 +102,22 @@ Scope.prototype.removePathObserver = function(path, identifier){
   }
 };
 
-var determineRefPath = function (scope, varRef) {
-  var searchKey = "ashfdpnasvdnoaisdfn3423#$%$#$%0as8d23nalsfdasdf";
-  varRef[searchKey] = 1;
 
-  var refPath = null;
-  for (var p in scope) {
-    var ref = scope[p];
-    if (ref[searchKey] == 1) {
-      refPath = p;
-      break;
-    }
-  }
 
-  varRef[searchKey] = null;
-  delete varRef[searchKey];
 
-  return refPath;
-};
-  
-Scope.prototype.observe = function(varRef, meta, bindContext){
+Scope.prototype.observe = function(varRef, meta){
   var refPath = determineRefPath(this, varRef);
+  var monitor = new ValueMonitor(this, refPath);
+  var context = new BindContext(monitor);
+
   var rewittenMeta = rewriteObserverMeta(refPath, meta);
-  var context = {};
-  if(bindContext){
-    //we do not do deep copy, only the first layer
-    for(var k in bindContext){
-      context[k] = bindContext[k];
-    }
-  }
-  //make sure the scope is current scope
-  context._scope = this;
-  this.bindMeta(rewittenMeta, context);
+  context.bind(rewittenMeta);
+  
 };
 
-Scope.prototype.bindMeta = function(meta, bindContext){
-  var THIS = this;
-  if(Array.isArray(meta)){
-    meta.forEach(function(m){
-      THIS.bindMeta(m, bindContext);
-    });
-    return;
-  }
-  var nonRecursive = ["_value", "_splice"];
-  for(var i in nonRecursive){
-    var sub = meta[nonRecursive[i]];
-    if(!sub){
-      continue;
-    }
-    sub.forEach(function(sm){
-      if(sm._register_on_change){
-        var changeHandler = sm._change_handler_creator.call(sm, bindContext, sm._on_change);
-        var force = sm._register_on_change.call(sm, bindContext, function(){
-          changeHandler.apply(sm, arguments);
-        });
-        force.apply();
-      }
-      if(sm._register_assign){
-        var assignChangeHandler = sm._assign_change_handler_creator.call(sm, bindContext, sm._assign);
-        var force = sm._register_assign.call(sm, bindContext, function(){
-          assignChangeHandler.apply(sm, arguments);
-          Aj.sync();
-        });
-        //force.apply
-      }
-      if(sm._post_binding){
-        sm._post_binding.forEach(function(pb){
-          pb.call(sm, bindContext)
-        });
-      }
-    });
-  }
-  
-  var propSub = meta._prop;
-  if(!propSub){
-    return;
-  }
-  propSub.forEach(function(ps){
-    for(var p in ps){
-      var pm = ps[p];
-      if(!pm){
-        continue;
-      }
-      THIS.bindMeta(pm, bindContext);
-    }
-  });
-};
 
 Scope.prototype.snippet = function(selector){
-  var root = $(selector);
-  return new Snippet(this, root);
+  return new Snippet(this, selector);
 };
 
 config.scope.create=function(){

@@ -6,6 +6,25 @@ util.sync = function(){
   Platform.performMicrotaskCheckpoint();
 };
 
+util.determineRefPath = function (scope, varRef) {
+  var searchKey = "ashfdpnasvdnoaisdfn3423#$%$#$%0as8d23nalsfdasdf";
+  varRef[searchKey] = 1;
+
+  var refPath = null;
+  for (var p in scope) {
+    var ref = scope[p];
+    if (ref[searchKey] == 1) {
+      refPath = p;
+      break;
+    }
+  }
+
+  varRef[searchKey] = null;
+  delete varRef[searchKey];
+
+  return refPath;
+};
+
 var __uidTimestamp = Date.now();
 var __uidSeq = 0;
 util.createUID = function () {
