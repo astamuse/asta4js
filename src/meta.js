@@ -1,10 +1,8 @@
 var _lib_observe = require("../lib/observe");
 
+var util=require("./util");
 var config=require("./config");
 var constant = require("./constant")
-
-
-var util=require("./util");
 
 var __reverseMetaKeys = ["_meta_type", "_meta_id", "_meta_trace_id", "_value", "_prop", "_splice", "_target_path"];
 
@@ -367,7 +365,7 @@ var _assign = function(meta){
   //if _assign is specified, the _assign_change_handler_creator will be forced to handle _on_change
   meta._assign_change_handler_creator = function(bindContext){
     var scope = bindContext;
-    var arrayedPath = __replaceIndexesInPath(propertyPath, bindContext._indexes);
+    var arrayedPath = util.replaceIndexesInPath(propertyPath, bindContext._indexes);
     var path = _lib_observe.Path.get(arrayedPath);
     return function(value, bindContext){
       changeFn(path, value, bindContext);

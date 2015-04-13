@@ -1,3 +1,6 @@
+var _lib_observe = require("../lib/observe");
+
+var util = require("./util");
 var config = require("./config");
 var constant = require("./constant")
 
@@ -35,13 +38,13 @@ var _watch = function (meta) {
   if (!meta._register_on_change) {
     meta._register_on_change = function(bindContext, changeHandler) {
       var scope = bindContext._scope;
-      var arrayedPath = __replaceIndexesInPath(watchPropMapPath, bindContext._indexes);
+      var arrayedPath = util.replaceIndexesInPath(watchPropMapPath, bindContext._indexes);
       var observePath = "__watch__map__['" + arrayedPath + "']";
-      var observer = new PathObserver(scope, observePath);
+      var observer = new _lib_observe.PathObserver(scope, observePath);
       observer.open(function (newValue, oldValue) {
         changeHandler(newValue, oldValue, bindContext);
       });
-      var path = Path.get(observePath);
+      var path = _lib_observe.Path.get(observePath);
       return function(){
         changeHandler(path.getValueFrom(scope), undefined, bindContext);
       }
@@ -53,7 +56,7 @@ var _watch = function (meta) {
       var scope = bindContext._scope;
       var watchMap = retrieveWatchMap(scope);
       
-      var arrayedPath = __replaceIndexesInPath(watchPropMapPath, bindContext._indexes);
+      var arrayedPath = util.replaceIndexesInPath(watchPropMapPath, bindContext._indexes);
       
       watchMap[arrayedPath] = value;
       if(watchDef._store){
@@ -67,13 +70,13 @@ var _watch = function (meta) {
       var scope = bindContext._scope;
       var watchMap = retrieveWatchMap(scope);
       var targetValuePathes = [];
-      var observer = new CompoundObserver();
+      var observer = new _lib_observe.CompoundObserver();
       observerTargets.forEach(function(observerPath){
-        var arrayedObservePath = __replaceIndexesInPath(observerPath, bindContext._indexes);
-        targetValuePathes.push(Path.get(arrayedObservePath));
+        var arrayedObservePath = util.replaceIndexesInPath(observerPath, bindContext._indexes);
+        targetValuePathes.push(_lib_observe.Path.get(arrayedObservePath));
         observer.addPath(scope, arrayedObservePath);
       });
-      var arrayedPath = __replaceIndexesInPath(watchPropMapPath, bindContext._indexes);
+      var arrayedPath = util.replaceIndexesInPath(watchPropMapPath, bindContext._indexes);
       if(bindContext._snippet){
         bindContext._snippet.addDiscardHook(function(){
           observer.close();

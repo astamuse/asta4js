@@ -254,8 +254,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	var _lib_observe = __webpack_require__(8);
 
 	var config = __webpack_require__(2);
-	var Snippet = __webpack_require__(9);
-	var rewriteObserverMeta = __webpack_require__(10);
+	var Snippet = __webpack_require__(10);
+	var rewriteObserverMeta = __webpack_require__(11);
 
 	var ObserverMap = function(){
 	  this.map = {};
@@ -453,8 +453,8 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	var util = __webpack_require__(1);
 	var config = __webpack_require__(2);
-	var constant = __webpack_require__(11)
-	var Snippet = __webpack_require__(9);
+	var constant = __webpack_require__(9)
+	var Snippet = __webpack_require__(10);
 
 	var _duplicator = function(meta){
 	  var _duplicator = meta._duplicator;
@@ -816,8 +816,11 @@ return /******/ (function(modules) { // webpackBootstrap
 /* 5 */
 /***/ function(module, exports, __webpack_require__) {
 
+	var _lib_observe = __webpack_require__(8);
+
+	var util = __webpack_require__(1);
 	var config = __webpack_require__(2);
-	var constant = __webpack_require__(11)
+	var constant = __webpack_require__(9)
 
 	var retrieveWatchMap=function(scope){
 	  var watchMap = scope.__watch__map__;
@@ -853,13 +856,13 @@ return /******/ (function(modules) { // webpackBootstrap
 	  if (!meta._register_on_change) {
 	    meta._register_on_change = function(bindContext, changeHandler) {
 	      var scope = bindContext._scope;
-	      var arrayedPath = __replaceIndexesInPath(watchPropMapPath, bindContext._indexes);
+	      var arrayedPath = util.replaceIndexesInPath(watchPropMapPath, bindContext._indexes);
 	      var observePath = "__watch__map__['" + arrayedPath + "']";
-	      var observer = new PathObserver(scope, observePath);
+	      var observer = new _lib_observe.PathObserver(scope, observePath);
 	      observer.open(function (newValue, oldValue) {
 	        changeHandler(newValue, oldValue, bindContext);
 	      });
-	      var path = Path.get(observePath);
+	      var path = _lib_observe.Path.get(observePath);
 	      return function(){
 	        changeHandler(path.getValueFrom(scope), undefined, bindContext);
 	      }
@@ -871,7 +874,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	      var scope = bindContext._scope;
 	      var watchMap = retrieveWatchMap(scope);
 	      
-	      var arrayedPath = __replaceIndexesInPath(watchPropMapPath, bindContext._indexes);
+	      var arrayedPath = util.replaceIndexesInPath(watchPropMapPath, bindContext._indexes);
 	      
 	      watchMap[arrayedPath] = value;
 	      if(watchDef._store){
@@ -885,13 +888,13 @@ return /******/ (function(modules) { // webpackBootstrap
 	      var scope = bindContext._scope;
 	      var watchMap = retrieveWatchMap(scope);
 	      var targetValuePathes = [];
-	      var observer = new CompoundObserver();
+	      var observer = new _lib_observe.CompoundObserver();
 	      observerTargets.forEach(function(observerPath){
-	        var arrayedObservePath = __replaceIndexesInPath(observerPath, bindContext._indexes);
-	        targetValuePathes.push(Path.get(arrayedObservePath));
+	        var arrayedObservePath = util.replaceIndexesInPath(observerPath, bindContext._indexes);
+	        targetValuePathes.push(_lib_observe.Path.get(arrayedObservePath));
 	        observer.addPath(scope, arrayedObservePath);
 	      });
-	      var arrayedPath = __replaceIndexesInPath(watchPropMapPath, bindContext._indexes);
+	      var arrayedPath = util.replaceIndexesInPath(watchPropMapPath, bindContext._indexes);
 	      if(bindContext._snippet){
 	        bindContext._snippet.addDiscardHook(function(){
 	          observer.close();
@@ -948,8 +951,8 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	var util = __webpack_require__(1);
 	var config = __webpack_require__(2);
-	var constant = __webpack_require__(11)
-	var Snippet = __webpack_require__(9)
+	var constant = __webpack_require__(9)
+	var Snippet = __webpack_require__(10)
 
 	var _form = function (meta) {
 	  var formDef = meta._form;
@@ -3361,6 +3364,28 @@ return /******/ (function(modules) { // webpackBootstrap
 /* 9 */
 /***/ function(module, exports, __webpack_require__) {
 
+	var constant={};
+
+	constant.metaRewritterPriority={
+	  _watch: 10000,
+	  _form : 20000,
+	  _duplicator: 30000,
+	  _selector : 40000,
+	  _attr_op : 50000,
+	  _selector_after_attr_op : 60000,
+	  _render : 70000,
+	  _register_dom_change: 80000,
+	  _on_change: 90000,
+	  _assign : 100000
+	};
+
+
+	module.exports = constant;
+
+/***/ },
+/* 10 */
+/***/ function(module, exports, __webpack_require__) {
+
 	var util = __webpack_require__(1);
 
 	var Snippet = function(scope, root, parentSnippet, arrayIndex){
@@ -3449,16 +3474,14 @@ return /******/ (function(modules) { // webpackBootstrap
 	module.exports = Snippet;
 
 /***/ },
-/* 10 */
+/* 11 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var _lib_observe = __webpack_require__(8);
 
-	var config=__webpack_require__(2);
-	var constant = __webpack_require__(11)
-
-
 	var util=__webpack_require__(1);
+	var config=__webpack_require__(2);
+	var constant = __webpack_require__(9)
 
 	var __reverseMetaKeys = ["_meta_type", "_meta_id", "_meta_trace_id", "_value", "_prop", "_splice", "_target_path"];
 
@@ -3821,7 +3844,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  //if _assign is specified, the _assign_change_handler_creator will be forced to handle _on_change
 	  meta._assign_change_handler_creator = function(bindContext){
 	    var scope = bindContext;
-	    var arrayedPath = __replaceIndexesInPath(propertyPath, bindContext._indexes);
+	    var arrayedPath = util.replaceIndexesInPath(propertyPath, bindContext._indexes);
 	    var path = _lib_observe.Path.get(arrayedPath);
 	    return function(value, bindContext){
 	      changeFn(path, value, bindContext);
@@ -3872,28 +3895,6 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 	module.exports = rewriteObserverMeta;
-
-/***/ },
-/* 11 */
-/***/ function(module, exports, __webpack_require__) {
-
-	var constant={};
-
-	constant.metaRewritterPriority={
-	  _watch: 10000,
-	  _form : 20000,
-	  _duplicator: 30000,
-	  _selector : 40000,
-	  _attr_op : 50000,
-	  _selector_after_attr_op : 60000,
-	  _render : 70000,
-	  _register_dom_change: 80000,
-	  _on_change: 90000,
-	  _assign : 100000
-	};
-
-
-	module.exports = constant;
 
 /***/ },
 /* 12 */
