@@ -1,9 +1,5 @@
 "use strict";
 
-//var config=
-//var clone=require('../lib/clone.js')
-
-
 var util = require("./util");
 var shallow = util.shallowCopy;
 

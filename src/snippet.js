@@ -1,34 +1,30 @@
 "use strict";
 
 var util = require("./util");
+var BindContext = require("./bind-context");
+var ValueMonitor = require("./value-monitor");
 
-var Snippet = function(scope, selector){
+var Snippet = function(selector){
   this.root = $(selector);
   if(this.root.length == 0){
     var err = new Error("Snippet was not found for given selector:" + selector);
     console.error(err);
   }
-  this.scope = scope;
-};
+}
 
 Snippet.prototype.discard = function(){
-  this._root.remove();
-};
+  this.root.remove();
+}
 
-Snippet.prototype.bind = function(varRef, meta){
-  var refPath = determineRefPath(this.scope, varRef);
-  var monitor = new ValueMonitor(this.scope, refPath);
-  
-  var context = new BindContext(monitor, this);
-  var rewittenMeta = rewriteObserverMeta(refPath, meta);
-  
-  context.bind(rewittenMeta);
-
-  return this;
-};
+Snippet.prototype.createBindingContext = function(){
+  var THIS = this;
+  return {
+    snippet: THIS
+  };
+}
 
 Snippet.prototype.find = function(selector){
-  return util.findWithRoot(this._root, selector);
+  return util.findWithRoot(this.root, selector);
 }
 
 Snippet.prototype.on = function (event, selector, fn) {

@@ -294,16 +294,16 @@ var _render = function (meta) {
   if(!meta._change_handler_creator){
     var renderFn = meta._render;
     var selector = meta._selector;
-    var propertyPath = meta._target_path;
+    var targetPath = meta._target_path;
     meta._change_handler_creator = function(bindContext){
-      var snippet = bindContext._snippet;
+      var snippet = bindContext.snippet;
       var target = snippet.find(selector);
-      if(propertyPath === "_index"){
+      if(targetPath === "_index"){
         //we do not need to observe anything, just return a force render handler
         return function(){
           renderFn(target, snippet._index, undefined, bindContext);
         }
-      }else if (propertyPath == "_indexes"){
+      }else if (targetPath == "_indexes"){
         //we do not need to observe anything, just return a force render handler
         return function(){
           renderFn(target, snippet._indexes, undefined, bindContext);
@@ -323,7 +323,7 @@ var _register_dom_change = function (meta) {
     var _register_dom_change = meta._register_dom_change;
     var selector = meta._selector;
     meta._register_assign = function(bindContext, changeHandler){
-      var snippet = bindContext._snippet;
+      var snippet = bindContext.snippet;
       var target = snippet.find(selector);
       return _register_dom_change(target, changeHandler, bindContext);
     }

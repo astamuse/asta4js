@@ -2,15 +2,52 @@
 
 var util = require("./util");
 var config = require("./config");
+var normalizeMeta = require("./meta");
 
-var BindContext=function(valueMonitor, snippet){
-  this.valueMonitor = valueMonitor;
-  this.snippet = snippet;
+var ResourceMap = require("./resource-map");
+
+var BindContext=function(override, arrayIndexes){
+  if(override){
+    util.shallowCopy(override, this);
+  }
+
+  this.arrayIndexes = arrayIndexes;
+  this.resourceMap = new ResourceMap();
+  //we declared an independent map for child context due to performance reason
+  this.childContextMap = new ResourceMap();
+  
   this.discardHook = [];
+  
+
 }
 
-BindContext.prototype.bind=function(meta){
-  //var THIS = this;
+BindContext.prototype.addResource=function(category, identifier, discardable){
+  this.resourceMap.add(category, identifier, discardable);
+}
+
+BindContext.prototype.removeResource=function(category, identifier){
+  this.resourceMap.remove(category, identifier);
+}
+
+BindContext.prototype.getResource=function(category, identifier){
+  this.resourceMap.remove(category, identifier);
+}
+
+BindContext.prototype.createChildContext=function(identifier, index, override){
+  var indexes = this.arrayIndexes ? util.clone(this.arrayIndexes) : [];
+  indexes.push(index);
+  var ov = util.shallowCopy(this);
+  util.shallowCopy(override, ov);
+  var context = new BindContext(ov, indexes);
+  this.childContextMap.add(index, identifier, context);
+  return context;
+}
+
+BindContext.prototype.removeChildContext=function(identifier, index){
+  this.childContextMap.remove(index, identifier);
+}
+
+BindContext.prototype.bind=function(meta){  
   if(Array.isArray(meta)){
     for(var i=0;i<meta.length;i++){
       this.bind(meta[i]);
@@ -18,6 +55,10 @@ BindContext.prototype.bind=function(meta){
     return;
   }
   
+  if(!meta._trace_id){
+    meta = normalizeMeta(meta);
+  }
+
   var nonRecursive = ["_value", "_splice"];
   for(var i in nonRecursive){
     var sub = meta[nonRecursive[i]];
@@ -46,7 +87,7 @@ BindContext.prototype.bind=function(meta){
           sm._post_binding[k].call(sm, this);
         }
       }
-    });
+    };
   }
   
   var propSub = meta._prop;
@@ -55,26 +96,32 @@ BindContext.prototype.bind=function(meta){
   }
   
   for(var i=0;i<propSub.length;i++){
-    var ps = probSub[i];
+    var ps = propSub[i];
     for(var p in ps){
       var pm = ps[p];
-      if(!pm){
-        continue;
+      if(typeof pm === "object"){
+        this.bind(pm);
       }
-      this.bind(pm);
     }
   }
-}
+
+};
 
 BindContext.prototype.addDiscardHook=function(fn){
   this.discardHook.push(fn);
-}
+};
 
 BindContext.prototype.discard=function(){
-  this.valueMonitor.discard();
-  this.snippet.discard();
+  var p;
+  for(var k in this){
+    p = this[k];
+    if(p.discard){
+      p.discard();
+    }
+  }
   for(var i=0;i<this.discardHook.length;i++){
     this.discardHook[i].apply();
   }
-}
+};
+
 module.exports=BindContext;

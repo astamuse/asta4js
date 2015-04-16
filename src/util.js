@@ -52,6 +52,12 @@ util.regulateArray = function (v, tryKeepRef) {
 
 util.clone = require("../lib/clone");
 
+/**
+ * (from)
+ * (from, [propList])
+ * (from, to)
+ * (from, to, [propList])
+ */
 util.shallowCopy = function(arg1, arg2, arg3){
   var from = arg1;
   var to;

@@ -90,17 +90,22 @@ var createAndRetrieveSubMetaRef = function(meta, subType){
 };
 
 
-var rewriteObserverMeta = function(propertyPath, meta, metaId){
+var normalizeMeta = function(meta, metaId, propertyPath){
+  
+  if(propertyPath === undefined || propertyPath === null){
+    propertyPath = "";
+  }
   
   if(Array.isArray(meta)){
     return meta.map(function(m){
-      return rewriteObserverMeta(propertyPath, m, metaId);
+      return normalizeMeta(m, metaId, propertyPath);
     });
   }
   
-   //convert function to standard meta format
+  
   var newMeta = util.clone(meta);
   
+   //convert function to standard meta format
   if(typeof newMeta !== "object"){
     newMeta = config.meta.nonObjectMetaConvertor(newMeta);
   }
@@ -167,7 +172,7 @@ var rewriteObserverMeta = function(propertyPath, meta, metaId){
           }
           subMeta[i]._target_path = propertyPath;
         }
-        newMeta[subMetak] = rewriteObserverMeta(propertyPath, subMeta, newMeta._meta_id);
+        newMeta[subMetak] = normalizeMeta(subMeta, newMeta._meta_id, propertyPath);
       }
     break;
     case "_splice":
@@ -178,8 +183,13 @@ var rewriteObserverMeta = function(propertyPath, meta, metaId){
         //array binding
         var itemMeta = newMeta._item;
         if(itemMeta){
-          var itemPath = newMeta._target_path + "[?]";
-          newMeta._item = rewriteObserverMeta(itemPath, itemMeta, newMeta._meta_id);
+          var arrayMap = itemMeta._array_map;
+          var arrayDiscard = itemMeta._array_discard;
+          if(arrayMap && arrayDiscard){
+            newMeta._item = normalizeMeta(itemMeta, newMeta._meta_id, "");
+          }else{
+            throw "_array_map and _array_discard is necessary for _item mapping but we got:" + JSON.stringify(newMeta);
+          }
         }
       }
       
@@ -204,128 +214,114 @@ var rewriteObserverMeta = function(propertyPath, meta, metaId){
       
       if(newMeta._change_handler_creator || newMeta._item){
         if(!newMeta._register_on_change){
-          //by default, we treat the bindContext as scope
-          var propertyPath = newMeta._target_path;
+          var targetPath = newMeta._target_path;
           newMeta._register_on_change = function (bindContext, changeHandler) {
-            var scope = bindContext._scope;
-            var arrayIndexedPath = util.replaceIndexesInPath(propertyPath, bindContext._indexes);
-            var observer = scope.registerPathObserver(arrayIndexedPath, function(newValue, oldValue){
+            bindContext.valueMonitor.pathObserve(targetPath, function(newValue, oldValue){
               changeHandler(newValue, oldValue, bindContext);
-            }, newMeta._meta_trace_id);
-            if(bindContext.addDiscardHook){
-              bindContext.addDiscardHook(function(){
-                observer.close();
-              })
-            }
-            var observePath = _lib_observe.Path.get(arrayIndexedPath);
+            });
+            var vr = bindContext.valueMonitor.getValueRef(targetPath);
             return function(){
-              changeHandler(observePath.getValueFrom(scope), undefined, bindContext);
+              changeHandler(vr.getValue(), undefined, bindContext);
             };
           };
           if(newMeta._item){
             var changeHandlerCreator = newMeta._change_handler_creator;
             var itemMeta = newMeta._item;
+            var arrayMap = itemMeta._array_map;
+            var arrayDiscard = itemMeta._array_discard;
             newMeta._change_handler_creator = function(bindContext){
               var existingChangeFn = changeHandlerCreator ? changeHandlerCreator.call(this, bindContext) : undefined;
+              //we have to discard the mapped array before current context is discarded.
+              bindContext.addDiscardHook(function(){
+                arrayDiscard.apply(newMeta);
+              });
               return function(newValue, oldValue, bindContext){
                 var scope = bindContext._scope;
                 if(existingChangeFn){
                   existingChangeFn.call(this, arguments);
                 }
+                
                 //regiser _item change
                 
+                //retrieve mapped array for item monitor
+                var newArray = arrayMap.call(newMeta, newValue, oldValue, bindContext);
+                
+                //register spice at first
+                if(newArray){
+                  bindContext.valueMonitor.arrayObserve(newMeta._meta_trace_id, newArray, function(splices){
+                    var addedCount = 0;
+
+                    splices.forEach(function (s) {
+                      removedCount += s.removed.length;
+                      addedCount += s.addedCount;
+                    });
+
+                    var diff = addedCount - removedCount;
+                    var newLength = newValue.length;
+                    if(diff > 0){
+                      var childContext;
+                      var newRootMonitorPath;
+                      for (var i = diff; i >0; i--) {
+                        newRootMonitorPath = targetPath + "[" + (newLength - i) +"]";
+                        newMonitor = bindContext.valueMonitor.createSubMonitor(newRootMonitorPath);
+                        childContext = bindContext.createChildContext(itemMeta._meta_trace_id, i, {
+                          valueMonitor: newMonitor,
+                          mappedItem: newArray[i] //must be not null
+                        });
+                        childContext.bind(itemMeta);
+                      }
+                    }else{
+                      diff = 0 - diff;
+                      for(var i=0;i<diff;i++){
+                        bindContext.removeChildContext(itemMeta._meta_trace_id, newLength + i);
+                      }
+                    }
+                  });
+                }else if(oldValue){//which means we need to remove previous registered array observer
+                  bindContext.valueMonitor.removeArrayObserve(newMeta._meta_trace_id);
+                }
+                
+                //bind item context
                 var regularOld = util.regulateArray(oldValue);
                 var regularNew = util.regulateArray(newValue);
-                
+                var childContext;
+                var newRootMonitorPath;
+                var newMonitor;
+                //add new child context binding
                 for(var i=regularOld.length;i<regularNew.length;i++){
-                  var arrayedContext = util.shallowCopy(bindContext);
-                  if(!arrayedContext._indexes){
-                    arrayedContext._indexes = [];
-                  }
-                  arrayedContext._indexes.push(i);
-                  //var itemPath = util.replaceIndexesInPath(itemMeta._target_path, arrayedContext.__indexes);
-                  //scope.removePathObserver(itemPath, )
-                  scope.bindMeta(itemMeta, arrayedContext);
+                  newRootMonitorPath = targetPath + "[" + i +"]";
+                  newMonitor = bindContext.valueMonitor.createSubMonitor(newRootMonitorPath);
+                  childContext = bindContext.createChildContext(itemMeta._meta_trace_id, i, {
+                    valueMonitor: newMonitor,
+                    mappedItem: newArray[i] //must be not null
+                  });
+                  childContext.bind(itemMeta);
                 }
-                //currently we have no way to unbound them....
-                /*
                 for(var i=regularNew.length;i<regularOld.length;i++){
-                  var arrayedContext = util.shallowCopy(bindContext);
-                  if(!arrayedContext.__indexes){
-                    arrayedContext.__indexes = [];
-                  }
-                  arrayedContext.__index.push(i);
-                  var itemPath = util.replaceIndexesInPath(itemMeta._target_path, arrayedContext.__indexes);
-                  scope.removePathObserver(itemPath, )
+                  bindContext.removeChildContext(itemMeta._meta_trace_id, i);
                 }
-                */
-                
-                var arrayIndexedPath = util.replaceIndexesInPath(propertyPath, bindContext._indexes);
-                if(oldValue){
-                  scope.removeArrayObserver(arrayIndexedPath, newMeta._meta_trace_id);
-                }
-                if(newValue){
-                  scope.registerArrayObserver(arrayIndexedPath, newValue, function(splices){
-                    //delay(function(){;
-                      var removedCount = 0;
-                      var addedCount = 0;
-
-                      splices.forEach(function (s) {
-                        removedCount += s.removed.length;
-                        addedCount += s.addedCount;
-                      });
-
-                      var diff = addedCount - removedCount;
-                      var newLength = newValue.length;
-                      if(diff > 0){
-                        for (var i = diff; i >0; i--) {
-                          var newIndex = newLength - i;
-                          var arrayedContext = util.shallowCopy(bindContext);
-                          if(!arrayedContext._indexes){
-                            arrayedContext._indexes = [];
-                          }
-                          arrayedContext._indexes.push(newIndex);
-                          //var itemPath = util.replaceIndexesInPath(itemMeta._target_path, arrayedContext.__indexes);
-                          //scope.removePathObserver(itemPath, )
-                          scope.bindMeta(itemMeta, arrayedContext);
-                        }
-                      }
-                    //});
-                  }, newMeta._meta_trace_id);
-                };
-              };
+              };//returned change handler
             };
-          }
+          }//_item
 
           if(newMeta._meta_type == "_splice"){
             var spliceChangeHandlerCreator = newMeta._change_handler_creator;
             newMeta._change_handler_creator = function(bindContext){
               var spliceFn = spliceChangeHandlerCreator.call(this, bindContext);
               return function(newValue, oldValue, bindContext){
-                var scope = bindContext._scope;
-                var arrayIndexedPath = util.replaceIndexesInPath(propertyPath, bindContext._indexes);
-                if(oldValue){
-                  scope.removeArrayObserver(arrayIndexedPath, newMeta._meta_trace_id);
-                }
-                if(newValue){
-                  scope.registerArrayObserver(arrayIndexedPath, newValue, function(splices){
-                    spliceFn.call(newMeta, splices, bindContext);
-                  }, newMeta._meta_trace_id);
-                };
+                bindContext.valueMonitor.arrayObserve(newMeta._meta_trace_id, newMeta._target_path, spliceFn);
               }
             }
-          }
+          }//_splice
         }
       }
       //set default assign even we do not need it
       if(!newMeta._assign_change_handler_creator){
-        var propertyPath = newMeta._target_path;
+        var targetPath = newMeta._target_path;
         newMeta._assign_change_handler_creator = function(bindContext){
-          var scope = bindContext._scope;
-          var arrayedPath = util.replaceIndexesInPath(propertyPath, bindContext._indexes);
-          var path = _lib_observe.Path.get(arrayedPath);
+          var vr = bindContext.valueMonitor.getValueRef(targetPath)
           return function(value, bindContext){
-            path.setValueFrom(scope, value);
+            vr.setValue(value);
           };
         }
       }
@@ -340,10 +336,16 @@ var rewriteObserverMeta = function(propertyPath, meta, metaId){
         if(ppm.nonMeta){
           continue;
         }
-        if(p === "_index"){
-          newMeta[p] = rewriteObserverMeta(p, ppm);
+        if(p === "_index" || p === "_indexes"){
+          newMeta[p] = normalizeMeta(ppm, newMeta._meta_id, p);
         }else{
-          newMeta[p] = rewriteObserverMeta(propertyPath + "." + p, ppm);
+          var recursivePath;
+          if(propertyPath){
+            recursivePath = propertyPath + "." + p;
+          }else{
+            recursivePath = p;
+          }
+          newMeta[p] = normalizeMeta(ppm, newMeta._meta_id, recursivePath);
         }
       }
     break;
@@ -364,13 +366,10 @@ var _on_change = function(meta){
 var _assign = function(meta){
   var changeFn = meta._assign;
   var propertyPath = meta._target_path;
-  //if _assign is specified, the _assign_change_handler_creator will be forced to handle _on_change
+  //if _assign is specified, the _assign_change_handler_creator will be forced to handle _assign
   meta._assign_change_handler_creator = function(bindContext){
-    var scope = bindContext;
-    var arrayedPath = util.replaceIndexesInPath(propertyPath, bindContext._indexes);
-    var path = _lib_observe.Path.get(arrayedPath);
     return function(value, bindContext){
-      changeFn(path, value, bindContext);
+      changeFn(value, bindContext);
     };
   }
 };
@@ -417,4 +416,4 @@ config.meta.rewritterMap["_assign"] = {
   fn : _assign
 };
 
-module.exports = rewriteObserverMeta;
+module.exports = normalizeMeta
