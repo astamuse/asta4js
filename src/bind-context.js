@@ -30,7 +30,7 @@ BindContext.prototype.removeResource=function(category, identifier){
 }
 
 BindContext.prototype.getResource=function(category, identifier){
-  this.resourceMap.remove(category, identifier);
+  return this.resourceMap.get(category, identifier);
 }
 
 BindContext.prototype.createChildContext=function(identifier, index, override){

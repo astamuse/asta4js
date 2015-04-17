@@ -4,10 +4,14 @@ var util = require("./util");
 var BindContext = require("./bind-context");
 var ValueMonitor = require("./value-monitor");
 
-var Snippet = function(selector){
-  this.root = $(selector);
+var Snippet = function(arg){
+  if (typeof arg === "string"){
+    this.root = $(arg);//as selector
+  }else{
+    this.root = arg;
+  }
   if(this.root.length == 0){
-    var err = new Error("Snippet was not found for given selector:" + selector);
+    var err = new Error("Snippet was not found for given selector:" + this.root.selector);
     console.error(err);
   }
 }
@@ -28,7 +32,7 @@ Snippet.prototype.find = function(selector){
 }
 
 Snippet.prototype.on = function (event, selector, fn) {
-  this._root.on(event, selector, function(){
+  this.root.on(event, selector, function(){
     fn.apply(this, arguments);
     util.sync();
   });

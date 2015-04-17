@@ -1,5 +1,6 @@
 "use strict";
 
+var util = require("./util");
 var config = require("./config");
 var Snippet = require("./snippet");
 var rewriteObserverMeta = require("./meta");
@@ -30,9 +31,8 @@ var createSnippetContext=function(snippet){
 
 Scope.prototype.observe = function(varRef, meta){
   var context = createValueMonitorContext(this, varRef);
-  var createChildContext = context.createChildContext;
-  
-  context.bind(meta);
+  var bindContext = new BindContext(context);
+  bindContext.bind(meta);
 }
 
 
@@ -42,7 +42,9 @@ Scope.prototype.snippet = function(selector){
   snippet.bind = function(varRef, meta){
     var context = createValueMonitorContext(scope, varRef);
     context = util.shallowCopy(createSnippetContext(snippet), context);
-    context.bind(meta);
+    var bindContext = new BindContext(context);
+    bindContext.bind(meta);
+    return this;
   };
   return snippet;
 }

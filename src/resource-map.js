@@ -51,7 +51,7 @@ ResourceList.prototype.get=function(identifier){
   return found;
 }
 
-ResourceList.prototype.dicard=function(){
+ResourceList.prototype.discard=function(){
   var node = this.head;
   while(node){
     node.discardable.discard();
@@ -94,9 +94,9 @@ ResourceMap.prototype.get=function(category, identifier){
   return list.get(identifier);
 };
 
-ResourceMap.prototype.discardAll=function(){
+ResourceMap.prototype.discard=function(){
   for(var p in this.map){
-    this.map[p].discardAll();
+    this.map[p].discard();
   }
   delete this.map;
 }

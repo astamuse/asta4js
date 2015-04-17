@@ -60,7 +60,7 @@ ValueMonitor.prototype.arrayObserve=function(identifier, targetArray, changeFn){
   observer.open(changeFn);
   this.observerMap.add(identifier, identifier, {
     discard: function(){
-      observer.close;
+      observer.close();
     }
   });
 }
@@ -69,7 +69,7 @@ ValueMonitor.prototype.removeArrayObserve=function(identifier){
 }
 
 ValueMonitor.prototype.discard=function(){
-  this.observerMap.discardAll();
+  this.observerMap.discard();
 }
 
 module.exports=ValueMonitor;

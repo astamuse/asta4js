@@ -183,13 +183,7 @@ var normalizeMeta = function(meta, metaId, propertyPath){
         //array binding
         var itemMeta = newMeta._item;
         if(itemMeta){
-          var arrayMap = itemMeta._array_map;
-          var arrayDiscard = itemMeta._array_discard;
-          if(arrayMap && arrayDiscard){
-            newMeta._item = normalizeMeta(itemMeta, newMeta._meta_id, "");
-          }else{
-            throw "_array_map and _array_discard is necessary for _item mapping but we got:" + JSON.stringify(newMeta);
-          }
+          newMeta._item = normalizeMeta(itemMeta, newMeta._meta_id, "");
         }
       }
       
@@ -216,7 +210,7 @@ var normalizeMeta = function(meta, metaId, propertyPath){
         if(!newMeta._register_on_change){
           var targetPath = newMeta._target_path;
           newMeta._register_on_change = function (bindContext, changeHandler) {
-            bindContext.valueMonitor.pathObserve(targetPath, function(newValue, oldValue){
+            bindContext.valueMonitor.pathObserve(newMeta._meta_trace_id, targetPath, function(newValue, oldValue){
               changeHandler(newValue, oldValue, bindContext);
             });
             var vr = bindContext.valueMonitor.getValueRef(targetPath);
@@ -227,8 +221,21 @@ var normalizeMeta = function(meta, metaId, propertyPath){
           if(newMeta._item){
             var changeHandlerCreator = newMeta._change_handler_creator;
             var itemMeta = newMeta._item;
-            var arrayMap = itemMeta._array_map;
-            var arrayDiscard = itemMeta._array_discard;
+            var arrayMap = newMeta._array_map;
+            var arrayDiscard = newMeta._array_discard;
+            
+            if(!arrayMap || !arrayDiscard){
+              throw "_array_map and _array_discard is necessary for _item mapping but we got:" + JSON.stringify(newMeta);
+            }
+            var arrayChildContextCreator = newMeta._array_child_context_creator;
+            if(!arrayChildContextCreator){
+              arrayChildContextCreator = function(parentContext, contextOverride, index){
+                var childContext = parentContext.createChildContext(this._item._meta_trace_id, index, contextOverride);
+                return childContext;
+              };
+              //may not be necessary, but...
+              newMeta._array_child_context_creator = arrayChildContextCreator;
+            }
             newMeta._change_handler_creator = function(bindContext){
               var existingChangeFn = changeHandlerCreator ? changeHandlerCreator.call(this, bindContext) : undefined;
               //we have to discard the mapped array before current context is discarded.
@@ -241,15 +248,15 @@ var normalizeMeta = function(meta, metaId, propertyPath){
                   existingChangeFn.call(this, arguments);
                 }
                 
-                //regiser _item change
-                
-                //retrieve mapped array for item monitor
-                var newArray = arrayMap.call(newMeta, newValue, oldValue, bindContext);
-                
                 //register spice at first
-                if(newArray){
-                  bindContext.valueMonitor.arrayObserve(newMeta._meta_trace_id, newArray, function(splices){
+                if(newValue){
+                  bindContext.valueMonitor.arrayObserve(newMeta._meta_trace_id, newValue, function(splices){
+                    
+                     //retrieve mapped array for item monitor
+                    var mappedArray = arrayMap.call(newMeta, newValue, newValue, bindContext);
+                    
                     var addedCount = 0;
+                    var removedCount = 0;
 
                     splices.forEach(function (s) {
                       removedCount += s.removed.length;
@@ -264,10 +271,11 @@ var normalizeMeta = function(meta, metaId, propertyPath){
                       for (var i = diff; i >0; i--) {
                         newRootMonitorPath = targetPath + "[" + (newLength - i) +"]";
                         newMonitor = bindContext.valueMonitor.createSubMonitor(newRootMonitorPath);
-                        childContext = bindContext.createChildContext(itemMeta._meta_trace_id, i, {
+                        var childContext = {
                           valueMonitor: newMonitor,
-                          mappedItem: newArray[i] //must be not null
-                        });
+                          mappedItem: mappedArray[i] //must be not null
+                        };
+                        childContext = arrayChildContextCreator.call(newMeta, bindContext, childContext, newLength - i);
                         childContext.bind(itemMeta);
                       }
                     }else{
@@ -281,6 +289,9 @@ var normalizeMeta = function(meta, metaId, propertyPath){
                   bindContext.valueMonitor.removeArrayObserve(newMeta._meta_trace_id);
                 }
                 
+                //retrieve mapped array for item monitor
+                var mappedArray = arrayMap.call(newMeta, newValue, oldValue, bindContext);
+                
                 //bind item context
                 var regularOld = util.regulateArray(oldValue);
                 var regularNew = util.regulateArray(newValue);
@@ -291,10 +302,11 @@ var normalizeMeta = function(meta, metaId, propertyPath){
                 for(var i=regularOld.length;i<regularNew.length;i++){
                   newRootMonitorPath = targetPath + "[" + i +"]";
                   newMonitor = bindContext.valueMonitor.createSubMonitor(newRootMonitorPath);
-                  childContext = bindContext.createChildContext(itemMeta._meta_trace_id, i, {
+                  var childContext = {
                     valueMonitor: newMonitor,
-                    mappedItem: newArray[i] //must be not null
-                  });
+                    mappedItem: mappedArray[i] //must be not null
+                  };
+                  childContext = arrayChildContextCreator.call(newMeta, bindContext, childContext, i);
                   childContext.bind(itemMeta);
                 }
                 for(var i=regularNew.length;i<regularOld.length;i++){

@@ -36,6 +36,7 @@ util.createUID = function () {
   return "aj-" + __uidSeq + "-"+ __uidTimestamp;
 };
 
+//TODO we should keep ref always
 util.regulateArray = function (v, tryKeepRef) {
   if ($.isArray(v)) {
     if(tryKeepRef){

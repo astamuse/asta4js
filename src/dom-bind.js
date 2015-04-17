@@ -6,22 +6,78 @@ var util = require("./util");
 var config = require("./config");
 var constant = require("./constant")
 var Snippet = require("./snippet");
+var BindContext = require("./bind-context");
+
+var ComposedBindContext=function(contexts){
+  this.contexts = contexts;
+}
+
+//extends from BindContext
+util.shallowCopy(BindContext.prototype, ComposedBindContext.prototype);
+
+ComposedBindContext.prototype.bind=function(meta){
+  for(var i=0;i<this.contexts.length;i++){
+    this.contexts[i].bind(meta);
+  }
+}
+
+ComposedBindContext.prototype.discard=function(){
+  for(var i=0;i<contexts.length;i++){
+    contexts[i].discard();
+  }
+}
 
 var _duplicator = function(meta){
-  var _duplicator = meta._duplicator;
-  var propertyPath = meta._target_path;
-  if(!meta._register_on_change){
-    meta._register_on_change = function(bindContext, changeHandler){
-      var snippet = bindContext._snippet;
-      var scope = bindContext._scope;
-      var forceChange = [];
-      if(meta._meta_type === "_value"){
-        var target = snippet.find(_duplicator);
-        if (target.length == 0) {
-          throw "could not find duplicator:" + _duplicator;
-        }
-        
-        target.each(function(index, elem){
+  var duplicator = meta._duplicator;
+  var targetPath = meta._target_path;
+  if(!meta._array_map && !meta._array_discard){
+    meta._array_discard = function(){
+      var mappedArrayInfo = bindContext.getResource("_duplicator", duplicator);
+      if(!mappedArrayInfo){
+        //it seems that we do not need to remove all the existing DOMs
+      }
+      bindContext.removeResource("_duplicator", duplicator);
+    };
+    
+    meta._array_child_context_creator = function(parentContext, contextOverride, index, itemMeta){
+      var mappedArrayInfo = parentContext.getResource("_duplicator", duplicator);//must have
+      var item = mappedArrayInfo.items[index];
+      var childContexts = [];
+      var context;
+      for(var i=0;i<item.length;i++){
+        context = {
+          snippet: new Snippet(item[i])
+        };
+        util.shallowCopy(contextOverride, context);
+        context = parentContext.createChildContext(this._item._meta_trace_id, index, context);
+        childContexts[i] = context;
+      }
+      var composedContext = new ComposedBindContext(childContexts);
+      return composedContext;
+    }
+    
+    meta._array_discard = function(){
+      var mappedArrayInfo = bindContext.getResource("_duplicator", duplicator);
+      if(!mappedArrayInfo){
+        //it seems that we do not need to remove all the existing DOMs
+      }
+      bindContext.removeResource("_duplicator", duplicator);
+    };
+    meta._array_map = function(newValue, oldValue, bindContext){
+      var mappedArrayInfo = bindContext.getResource("_duplicator", duplicator);
+      if(!mappedArrayInfo){
+        mappedArrayInfo = {
+          discard: function(){},
+          dupTargets: [],
+          items: []//[][]
+        };
+        bindContext.addResource("_duplicator", duplicator, mappedArrayInfo);
+
+        //initialize the place holder and template
+        var snippet = bindContext.snippet;
+        var targets = snippet.find(duplicator);
+        for(var i=0;i<targets.length;i++){
+          var elem = targets.get(i);
           var tagName = elem.tagName;
           var placeHolderId = util.createUID();
           if( (tagName === "OPTION" || tagName === "OPTGROUP") && $.browser !== "mozilla"){
@@ -40,143 +96,47 @@ var _duplicator = function(meta){
           
           //set the placeholder id to all the children input elements for the sake of checkbox/radio box option rendering
           $elem.find("input").attr("aj-placeholder-id", placeHolderId);
-          var changeContext = util.shallowCopy(bindContext);
-          changeContext._observeTraceId = meta._trace_id + ":" + placeHolderId;
-          changeContext._placeHolder = placeHolder;
-          changeContext._templateStr = templateStr;
-          changeContext._indexedPath = util.replaceIndexesInPath(propertyPath, bindContext._indexes);
-          var observer = scope.registerPathObserver(changeContext._indexedPath, function(newValue, oldValue){
-            changeHandler(newValue, oldValue, changeContext);
-          }, changeContext._observeTraceId);
-          snippet._discardHooks.push(function(){
-            observer.close();
-          });
-          var observePath = _lib_observe.Path.get(changeContext._indexedPath);
-          forceChange.push(function(){
-            var v = observePath.getValueFrom(scope);
-            changeHandler(v, undefined, changeContext);
-          });
-        });//end target each
-      }
-
-      return function(){
-        forceChange.forEach(function(f){
-          f.apply();
-        });
-      }
-    }
-  }
-  if(!meta._on_change){
-    if(meta._meta_type === "_value"){
-      meta._on_change = function(newValue, oldValue, context){
-        var scope = context._scope;
-        var snippet = context._snippet;
-        var target = context._target;
-        var observeTraceId = context._observeTraceId;
-        var placeHolder = context._placeHolder;
-        var templateStr = context._templateStr;
-        var currentPath = context._indexedPath;
-        var itemMeta = this._item;
-        
-        var regularOld = util.regulateArray(oldValue);
-        var regularNew = util.regulateArray(newValue);
-        
-        //var existingNodes = snippet._root.find("[aj-generated=" + placeHolderId + "]");
-        var existingSubSnippets = util.getDataRef(placeHolder, "aj-place-holder-ref").subSnippets;
-        if(!existingSubSnippets){
-          existingSubSnippets = [];
-          util.getDataRef(placeHolder, "aj-place-holder-ref").subSnippets = existingSubSnippets;
-        }
-
-        var newLength = regularNew.length;
-        var existingLength = existingSubSnippets.length;
-
-
-
-        var insertPoint = placeHolder;
-        if(existingLength > 0){
-          insertPoint = existingSubSnippets[existingLength-1]._root;
-        }
-        
-        //add new snippets
-        for (var i=existingLength; i < newLength; i++) {
-          var childElem = $(templateStr);
-          insertPoint.after(childElem);
-
-          //recursive binding
-          var childSnippet = new Snippet(snippet._scope, childElem, snippet, i);
-          childSnippet.bindMeta(itemMeta);
-          insertPoint = childElem;
           
-          existingSubSnippets.push(childSnippet);
-
-        } // end i
-
-        //remove redundant snippets
-        for (var j=existingLength-1; j >= newLength; j--) {
-          existingSubSnippets[j].discard();
+          mappedArrayInfo.dupTargets[i] = {
+            placeHolder: placeHolder,
+            insertPoint: placeHolder,
+            templateStr: templateStr
+          };
         }
-        
-        if(existingLength>newLength){
-          existingSubSnippets.splice(newLength-1, existingLength - newLength);
-          snippet.removeDiscardedSubSnippets();
+      }
+      
+      var existingLength = mappedArrayInfo.items.length;
+      var regularNew = util.regulateArray(newValue);
+      var targetLength = mappedArrayInfo.dupTargets.length;
+      var dupTarget;
+      var dupSpawned;
+      var mappedItem;
+      for(var i=existingLength;i<regularNew.length;i++){
+        mappedItem = [];
+        mappedArrayInfo.items[i] = mappedItem;
+        for(var j=0;j<targetLength;j++){
+          dupTarget = mappedArrayInfo.dupTargets[j];
+          dupSpawned = $(dupTarget.templateStr);
+          dupTarget.insertPoint.after(dupSpawned);
+          dupTarget.insertPoint = dupSpawned;
+          mappedItem[j] = dupSpawned;
         }
-        if(oldValue){
-          scope.removeArrayObserver(currentPath, oldValue, observeTraceId);
+      }
+      for(var i=regularNew.length;i<existingLength;i++){
+        mappedItem = mappedArrayInfo.items[i];
+        for(var j=0;j<targetLength;j++){
+          mappedItem[j].remove();
         }
-        if(newValue){
-          scope.registerArrayObserver(currentPath, newValue, function(splices){
-            var removedCount = 0;
-            var addedCount = 0;
-
-            splices.forEach(function (s) {
-              removedCount += s.removed.length;
-              addedCount += s.addedCount;
-            });
-
-            var diff = addedCount - removedCount;
-            var existingLength = existingSubSnippets.length;
-            if(diff > 0){
-              //we simply add the new child to the last of current children list,
-              //all the values will be synchronized correctly since we bind them
-              //by a string value path rather than the real object reference
-              var insertPoint;
-              if(existingLength>0){
-                insertPoint = existingSubSnippets[existingLength-1]._root;
-              }else{
-                insertPoint = placeHolder;
-              }
-              for (var i = 0; i < diff; i++) {
-                var childElem = $(templateStr);
-                insertPoint.after(childElem);
-
-                //recursive binding
-                var childSnippet = new Snippet(snippet._scope, childElem, snippet, existingLength+i);
-                childSnippet.bindMeta(itemMeta);
-                insertPoint = childElem;
-                
-                existingSubSnippets.push(childSnippet);
-              }
-            }else if (diff < 0){
-              diff = 0 - diff;
-              for (var i = 1; i <= diff; i++) {
-                existingSubSnippets[existingLength - i].discard();
-              }
-              existingSubSnippets.splice(existingLength-diff, diff);
-              snippet.removeDiscardedSubSnippets();
-            }
-            if(meta._post_render){
-              meta._post_render();
-            }
-          }, observeTraceId);//end array(splice) observe
-        }
-        if(meta._post_render){
-          meta._post_render();
-        }
-      }//end meta._on_change
-    }else{
-      meta._on_change = function(){};
-    }
+      }
+      //reset insert point
+      var lastItem = mappedArrayInfo.items[regularNew.length-1];
+      for(var j=0;j<targetLength;j++){
+        dupTarget = mappedArrayInfo.dupTargets[j];
+        dupTarget.insertPoint = lastItem ? lastItem[j] : dupTarget.placeHolder;
+      }
+      
+      return mappedArrayInfo.items;
+    };
   }
 };//end _duplicator
 
@@ -301,12 +261,12 @@ var _render = function (meta) {
       if(targetPath === "_index"){
         //we do not need to observe anything, just return a force render handler
         return function(){
-          renderFn(target, snippet._index, undefined, bindContext);
+          renderFn(target, bindContext.arrayIndexes[bindContext.arrayIndexes.length - 1], undefined, bindContext);
         }
       }else if (targetPath == "_indexes"){
         //we do not need to observe anything, just return a force render handler
         return function(){
-          renderFn(target, snippet._indexes, undefined, bindContext);
+          renderFn(target, bindContext.arrayIndexes, undefined, bindContext);
         }
       }else{
         return function(newValue, oldValue, bindContext){
