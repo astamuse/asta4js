@@ -95,18 +95,19 @@ return /******/ (function(modules) { // webpackBootstrap
 	//internal extension
 	__webpack_require__(4);
 	__webpack_require__(5);
+	__webpack_require__(6);
 
-	var form = __webpack_require__(6);
+	shallow(__webpack_require__(7), Aj);
 
-	shallow(form, Aj);
-
-	$(function(){
-	  if(Aj.config.autoSyncAfterJqueryAjax){
-	    $( document ).ajaxComplete(function() {
-	      Aj.sync();
-	    });
-	  }
-	});
+	if($){
+	  $(function(){
+	    if(Aj.config.autoSyncAfterJqueryAjax){
+	      $( document ).ajaxComplete(function() {
+	        Aj.sync();
+	      });
+	    }
+	  });
+	}
 
 	module.exports = Aj;
 
@@ -116,27 +117,36 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	"use strict";
 
+	var constant = __webpack_require__(8)
+
 	var util = {};
 
 	util.sync = function(){
 	  Platform.performMicrotaskCheckpoint();
 	};
 
-	util.determineRefPath = function (scope, varRef) {
-	  var searchKey = "ashfdpnasvdnoaisdfn3423#$%$#$%0as8d23nalsfdasdf";
-	  varRef[searchKey] = 1;
+	util.determineRefPath = function (scope, varRef, searchKey) {
+	  var deleteSearchKey;
+	  if(searchKey){
+	    deleteSearchKey = false;
+	  }else{
+	    deleteSearchKey = true;
+	    searchKey = constant.impossibleSearchKey;
+	    varRef[searchKey] = 1;
+	  }
 
 	  var refPath = null;
 	  for (var p in scope) {
 	    var ref = scope[p];
-	    if (ref[searchKey] == 1) {
+	    if (ref[searchKey]) {
 	      refPath = p;
 	      break;
 	    }
 	  }
-
-	  varRef[searchKey] = null;
-	  delete varRef[searchKey];
+	  
+	  if(deleteSearchKey){
+	    delete varRef[searchKey];
+	  }
 
 	  return refPath;
 	};
@@ -167,7 +177,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  }
 	};
 
-	util.clone = __webpack_require__(7);
+	util.clone = __webpack_require__(9);
 
 	/**
 	 * (from)
@@ -283,11 +293,11 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	var util = __webpack_require__(1);
 	var config = __webpack_require__(2);
-	var Snippet = __webpack_require__(8);
-	var rewriteObserverMeta = __webpack_require__(9);
+	var Snippet = __webpack_require__(10);
+	var rewriteObserverMeta = __webpack_require__(11);
 
-	var BindContext = __webpack_require__(10);
-	var ValueMonitor = __webpack_require__(11);
+	var BindContext = __webpack_require__(12);
+	var ValueMonitor = __webpack_require__(13);
 
 
 	var Scope = function(){
@@ -340,13 +350,13 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	"use strict";
 
-	var _lib_observe = __webpack_require__(12);
+	var _lib_observe = __webpack_require__(14);
 
 	var util = __webpack_require__(1);
 	var config = __webpack_require__(2);
-	var constant = __webpack_require__(13)
-	var Snippet = __webpack_require__(8);
-	var BindContext = __webpack_require__(10);
+	var constant = __webpack_require__(8)
+	var Snippet = __webpack_require__(10);
+	var BindContext = __webpack_require__(12);
 
 	var ComposedBindContext=function(contexts){
 	  this.contexts = contexts;
@@ -669,11 +679,11 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	"use strict";
 
-	var _lib_observe = __webpack_require__(12);
+	var _lib_observe = __webpack_require__(14);
 
 	var util = __webpack_require__(1);
 	var config = __webpack_require__(2);
-	var constant = __webpack_require__(13)
+	var constant = __webpack_require__(8)
 
 	var retrieveWatchMap=function(scope){
 	  var watchMap = scope.__watch__map__;
@@ -802,12 +812,31 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	"use strict";
 
-	var _lib_observe = __webpack_require__(12);
+	var _lib_observe = __webpack_require__(14);
 
 	var util = __webpack_require__(1);
 	var config = __webpack_require__(2);
-	var constant = __webpack_require__(13)
-	var Snippet = __webpack_require__(8)
+	var constant = __webpack_require__(8)
+	var Snippet = __webpack_require__(10)
+
+	var BindContext = __webpack_require__(12)
+	var ValueMonitor = __webpack_require__(13)
+
+	var optionUtil = __webpack_require__(15)
+
+	var getInputType=function(jq){
+	  var inputType;
+	  var tagName = jq.prop("tagName");
+	  if(tagName === "INPUT"){
+	    inputType = jq.attr("type");
+	    if(inputType){
+	      inputType = inputType.toLowerCase();
+	    }
+	  }else if(tagName === "SELECT"){
+	    inputType = "select";
+	  }
+	  return inputType;
+	}
 
 	var _form = function (meta) {
 	  var formDef = meta._form;
@@ -830,10 +859,8 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	  if (!meta._render) {
 	    meta._render = function (target, newValue, oldValue, bindContext) {
-	      //TODO we need to do more for select/checkbox/radio
-	      var tagName = target.prop("tagName");
-	      switch (tagName) {
-	      case "SELECT":
+	      var inputType = getInputType(target);
+	      if(inputType === "select"){
 	        //move diverge value option at first
 	        target.find("[aj-diverge-value]").remove();
 	        target.val(newValue);
@@ -843,97 +870,77 @@ return /******/ (function(modules) { // webpackBootstrap
 	          target.append(op);
 	          target.val(newValue);
 	        }
-	        break;
-	      case "INPUT":
-	        var type = target.attr("type");
-	        if(type){
-	          type = type.toLowerCase();
+	        /*
+	        var optionBindingHub = optionUtil.getOptionBindingHub(bindContext, meta._meta_trace_id);
+	        if(optionBindingHub.notifyValueChanged){
+	          optionBindingHub.notifyValueChanged();
 	        }
-	        if(type === "checkbox" || type === "radio"){
-	          if(formDef._single_check){
-	            if(newValue){
-	              target.prop("checked", true);
-	            }else{
-	              target.prop("checked", false);
-	            }
+	        */
+	      }else if(inputType === "checkbox" || inputType === "radio"){
+	        if(formDef._single_check){
+	          if(newValue){
+	            target.prop("checked", true);
 	          }else{
-	            var va = util.regulateArray(newValue);
-	            if(type === "radio" && va.length > 1){
-	              throw "There are over than one candidate value for radio:" + va;
-	            }
-	            var unmatchedValue = [];
-	            //there must be "aj-placeholder-id"
-	            var placeHolderId = target.attr("aj-placeholder-id");
-	            
-	            if(!placeHolderId){//option bind has not been called yet or static option
-	              return;
-	            }
-	            
-	            var snippet = bindContext._snippet;
-	            
-	            //remove the auto generated diverge elements
-	            snippet.find("[aj-diverge-value=" + placeHolderId + "]").remove();
-	            
-	            //find out all the existing options
-	            var ops = snippet.find("[aj-generated=" + placeHolderId + "]");
-	            util.findWithRoot(ops, "input[type="+type+"]").prop("checked", false);
-	            va.forEach(function(v){
-	              if(v === null || v === undefined){
-	                v = "";
-	              }
-	              var foundInput = util.findWithRoot(ops, "input[value='"+v+"']");
-	              if(foundInput.length === 0){
-	                if(v){
-	                  unmatchedValue.push(v);
-	                }
-	              }else{
-	                foundInput.prop("checked", true);
-	              }
-	            });
-	            if(unmatchedValue.length > 0){
-	              var insertPoint = snippet.find("#" + placeHolderId);
-	              unmatchedValue.forEach(function(v){
-	                var uid = util.createUID();
-	                var clone = target.clone().attr("id", uid).val(v).prop("checked", true);
-	                var label = $("<label>").attr("for",uid).text(v);
-	                
-	                var diverge = $("<span>").attr("aj-diverge-value", placeHolderId);
-	                diverge.append(clone).append(label);
-	                
-	                insertPoint.after(diverge);
-	                insertPoint = diverge;
-	              });
-	            }
+	            target.prop("checked", false);
 	          }
-	          break;
 	        }else{
-	          //continue to default
+	          var va = util.regulateArray(newValue);
+	          if(inputType === "radio" && va.length > 1){
+	            throw "There are over than one candidate value for radio:" + va;
+	          }
+	          var unmatchedValue = [];
+	          //there must be "aj-placeholder-id"
+	          var placeHolderId = target.attr("aj-placeholder-id");
+	          
+	          if(!placeHolderId){//option bind has not been called yet or static option
+	            return;
+	          }
+	          
+	          var snippet = bindContext._snippet;
+	          
+	          //remove the auto generated diverge elements
+	          snippet.find("[aj-diverge-value=" + placeHolderId + "]").remove();
+	          
+	          //find out all the existing options
+	          var ops = snippet.find("[aj-generated=" + placeHolderId + "]");
+	          util.findWithRoot(ops, "input[type="+type+"]").prop("checked", false);
+	          va.forEach(function(v){
+	            if(v === null || v === undefined){
+	              v = "";
+	            }
+	            var foundInput = util.findWithRoot(ops, "input[value='"+v+"']");
+	            if(foundInput.length === 0){
+	              if(v){
+	                unmatchedValue.push(v);
+	              }
+	            }else{
+	              foundInput.prop("checked", true);
+	            }
+	          });
+	          if(unmatchedValue.length > 0){
+	            var insertPoint = snippet.find("#" + placeHolderId);
+	            unmatchedValue.forEach(function(v){
+	              var uid = util.createUID();
+	              var clone = target.clone().attr("id", uid).val(v).prop("checked", true);
+	              var label = $("<label>").attr("for",uid).text(v);
+	              
+	              var diverge = $("<span>").attr("aj-diverge-value", placeHolderId);
+	              diverge.append(clone).append(label);
+	              
+	              insertPoint.after(diverge);
+	              insertPoint = diverge;
+	            });
+	          }
 	        }
-	      default:
+	      }else{
 	        target.val(newValue);
-	      } //end switch
+	      } //end inputType
 	      
 	      //save the current value to target as data attribute
 	      util.getDataRef(target, "aj-form-binding-ref").value = newValue;
 	    } // end _render = function...
 	  } // end !meta._render
 
-	  if (formDef._option) {
-	    var renderFn = meta._render;
-	    meta._post_binding.push(function (context) {
-	      var scope = context._scope;
-	      var ownerSnippet = context._snippet;
-	      var target = ownerSnippet.find(meta._selector);
-	      var optionSnippet = formDef._option.bindAsSubSnippet(scope, target, function () {
-	        var currentDomValue = util.getDataRef(target, "aj-form-binding-ref").value;
-	        renderFn(target, currentDomValue, undefined, context);
-	      });
-	      ownerSnippet._discardHooks.push(function(){
-	        optionSnippet.discard();
-	      });
-	    });
-	  }
-	  
 	  if (!meta._register_dom_change) {
 	    var changeEvents = new Array();
 
@@ -951,18 +958,12 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	    if (changeEvents.length > 0) {
 	      meta._register_dom_change = function (target, changeHandler, bindContext) {
-	        var snippet = bindContext._snippet;
-	        var ref = util.getDataRef(target, "aj-form-binding-ref");
-	        ref.changeEvents = changeEvents;
-
-	        var inputType;
-	        var tagName = target.prop("tagName");
-	        if(tagName === "INPUT"){
-	          inputType = target.attr("type");
-	          if(inputType){
-	            inputType = inputType.toLowerCase();
-	          }
+	        var inputType = getInputType(target);
+	        if(inputType && !formDef._single_check){
+	          var optionBindingHub = optionUtil.getOptionBindingHub(bindContext, meta._meta_trace_id);
+	          optionBindingHub.inputType = inputType;
 	        }
+
 	        if(inputType === "checkbox" || inputType === "radio"){
 	          if(formDef._single_check){
 	            target.bind(changeEvents.join(" "), function () {
@@ -987,7 +988,65 @@ return /******/ (function(modules) { // webpackBootstrap
 	      }// end meta._register_assign
 	    };// end changeEvents.length > 0
 	  }// end !meta._register_assign
+	  
+	  if (formDef._option) {
+	    var varPath = formDef._option._var_path;
+	    var varRef = formDef._option._var_ref;
+	    var varRefSearchKey = formDef._option._var_ref_search_key;
+	    delete formDef._option._var_path;
+	    delete formDef._option._var_ref;
+	    var optionMeta;
+	    meta._post_binding.push(function (bindContext) {
+	      if(!varPath){
+	        var scope = bindContext.valueMonitor.scope;
+	        varPath = util.determineRefPath(scope, varRef, varRefSearchKey);
+	      }
+	      
+	      var optionBindingHub = optionUtil.getOptionBindingHub(bindContext, meta._meta_trace_id);//must have
+	      if(!optionMeta){
+	        optionMeta = optionUtil.rewriteOptionMeta(formDef._option, optionBindingHub.inputType);
+	      }
+	      
+	      optionBindingHub.notifyOptionChange=function(){
+	        bindContext.forceSyncFromObserveTarget(meta._meta_trace_id);
+	      };
+
+	      var optionMonitor = new ValueMonitor(scope, varPath);
+	      var snippet = bindContext.snippet;
+	      
+	      var optionContext = new BindContext({
+	        valueMonitor: optionMonitor,
+	        snippet: snippet,
+	        optionBindingHub: optionBindingHub,
+	        inputTargetBindContext: bindContext,
+	      });
+	      bindContext.addDiscardHook(function(){
+	        optionContext.discard();
+	      });
+	      optionContext.bind(optionMeta);
+	    });
+	  }
 	}
+
+	config.meta.rewritterMap["_form"] = {
+	  priority : constant.metaRewritterPriority["_form"],
+	  fn : _form
+	};
+
+
+
+/***/ },
+/* 7 */
+/***/ function(module, exports, __webpack_require__) {
+
+	"use strict";
+
+	var _lib_observe = __webpack_require__(14);
+
+	var util = __webpack_require__(1);
+	var config = __webpack_require__(2);
+	var constant = __webpack_require__(8)
+	var Snippet = __webpack_require__(10)
 
 	var api={};
 
@@ -997,7 +1056,6 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * _meta2  : _duplicator
 	 */
 	api.optionBind = function (_varRef, _meta, _meta2) {
-	  var varRef = _varRef;
 	  var meta;
 	  if (typeof _meta === "string") {
 	    meta = {};
@@ -1011,194 +1069,14 @@ return /******/ (function(modules) { // webpackBootstrap
 	      meta[kk]._duplicator = _meta2;
 	    }
 	  }
-
-	  var checkKeys = Object.keys(meta);
-	  if (checkKeys.length !== 1) {
-	    throw "There can only be one property declaration in option binding, but got:" + checkKeys;
-	  }
-
-	  var optionMeta = meta[checkKeys[0]];
-	  var itemDef = optionMeta._item; 
-	  if (!optionMeta._item) {
-	    optionMeta._item = {};
-	  }
-	  var itemDef = optionMeta._item;
 	  
-	  //move all the properties to _item
-	  for (var p in optionMeta) {
-	    if (p === "_duplicator" || p === "_item") {
-	      continue;
-	    }
-	    itemDef[p] = optionMeta[p];
-	    delete optionMeta[p];
-	  }
-
-	  //we do not want there are other properties from "_duplicator" and "_item"
-	  for (var p in optionMeta) {
-	    if (p === "_duplicator" || p === "_item") {
-	      continue;
-	    }
-	    throw "Only _duplicator and _item are allowed under option binding but found:" + p;
-	  }
-
+	  var searchKey = constant.impossibleSearchKey + "-option-bind-trick-" + util.createUID();
+	  _varRef[searchKey] = 1;
 	  
-	  var valueFn = itemDef._value ? itemDef._value : function (v) {
-	    if(v.value === undefined){
-	      return v;
-	    }else{
-	      return v.value;
-	    }
-	  };
-	  delete itemDef._value;
-
-	  var textFn = itemDef._text ? itemDef._text : function (v) {
-	    if(v.text === undefined){
-	      return v;
-	    }else{
-	      return v.text;
-	    }
-	  };
-	  delete itemDef._text;
-
-	  var op = {};
-	  op.bindAsSubSnippet = function (scope, ownerFormInputTarget, onOptionChange) {
-	    var snippetRoot;
-	    
-	    //rewrite post render
-	    //it should be rewritten to simple object observe, but right now, we simply hack it.
-	    if(optionMeta._post_render){
-	      var pr = optionMeta._post_render;
-	      optionMeta._post_render = function(){
-	        onOptionChange();
-	        pr();
-	      }
-	    }else{
-	      optionMeta._post_render = onOptionChange;
-	    }
-	    
-	    //rewrite render by type
-	    var tagName = ownerFormInputTarget.prop("tagName");
-	    switch (tagName) {
-	    case "SELECT":
-	      snippetRoot = ownerFormInputTarget;
-	      if (!optionMeta._duplicator) {
-	        optionMeta._duplicator = "option:first"; //we will always use the first option as template
-	      }
-
-	      if (!itemDef._selector) {
-	        itemDef._selector = ":root";
-	      }
-	      if (itemDef._render) {
-	        var renderFn = itemDef._render;
-	        itemDef._render = function (target, newValue, oldValue) {
-	          renderFn(target, newValue, oldValue);
-	        }
-	      } else {
-	        itemDef._render = function (target, newValue) {
-	          target.val(valueFn(newValue));
-	          target.text(textFn(newValue));
-	        };
-	      }
-	      break;
-	    case "INPUT":
-	      var type = ownerFormInputTarget.attr("type");
-	      if(type){
-	        type = type.toLowerCase();
-	      }
-	      if(type=== "checkbox" || type === "radio"){
-	        if (!optionMeta._duplicator) {
-	          throw "_duplicator must be specified for options of checkbox or radio";
-	        }
-
-	        //find out the parent of duplicator
-	        var parent = ownerFormInputTarget;
-	        while(!parent.is(optionMeta._duplicator)){
-	          parent = parent.parent();
-	        }
-	        snippetRoot = parent.parent();
-	        
-	        if (!itemDef._selector) {
-	          itemDef._selector = ":root";
-	        }
-	        if(itemDef._register_dom_change || itemDef._dom_change){
-	          throw "_register_dom_change/_dom_change cannot be specified for checkbox/radio option";
-	        }else{
-	          var ref = util.getDataRef(ownerFormInputTarget, "aj-form-binding-ref");
-	          if(ref.changeEvents.length > 0){
-	            itemDef._register_dom_change = function (target, changeHandler, bindContext){
-	              var snippet = bindContext._snippet;
-	              var events = ref.changeEvents.join(" ");
-	              var targetInput = snippet.find("input");
-	              targetInput.bind(events, function () {
-	                var je = $(this);
-	                var value = je.val();
-	                var checked = je.prop("checked");
-	                changeHandler({
-	                  "value": value,
-	                  "checked": checked
-	                }, bindContext);
-	              });
-	              /*
-	              snippet.find("label").bind(events, function(){
-	                var je= $(this);
-	                var id = je.attr("for");
-	                var input = targetInput.filter("#" + id);
-	                //var eventHandler = input[ref.changeEvents[0]];
-	                //eventHandler.apply(input);
-	                var value = input.val();
-	                //label click may before checkbox "being clicked"
-	                var checked = !input.prop("checked");
-	                changeHandler({
-	                  "value": value,
-	                  "checked": checked
-	                }, bindContext);
-	              });
-	              */
-	            }
-	            itemDef._assign = function (path, changedValue, bindContext) {
-	              var value = changedValue.value;
-	              var checked = changedValue.checked;
-	              if(type === "checkbox"){
-	                var newResult = util.regulateArray(ref.value);
-	                var vidx = newResult.indexOf(value);
-	                if(checked && vidx>= 0){
-	                  //it is ok
-	                }else if(checked && vidx < 0){
-	                  //add
-	                  newResult.push(value);
-	                }else if(!checked && vidx >= 0){
-	                  //remove
-	                  newResult.splice(vidx, 1);
-	                }else{// !checked && vidx < 0
-	                  //it is ok
-	                }
-	                ref.value = newResult;
-	              }else{
-	                ref.value = value;
-	              }
-	            } //_assign
-	          } // ref.changeEvents.length > 0
-	        } // else of (itemDef._register_assign || itemDef._assign)
-	        if (!itemDef._render) {
-	          itemDef._render = function (target, newValue, oldValue, bindContext) {
-	            var snippet = bindContext._snippet;
-	            var uid = util.createUID();
-	            snippet.find("input[type="+type+"]").attr("id", uid).val(valueFn(newValue));;
-	            snippet.find("label").attr("for", uid).text(textFn(newValue));
-	          };
-	        }
-	        break;
-	      }else{
-	        // continue to the default
-	      }
-	    default:
-	      throw "Only select, checkbox or radio can declare _option but found:" + target[0].outerHTML;
-	    }
-	    var optionSnippet = new Snippet(scope, snippetRoot);
-	    optionSnippet.bind(varRef, meta);
-	    return optionSnippet;
-	  };
-	  return op;
+	  meta._var_ref = _varRef;
+	  meta._var_ref_search_key = searchKey;
+	  
+	  return meta;
 	}, //end optionBind
 
 	/**
@@ -1317,18 +1195,39 @@ return /******/ (function(modules) { // webpackBootstrap
 	  }
 	}
 
-	config.meta.rewritterMap["_form"] = {
-	  priority : constant.metaRewritterPriority["_form"],
-	  fn : _form
-	};
-
 	module.exports=api;
 
 
 
 
 /***/ },
-/* 7 */
+/* 8 */
+/***/ function(module, exports, __webpack_require__) {
+
+	"use strict";
+
+	var constant={};
+
+	constant.metaRewritterPriority={
+	  _watch: 10000,
+	  _form : 20000,
+	  _duplicator: 30000,
+	  _selector : 40000,
+	  _attr_op : 50000,
+	  _selector_after_attr_op : 60000,
+	  _render : 70000,
+	  _register_dom_change: 80000,
+	  _on_change: 90000,
+	  _assign : 100000
+	};
+
+	constant.impossibleSearchKey = "aj-impossible-search-key-ashfdpnasvdnoaisdfn3423#$%$#$%0as8d23nalsfdasdf";
+
+
+	module.exports = constant;
+
+/***/ },
+/* 9 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(global, Buffer, module) {'use strict';
@@ -1495,17 +1394,17 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	if (module && module.exports)
 	  module.exports = clone;
-	/* WEBPACK VAR INJECTION */}.call(exports, (function() { return this; }()), __webpack_require__(15).Buffer, __webpack_require__(16)(module)))
+	/* WEBPACK VAR INJECTION */}.call(exports, (function() { return this; }()), __webpack_require__(17).Buffer, __webpack_require__(18)(module)))
 
 /***/ },
-/* 8 */
+/* 10 */
 /***/ function(module, exports, __webpack_require__) {
 
 	"use strict";
 
 	var util = __webpack_require__(1);
-	var BindContext = __webpack_require__(10);
-	var ValueMonitor = __webpack_require__(11);
+	var BindContext = __webpack_require__(12);
+	var ValueMonitor = __webpack_require__(13);
 
 	var Snippet = function(arg){
 	  if (typeof arg === "string"){
@@ -1545,16 +1444,16 @@ return /******/ (function(modules) { // webpackBootstrap
 	module.exports = Snippet;
 
 /***/ },
-/* 9 */
+/* 11 */
 /***/ function(module, exports, __webpack_require__) {
 
 	"use strict";
 
-	var _lib_observe = __webpack_require__(12);
+	var _lib_observe = __webpack_require__(14);
 
 	var util=__webpack_require__(1);
 	var config=__webpack_require__(2);
-	var constant = __webpack_require__(13)
+	var constant = __webpack_require__(8)
 
 	var __reverseMetaKeys = ["_meta_type", "_meta_id", "_meta_trace_id", "_value", "_prop", "_splice", "_target_path"];
 
@@ -1981,16 +1880,16 @@ return /******/ (function(modules) { // webpackBootstrap
 	module.exports = normalizeMeta
 
 /***/ },
-/* 10 */
+/* 12 */
 /***/ function(module, exports, __webpack_require__) {
 
 	"use strict";
 
 	var util = __webpack_require__(1);
 	var config = __webpack_require__(2);
-	var normalizeMeta = __webpack_require__(9);
+	var normalizeMeta = __webpack_require__(11);
 
-	var ResourceMap = __webpack_require__(14);
+	var ResourceMap = __webpack_require__(16);
 
 	var BindContext=function(override, arrayIndexes){
 	  if(override){
@@ -2003,6 +1902,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	  this.childContextMap = new ResourceMap();
 	  
 	  this.discardHook = [];
+	  
+	  this.forceSyncFromObserveTargetMap={};
+	  this.forceSyncToObserveTargetMap={};
 	  
 
 	}
@@ -2033,6 +1935,28 @@ return /******/ (function(modules) { // webpackBootstrap
 	  this.childContextMap.remove(index, identifier);
 	}
 
+	var forceSyncWithObserveTarget=function(targetMap, metaTraceId){
+	  var keys;
+	  if(metaTraceId){
+	    var force = targetMap[metaTraceId];
+	    if(force){
+	      force.apply();
+	    }
+	  }else{
+	    for(var k in targetMap){
+	      targetMap[k].apply();
+	    }
+	  }
+	}
+
+	BindContext.prototype.forceSyncFromObserveTarget=function(metaTraceId){
+	  forceSyncWithObserveTarget(this.forceSyncFromObserveTargetMap, metaTraceId);
+	}
+
+	BindContext.prototype.forceSyncToObserveTarget=function(metaTraceId){
+	  forceSyncWithObserveTarget(this.forceSyncToObserveTargetMap, metaTraceId);
+	}
+
 	BindContext.prototype.bind=function(meta){  
 	  if(Array.isArray(meta)){
 	    for(var i=0;i<meta.length;i++){
@@ -2058,6 +1982,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	        var force = sm._register_on_change.call(sm, this, function(){
 	          changeHandler.apply(sm, arguments);
 	        });
+	        this.forceSyncFromObserveTarget[sm._meta_trace_id] = force;
 	        force.apply();
 	      }
 	      if(sm._register_assign){
@@ -2066,7 +1991,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	          assignChangeHandler.apply(sm, arguments);
 	          Aj.sync();
 	        });
-	        //force.apply
+	        this.forceSyncToObserveTarget[sm._meta_trace_id] = force;
 	      }
 	      if(sm._post_binding){
 	        for(var k=0;k<sm._post_binding.length;k++){
@@ -2113,16 +2038,16 @@ return /******/ (function(modules) { // webpackBootstrap
 	module.exports=BindContext;
 
 /***/ },
-/* 11 */
+/* 13 */
 /***/ function(module, exports, __webpack_require__) {
 
 	"use strict";
 
-	var _ = __webpack_require__(12);
+	var _ = __webpack_require__(14);
 
 	var util = __webpack_require__(1);
 	var config = __webpack_require__(2);
-	var ResourceMap = __webpack_require__(14);
+	var ResourceMap = __webpack_require__(16);
 
 	var ValueMonitor=function(scope, varRefRoot){
 	  this.scope = scope;
@@ -2193,7 +2118,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	module.exports=ValueMonitor;
 
 /***/ },
-/* 12 */
+/* 14 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(global, module) {/*
@@ -3908,34 +3833,135 @@ return /******/ (function(modules) { // webpackBootstrap
 	  
 	})(typeof global !== 'undefined' && global && typeof module !== 'undefined' && module ? global : this || window);
 
-	/* WEBPACK VAR INJECTION */}.call(exports, (function() { return this; }()), __webpack_require__(16)(module)))
+	/* WEBPACK VAR INJECTION */}.call(exports, (function() { return this; }()), __webpack_require__(18)(module)))
 
 /***/ },
-/* 13 */
+/* 15 */
 /***/ function(module, exports, __webpack_require__) {
 
 	"use strict";
 
-	var constant={};
+	var util = __webpack_require__(1);
+	var config = __webpack_require__(2);
+	var constant = __webpack_require__(8)
+	var Snippet = __webpack_require__(10)
+	var normalizeMeta = __webpack_require__(11)
 
-	constant.metaRewritterPriority={
-	  _watch: 10000,
-	  _form : 20000,
-	  _duplicator: 30000,
-	  _selector : 40000,
-	  _attr_op : 50000,
-	  _selector_after_attr_op : 60000,
-	  _render : 70000,
-	  _register_dom_change: 80000,
-	  _on_change: 90000,
-	  _assign : 100000
+
+	var getOptionBindingHub=function(bindContext, identifier){
+	  var info = bindContext.getResource("optionBindingHub", identifier);
+	  if(!info){
+	    info = {};
+	    bindContext.addResource("optionBindingHub", identifier, info);
+	  }
+	  return info;
+	}
+
+	var throwMalformedOptionMeta=function(meta){
+	  throw "There must be one property or a pair of _duplicator/_item (_item is ignorable) to be declared for option binding, but got:"
+	        + JSON.stringify(meta);
+	}
+	var retrieveTargetPropMetaRoot=function(meta){
+	  var checkKeys = Object.keys(meta);
+	  if (checkKeys.length == 0) {
+	    return meta;
+	  }else if(checkKeys.length == 1){
+	    if(checkKeys[0] === "_duplicator"){
+	      return meta;
+	    }else if(checkKeys[0] === "_item"){
+	      return meta;
+	    }else{
+	      return retrieveTargetPropMetaRoot(meta[checkKeys[0]]);
+	    }
+	  }else if(checkKeys.length == 2){
+	    if(checkKeys.indexOf("_duplicator") && checkKeys.indexOf("_item")){
+	      return meta;
+	    }else{
+	      throwMalformedOptionMeta(meta);
+	    }
+	  }else{
+	    throwMalformedOptionMeta(meta);
+	  }
+	}
+
+	var defaultValueFn=function (v){
+	  if(v.value === undefined){
+	    return v;
+	  }else{
+	    return v.value;
+	  }
+	}
+
+	var defaultTextFn=function(v){
+	  if(v.text === undefined){
+	    return v;
+	  }else{
+	    return v.text;
+	  }
 	};
 
+	/*
+	 * 
+	 */
+	var rewriteOptionMeta=function(optionMeta, inputType){
+	  var newMeta = util.clone(optionMeta);
+	  var targetPropMetaRoot = retrieveTargetPropMetaRoot(newMeta);
+	  if(!targetPropMetaRoot._item){
+	    targetPropMetaRoot._item = {};
+	  }
+	  
+	  targetPropMetaRoot._value = function(newValue, oldValue, bindContext){
+	    var fn = bindContext.optionBindingHub.notifyOptionChange();
+	    if(fn){
+	      fn.apply();
+	    }
+	  }
+	  
+	  //TODO we should handle splice but not now
+	  /*
+	  targetPropMetaRoot._splice = function(newValue, oldValue, bindContext){
+	    var fn = bindContext.optionBindingHub.notifyOptionChange();
+	    if(fn){
+	      fn.apply();
+	    }
+	  }
+	  */
+	  
+	  var itemDef = targetPropMetaRoot._item;
+	  
+	  var valueFn = itemDef._value ? itemDef._value : defaultValueFn;
+	  delete itemDef._value;
 
-	module.exports = constant;
+	  var textFn = itemDef._text ? itemDef._text : defaultTextFn;
+	  delete itemDef._text;
+	  
+	  if(inputType === "select"){
+	    if(!targetPropMetaRoot._duplicator){
+	      targetPropMetaRoot._duplicator = "option:first";
+	    }
+	    if(!itemDef._selector){
+	      itemDef._selector = ":root";
+	    }
+	    if (!itemDef._render) {
+	      itemDef._render = function (target, newValue, bindContext) {
+	        target.val(valueFn(newValue));
+	        target.text(textFn(newValue));
+	      };
+	    }
+	  }
+	  return normalizeMeta(newMeta);
+
+	}//end optionRewrite
+
+	module.exports={
+	  rewriteOptionMeta : rewriteOptionMeta,
+	  getOptionBindingHub : getOptionBindingHub
+	}
+
+
 
 /***/ },
-/* 14 */
+/* 16 */
 /***/ function(module, exports, __webpack_require__) {
 
 	"use strict";
@@ -4044,7 +4070,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	module.exports=ResourceMap;
 
 /***/ },
-/* 15 */
+/* 17 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(Buffer) {/*!
@@ -4054,9 +4080,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * @license  MIT
 	 */
 
-	var base64 = __webpack_require__(19)
-	var ieee754 = __webpack_require__(17)
-	var isArray = __webpack_require__(18)
+	var base64 = __webpack_require__(21)
+	var ieee754 = __webpack_require__(20)
+	var isArray = __webpack_require__(19)
 
 	exports.Buffer = Buffer
 	exports.SlowBuffer = SlowBuffer
@@ -5379,10 +5405,10 @@ return /******/ (function(modules) { // webpackBootstrap
 	  }
 	}
 
-	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(15).Buffer))
+	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(17).Buffer))
 
 /***/ },
-/* 16 */
+/* 18 */
 /***/ function(module, exports, __webpack_require__) {
 
 	module.exports = function(module) {
@@ -5398,7 +5424,46 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ },
-/* 17 */
+/* 19 */
+/***/ function(module, exports, __webpack_require__) {
+
+	
+	/**
+	 * isArray
+	 */
+
+	var isArray = Array.isArray;
+
+	/**
+	 * toString
+	 */
+
+	var str = Object.prototype.toString;
+
+	/**
+	 * Whether or not the given `val`
+	 * is an array.
+	 *
+	 * example:
+	 *
+	 *        isArray([]);
+	 *        // > true
+	 *        isArray(arguments);
+	 *        // > false
+	 *        isArray('');
+	 *        // > false
+	 *
+	 * @param {mixed} val
+	 * @return {bool}
+	 */
+
+	module.exports = isArray || function (val) {
+	  return !! val && '[object Array]' == str.call(val);
+	};
+
+
+/***/ },
+/* 20 */
 /***/ function(module, exports, __webpack_require__) {
 
 	exports.read = function(buffer, offset, isLE, mLen, nBytes) {
@@ -5488,46 +5553,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ },
-/* 18 */
-/***/ function(module, exports, __webpack_require__) {
-
-	
-	/**
-	 * isArray
-	 */
-
-	var isArray = Array.isArray;
-
-	/**
-	 * toString
-	 */
-
-	var str = Object.prototype.toString;
-
-	/**
-	 * Whether or not the given `val`
-	 * is an array.
-	 *
-	 * example:
-	 *
-	 *        isArray([]);
-	 *        // > true
-	 *        isArray(arguments);
-	 *        // > false
-	 *        isArray('');
-	 *        // > false
-	 *
-	 * @param {mixed} val
-	 * @return {bool}
-	 */
-
-	module.exports = isArray || function (val) {
-	  return !! val && '[object Array]' == str.call(val);
-	};
-
-
-/***/ },
-/* 19 */
+/* 21 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var lookup = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';

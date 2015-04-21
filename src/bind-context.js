@@ -18,6 +18,9 @@ var BindContext=function(override, arrayIndexes){
   
   this.discardHook = [];
   
+  this.forceSyncFromObserveTargetMap={};
+  this.forceSyncToObserveTargetMap={};
+  
 
 }
 
@@ -47,6 +50,28 @@ BindContext.prototype.removeChildContext=function(identifier, index){
   this.childContextMap.remove(index, identifier);
 }
 
+var forceSyncWithObserveTarget=function(targetMap, metaTraceId){
+  var keys;
+  if(metaTraceId){
+    var force = targetMap[metaTraceId];
+    if(force){
+      force.apply();
+    }
+  }else{
+    for(var k in targetMap){
+      targetMap[k].apply();
+    }
+  }
+}
+
+BindContext.prototype.forceSyncFromObserveTarget=function(metaTraceId){
+  forceSyncWithObserveTarget(this.forceSyncFromObserveTargetMap, metaTraceId);
+}
+
+BindContext.prototype.forceSyncToObserveTarget=function(metaTraceId){
+  forceSyncWithObserveTarget(this.forceSyncToObserveTargetMap, metaTraceId);
+}
+
 BindContext.prototype.bind=function(meta){  
   if(Array.isArray(meta)){
     for(var i=0;i<meta.length;i++){
@@ -72,6 +97,7 @@ BindContext.prototype.bind=function(meta){
         var force = sm._register_on_change.call(sm, this, function(){
           changeHandler.apply(sm, arguments);
         });
+        this.forceSyncFromObserveTarget[sm._meta_trace_id] = force;
         force.apply();
       }
       if(sm._register_assign){
@@ -80,7 +106,7 @@ BindContext.prototype.bind=function(meta){
           assignChangeHandler.apply(sm, arguments);
           Aj.sync();
         });
-        //force.apply
+        this.forceSyncToObserveTarget[sm._meta_trace_id] = force;
       }
       if(sm._post_binding){
         for(var k=0;k<sm._post_binding.length;k++){

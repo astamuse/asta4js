@@ -1,26 +1,35 @@
 "use strict";
 
+var constant = require("./constant")
+
 var util = {};
 
 util.sync = function(){
   Platform.performMicrotaskCheckpoint();
 };
 
-util.determineRefPath = function (scope, varRef) {
-  var searchKey = "ashfdpnasvdnoaisdfn3423#$%$#$%0as8d23nalsfdasdf";
-  varRef[searchKey] = 1;
+util.determineRefPath = function (scope, varRef, searchKey) {
+  var deleteSearchKey;
+  if(searchKey){
+    deleteSearchKey = false;
+  }else{
+    deleteSearchKey = true;
+    searchKey = constant.impossibleSearchKey;
+    varRef[searchKey] = 1;
+  }
 
   var refPath = null;
   for (var p in scope) {
     var ref = scope[p];
-    if (ref[searchKey] == 1) {
+    if (ref[searchKey]) {
       refPath = p;
       break;
     }
   }
-
-  varRef[searchKey] = null;
-  delete varRef[searchKey];
+  
+  if(deleteSearchKey){
+    delete varRef[searchKey];
+  }
 
   return refPath;
 };

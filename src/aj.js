@@ -35,17 +35,18 @@ require("./scope");
 //internal extension
 require("./dom-bind");
 require("./watch");
+require("./form");
 
-var form = require("./form");
+shallow(require("./form-api"), Aj);
 
-shallow(form, Aj);
-
-$(function(){
-  if(Aj.config.autoSyncAfterJqueryAjax){
-    $( document ).ajaxComplete(function() {
-      Aj.sync();
-    });
-  }
-});
+if($){
+  $(function(){
+    if(Aj.config.autoSyncAfterJqueryAjax){
+      $( document ).ajaxComplete(function() {
+        Aj.sync();
+      });
+    }
+  });
+}
 
 module.exports = Aj;

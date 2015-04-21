@@ -15,5 +15,7 @@ constant.metaRewritterPriority={
   _assign : 100000
 };
 
+constant.impossibleSearchKey = "aj-impossible-search-key-ashfdpnasvdnoaisdfn3423#$%$#$%0as8d23nalsfdasdf";
+
 
 module.exports = constant;
