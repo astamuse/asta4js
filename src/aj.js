@@ -24,6 +24,8 @@ Aj.init = function(initFunc){
   initFunc(scope);
 }
 
+Aj.delay=Aj.util.delay;
+
 //entry point
 require("./scope");
 
