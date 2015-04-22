@@ -259,13 +259,16 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	util.delay=function(callback, timeout, delayMoreCycles){
 	  if(delayMoreCycles && delayMoreCycles > 0){
-	    util.delay(callback, timeout, delayMoreCycles-1);
+	    setTimeout(function(){
+	      util.delay(callback, timeout, delayMoreCycles-1);
+	    }, 0);
 	    return;
+	  }else{
+	    setTimeout(function(){
+	      callback.apply();
+	      util.sync();
+	    }, timeout ? timeout : 0);
 	  }
-	  setTimeout(function(){
-	    callback.apply();
-	    util.sync();
-	  }, timeout ? timeout : 0);
 	}
 
 	module.exports = util;
@@ -690,20 +693,27 @@ return /******/ (function(modules) { // webpackBootstrap
 	var util = __webpack_require__(1);
 	var config = __webpack_require__(2);
 	var constant = __webpack_require__(8)
+	var ValueMonitor = __webpack_require__(13)
 
-	var retrieveWatchMap=function(scope){
-	  var watchMap = scope.__watch__map__;
-	  if(!watchMap){
-	    watchMap = {};
-	    scope.__watch__map__ = watchMap;
+	var getWatchDelegateScope=function(bindContext, meta){
+	  var watchDelegateScope = bindContext.getResource("_watch", meta._meta_trace_id);
+	  if(!watchDelegateScope){
+	    watchDelegateScope = {
+	      value: undefined,
+	    };
+	    var valueMonitor = new ValueMonitor(watchDelegateScope, "");
+	    watchDelegateScope.valueMonitor = valueMonitor;
+	    watchDelegateScope.valueRef = valueMonitor.getValueRef("value");
+	    watchDelegateScope.discard=function(){
+	      this.valueMonitor.discard();
+	    }
+	    bindContext.addResource("_watch", meta._meta_trace_id, watchDelegateScope);
 	  }
-	  return watchMap;
-	};
+	  return watchDelegateScope;
+	}
 
 	var _watch = function (meta) {
 	  var watchDef = meta._watch;
-	  var watchPropMapPath = meta._target_path + ":" + meta._meta_trace_id;
-	  
 	  var parentPath = meta._target_path;
 	  var dotIdx = parentPath.lastIndexOf(".");
 	  if(dotIdx >= 0){
@@ -715,86 +725,57 @@ return /******/ (function(modules) { // webpackBootstrap
 	  var observerTargets = watchDef._fields.map(function(f){
 	    var path;
 	    if(f.indexOf("@:") == 0){
-	      path = f.substr(2);
+	      path = f;
 	    }else{
-	      path = parentPath + "." + f;
+	      if(parentPath){
+	        path = parentPath + "." + f;
+	      }else{
+	        path = f;
+	      }
 	    }
 	    return path;
 	  });
 	  
 	  if (!meta._register_on_change) {
 	    meta._register_on_change = function(bindContext, changeHandler) {
-	      var scope = bindContext._scope;
-	      var arrayedPath = util.replaceIndexesInPath(watchPropMapPath, bindContext._indexes);
-	      var observePath = "__watch__map__['" + arrayedPath + "']";
-	      var observer = new _lib_observe.PathObserver(scope, observePath);
-	      observer.open(function (newValue, oldValue) {
+	      var watchDelegateScope = getWatchDelegateScope(bindContext, meta);
+	      watchDelegateScope.valueMonitor.pathObserve(meta._meta_trace_id, "value", function(newValue, oldValue){
 	        changeHandler(newValue, oldValue, bindContext);
 	      });
-	      var path = _lib_observe.Path.get(observePath);
 	      return function(){
-	        changeHandler(path.getValueFrom(scope), undefined, bindContext);
+	        changeHandler(watchDelegateScope.valueRef.getValue(), undefined, bindContext);
 	      }
 	    };
 	  }
 	  
 	  if(!meta._assign){
-	    meta._assign = function (path, value, bindContext){
-	      var scope = bindContext._scope;
-	      var watchMap = retrieveWatchMap(scope);
-	      
-	      var arrayedPath = util.replaceIndexesInPath(watchPropMapPath, bindContext._indexes);
-	      
-	      watchMap[arrayedPath] = value;
+	    meta._assign = function (value, bindContext){
+	      var watchDelegateScope = getWatchDelegateScope(bindContext, meta);
+	      watchDelegateScope.valueRef.setValue(value);
 	      if(watchDef._store){
-	        path.setValueFrom(bindContext._scope, value);
+	        bindContext.valueMonitor.getValueRef(meta._target_path).setValue(value);
 	      }
 	    };
 	  }
 	  
 	  if(!meta._register_assign){
 	    meta._register_assign = function (bindContext, changeHandler){
-	      var scope = bindContext._scope;
-	      var watchMap = retrieveWatchMap(scope);
-	      var targetValuePathes = [];
-	      var observer = new _lib_observe.CompoundObserver();
-	      observerTargets.forEach(function(observerPath){
-	        var arrayedObservePath = util.replaceIndexesInPath(observerPath, bindContext._indexes);
-	        targetValuePathes.push(_lib_observe.Path.get(arrayedObservePath));
-	        observer.addPath(scope, arrayedObservePath);
-	      });
-	      var arrayedPath = util.replaceIndexesInPath(watchPropMapPath, bindContext._indexes);
-	      if(bindContext._snippet){
-	        bindContext._snippet.addDiscardHook(function(){
-	          observer.close();
-	          delete watchMap[arrayedPath];
-	        });
-	      }
-	      
-	      //open observer
-	      observer.open(function(newValues, oldValues){
+	      var watchDelegateScope = getWatchDelegateScope(bindContext, meta);
+	      bindContext.valueMonitor.compoundObserve(meta._meta_trace_id, observerTargets, function(newValues, oldValues){
 	        if(watchDef._cal){
 	          changeHandler(watchDef._cal.apply(null, newValues), bindContext);
 	        }else{
 	          changeHandler(newValues, bindContext);
 	        }
 	      });
-	      
-	      //force retrieve current value
-	      var getCurrentTargetValue = function(){
-	        var values = [];
-	        targetValuePathes.forEach(function(p){
-	          values.push(p.getValueFrom(scope));
-	        });
-	        return values;
-	      };
+	      var valueRef = bindContext.valueMonitor.getCompoundValueRef(observerTargets);
 	      var force = function(){
-	        var targetValues = getCurrentTargetValue();
+	        var targetValues = valueRef.getValues();
 	        var value;
 	        if(watchDef._cal){
 	          value = watchDef._cal.apply(null, targetValues);
 	        }else{
-	          value = firstValues;
+	          value = targetValues;
 	        }
 	        changeHandler(value, bindContext);
 	      };
@@ -2122,11 +2103,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  var observePath = convertObservePath(this.varRefRoot, subPath);
 	  var observer = new _.PathObserver(this.scope, observePath);
 	  observer.open(changeFn);
-	  this.observerMap.add(observePath, identifier, {
-	    discard: function(){
-	      observer.close;
-	    }
-	  });
+	  this.observerMap.add(observePath, identifier, observer);
 	}
 
 	ValueMonitor.prototype.getValueRef=function(subPath){
@@ -2146,14 +2123,58 @@ return /******/ (function(modules) { // webpackBootstrap
 	ValueMonitor.prototype.arrayObserve=function(identifier, targetArray, changeFn){
 	  var observer = new _.ArrayObserver(targetArray);
 	  observer.open(changeFn);
-	  this.observerMap.add(identifier, identifier, {
-	    discard: function(){
-	      observer.close();
-	    }
-	  });
+	  this.observerMap.add(identifier, identifier, observer);
 	}
 	ValueMonitor.prototype.removeArrayObserve=function(identifier){
 	  this.observerMap.remove(identifier, identifier);
+	}
+
+	ValueMonitor.prototype.compoundObserve=function(identifier, pathes, changeFn){
+	  var observer = new _.CompoundObserver();
+	  var p;
+	  for(var i=0;i<pathes.length;i++){
+	    p = pathes[i];
+	    if(p.indexOf("@:") == 0){//absolute path from scope root
+	      p = p.substr(2);
+	    }else{//relative path from current monitor ref path
+	      p = convertObservePath(this.varRefRoot, p);
+	    }
+	    observer.addPath(this.scope, p);
+	  }
+	  observer.open(changeFn);
+	  this.observerMap.add(identifier, identifier, observer);
+	}
+
+	ValueMonitor.prototype.getCompoundValueRef=function(pathes){
+	  var ps = [];
+	  var p;
+	  for(var i=0;i<pathes.length;i++){
+	    p = pathes[i];
+	    if(p.indexOf("@:") == 0){//absolute path from scope root
+	      p = p.substr(2);
+	    }else{//relative path from current monitor ref path
+	      p = convertObservePath(this.varRefRoot, p);
+	    }
+	    ps[i] = _.Path.get(p);
+	  }
+	  var scope = this.scope;
+	  return {
+	    setValues : function(values){
+	      if(values.length != ps.length){
+	        throw "length not equal for compound value set";
+	      }
+	      for(var i=0;i<values.length;i++){
+	        ps[i].setValueFrom(scope, values[i]);
+	      }
+	    },
+	    getValues : function(){
+	      var values = [];
+	      for(var i=0;i<ps.length;i++){
+	        values[i] = ps[i].getValueFrom(scope);
+	      }
+	      return values;
+	    },
+	  };
 	}
 
 	ValueMonitor.prototype.discard=function(){
@@ -4220,8 +4241,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	 */
 
 	var base64 = __webpack_require__(21)
-	var ieee754 = __webpack_require__(19)
-	var isArray = __webpack_require__(20)
+	var ieee754 = __webpack_require__(20)
+	var isArray = __webpack_require__(19)
 
 	exports.Buffer = Buffer
 	exports.SlowBuffer = SlowBuffer
@@ -5566,6 +5587,45 @@ return /******/ (function(modules) { // webpackBootstrap
 /* 19 */
 /***/ function(module, exports, __webpack_require__) {
 
+	
+	/**
+	 * isArray
+	 */
+
+	var isArray = Array.isArray;
+
+	/**
+	 * toString
+	 */
+
+	var str = Object.prototype.toString;
+
+	/**
+	 * Whether or not the given `val`
+	 * is an array.
+	 *
+	 * example:
+	 *
+	 *        isArray([]);
+	 *        // > true
+	 *        isArray(arguments);
+	 *        // > false
+	 *        isArray('');
+	 *        // > false
+	 *
+	 * @param {mixed} val
+	 * @return {bool}
+	 */
+
+	module.exports = isArray || function (val) {
+	  return !! val && '[object Array]' == str.call(val);
+	};
+
+
+/***/ },
+/* 20 */
+/***/ function(module, exports, __webpack_require__) {
+
 	exports.read = function(buffer, offset, isLE, mLen, nBytes) {
 	  var e, m,
 	      eLen = nBytes * 8 - mLen - 1,
@@ -5649,45 +5709,6 @@ return /******/ (function(modules) { // webpackBootstrap
 	  for (; eLen > 0; buffer[offset + i] = e & 0xff, i += d, e /= 256, eLen -= 8);
 
 	  buffer[offset + i - d] |= s * 128;
-	};
-
-
-/***/ },
-/* 20 */
-/***/ function(module, exports, __webpack_require__) {
-
-	
-	/**
-	 * isArray
-	 */
-
-	var isArray = Array.isArray;
-
-	/**
-	 * toString
-	 */
-
-	var str = Object.prototype.toString;
-
-	/**
-	 * Whether or not the given `val`
-	 * is an array.
-	 *
-	 * example:
-	 *
-	 *        isArray([]);
-	 *        // > true
-	 *        isArray(arguments);
-	 *        // > false
-	 *        isArray('');
-	 *        // > false
-	 *
-	 * @param {mixed} val
-	 * @return {bool}
-	 */
-
-	module.exports = isArray || function (val) {
-	  return !! val && '[object Array]' == str.call(val);
 	};
 
 

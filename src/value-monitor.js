@@ -34,11 +34,7 @@ ValueMonitor.prototype.pathObserve=function(identifier, subPath, changeFn){
   var observePath = convertObservePath(this.varRefRoot, subPath);
   var observer = new _.PathObserver(this.scope, observePath);
   observer.open(changeFn);
-  this.observerMap.add(observePath, identifier, {
-    discard: function(){
-      observer.close;
-    }
-  });
+  this.observerMap.add(observePath, identifier, observer);
 }
 
 ValueMonitor.prototype.getValueRef=function(subPath){
@@ -58,14 +54,58 @@ ValueMonitor.prototype.getValueRef=function(subPath){
 ValueMonitor.prototype.arrayObserve=function(identifier, targetArray, changeFn){
   var observer = new _.ArrayObserver(targetArray);
   observer.open(changeFn);
-  this.observerMap.add(identifier, identifier, {
-    discard: function(){
-      observer.close();
-    }
-  });
+  this.observerMap.add(identifier, identifier, observer);
 }
 ValueMonitor.prototype.removeArrayObserve=function(identifier){
   this.observerMap.remove(identifier, identifier);
+}
+
+ValueMonitor.prototype.compoundObserve=function(identifier, pathes, changeFn){
+  var observer = new _.CompoundObserver();
+  var p;
+  for(var i=0;i<pathes.length;i++){
+    p = pathes[i];
+    if(p.indexOf("@:") == 0){//absolute path from scope root
+      p = p.substr(2);
+    }else{//relative path from current monitor ref path
+      p = convertObservePath(this.varRefRoot, p);
+    }
+    observer.addPath(this.scope, p);
+  }
+  observer.open(changeFn);
+  this.observerMap.add(identifier, identifier, observer);
+}
+
+ValueMonitor.prototype.getCompoundValueRef=function(pathes){
+  var ps = [];
+  var p;
+  for(var i=0;i<pathes.length;i++){
+    p = pathes[i];
+    if(p.indexOf("@:") == 0){//absolute path from scope root
+      p = p.substr(2);
+    }else{//relative path from current monitor ref path
+      p = convertObservePath(this.varRefRoot, p);
+    }
+    ps[i] = _.Path.get(p);
+  }
+  var scope = this.scope;
+  return {
+    setValues : function(values){
+      if(values.length != ps.length){
+        throw "length not equal for compound value set";
+      }
+      for(var i=0;i<values.length;i++){
+        ps[i].setValueFrom(scope, values[i]);
+      }
+    },
+    getValues : function(){
+      var values = [];
+      for(var i=0;i<ps.length;i++){
+        values[i] = ps[i].getValueFrom(scope);
+      }
+      return values;
+    },
+  };
 }
 
 ValueMonitor.prototype.discard=function(){
