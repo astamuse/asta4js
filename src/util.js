@@ -96,10 +96,35 @@ util.shallowCopy = function(arg1, arg2, arg3){
   
   return to;
 };
+
 util.arraySwap = function (array, index1, index2) {
       var tmp = array[index1];
       array[index1] = array[index2];
       array[index2] = tmp;
+};
+
+util.arrayLengthAdjust = function (targetArray, hopeLength, initialNewFn, discardCutFn) {
+  var existingLength = targetArray.length;
+  if(initialNewFn){
+    var newItem;
+    for(var i=existingLength;i<hopeLength;i++){
+      newItem = initialNewFn(i);
+      targetArray[i] = newItem;
+    }
+  }else{
+    for(var i=existingLength;i<hopeLength;i++){
+      targetArray[i] = undefined;
+    }
+  }
+  var removeCount = existingLength - hopeLength;
+  if(removeCount > 0){
+    if(discardCutFn){
+      for(var i=hopeLength;i<existingLength;i++){
+        discardCutFn(targetArray[i], i);
+      }
+    }
+    targetArray.splice(hopeLength, removeCount);
+  }
 };
     
 util.findWithRoot = function(rootElem, selector){
@@ -114,37 +139,6 @@ util.findWithRoot = function(rootElem, selector){
       }
       return result;
 };
-  
-var __element_ref_map = {};
-util.getDataRef = function(jqueryObject, dataAttrName){
-  var elementRefId = jqueryObject.attr("aj-element-ref-id");
-  if(!elementRefId){
-    elementRefId = Aj.util.createUID();
-    jqueryObject.attr("aj-element-ref-id", elementRefId);
-  }
-  var refMap = __element_ref_map[elementRefId];
-  if(!refMap){
-    refMap = {};
-    __element_ref_map[elementRefId] = refMap;
-  }
-  var dataRef = refMap[dataAttrName];
-  if(!dataRef){
-    dataRef = {
-        _trace_id: Aj.util.createUID()
-    };
-    refMap[dataAttrName] = dataRef;
-  }
-  return dataRef;
-};
-
-util.replaceIndexesInPath = function(path, replaceIndexes){
-  if(replaceIndexes){
-    for(var i=0;i<replaceIndexes.length;i++){
-      path = path.replace("?", replaceIndexes[i]);
-    }
-  }
-  return path;
-}
 
 util.delay=function(callback, timeout, delayMoreCycles){
   if(delayMoreCycles && delayMoreCycles > 0){

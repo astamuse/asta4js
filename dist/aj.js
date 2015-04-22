@@ -73,6 +73,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  "regulateArray",
 	  "clone",
 	  "arraySwap",
+	  "arrayLengthAdjust",
 	  "delay",
 	]);
 
@@ -111,7 +112,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	"use strict";
 
-	var constant = __webpack_require__(8)
+	var constant = __webpack_require__(12)
 
 	var util = {};
 
@@ -171,7 +172,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  }
 	};
 
-	util.clone = __webpack_require__(9);
+	util.clone = __webpack_require__(13);
 
 	/**
 	 * (from)
@@ -207,10 +208,35 @@ return /******/ (function(modules) { // webpackBootstrap
 	  
 	  return to;
 	};
+
 	util.arraySwap = function (array, index1, index2) {
 	      var tmp = array[index1];
 	      array[index1] = array[index2];
 	      array[index2] = tmp;
+	};
+
+	util.arrayLengthAdjust = function (targetArray, hopeLength, initialNewFn, discardCutFn) {
+	  var existingLength = targetArray.length;
+	  if(initialNewFn){
+	    var newItem;
+	    for(var i=existingLength;i<hopeLength;i++){
+	      newItem = initialNewFn(i);
+	      targetArray[i] = newItem;
+	    }
+	  }else{
+	    for(var i=existingLength;i<hopeLength;i++){
+	      targetArray[i] = undefined;
+	    }
+	  }
+	  var removeCount = existingLength - hopeLength;
+	  if(removeCount > 0){
+	    if(discardCutFn){
+	      for(var i=hopeLength;i<existingLength;i++){
+	        discardCutFn(targetArray[i], i);
+	      }
+	    }
+	    targetArray.splice(hopeLength, removeCount);
+	  }
 	};
 	    
 	util.findWithRoot = function(rootElem, selector){
@@ -225,37 +251,6 @@ return /******/ (function(modules) { // webpackBootstrap
 	      }
 	      return result;
 	};
-	  
-	var __element_ref_map = {};
-	util.getDataRef = function(jqueryObject, dataAttrName){
-	  var elementRefId = jqueryObject.attr("aj-element-ref-id");
-	  if(!elementRefId){
-	    elementRefId = Aj.util.createUID();
-	    jqueryObject.attr("aj-element-ref-id", elementRefId);
-	  }
-	  var refMap = __element_ref_map[elementRefId];
-	  if(!refMap){
-	    refMap = {};
-	    __element_ref_map[elementRefId] = refMap;
-	  }
-	  var dataRef = refMap[dataAttrName];
-	  if(!dataRef){
-	    dataRef = {
-	        _trace_id: Aj.util.createUID()
-	    };
-	    refMap[dataAttrName] = dataRef;
-	  }
-	  return dataRef;
-	};
-
-	util.replaceIndexesInPath = function(path, replaceIndexes){
-	  if(replaceIndexes){
-	    for(var i=0;i<replaceIndexes.length;i++){
-	      path = path.replace("?", replaceIndexes[i]);
-	    }
-	  }
-	  return path;
-	}
 
 	util.delay=function(callback, timeout, delayMoreCycles){
 	  if(delayMoreCycles && delayMoreCycles > 0){
@@ -302,11 +297,11 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	var util = __webpack_require__(1);
 	var config = __webpack_require__(2);
-	var Snippet = __webpack_require__(10);
-	var rewriteObserverMeta = __webpack_require__(11);
+	var Snippet = __webpack_require__(8);
+	var rewriteObserverMeta = __webpack_require__(9);
 
-	var BindContext = __webpack_require__(12);
-	var ValueMonitor = __webpack_require__(13);
+	var BindContext = __webpack_require__(10);
+	var ValueMonitor = __webpack_require__(11);
 
 
 	var Scope = function(){
@@ -363,9 +358,9 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	var util = __webpack_require__(1);
 	var config = __webpack_require__(2);
-	var constant = __webpack_require__(8)
-	var Snippet = __webpack_require__(10);
-	var BindContext = __webpack_require__(12);
+	var constant = __webpack_require__(12)
+	var Snippet = __webpack_require__(8);
+	var BindContext = __webpack_require__(10);
 
 	var ComposedBindContext=function(contexts){
 	  this.contexts = contexts;
@@ -467,12 +462,11 @@ return /******/ (function(modules) { // webpackBootstrap
 	      var existingLength = mappedArrayInfo.items.length;
 	      var regularNew = util.regulateArray(newValue);
 	      var targetLength = mappedArrayInfo.dupTargets.length;
-	      var dupTarget;
-	      var dupSpawned;
-	      var mappedItem;
-	      for(var i=existingLength;i<regularNew.length;i++){
-	        mappedItem = [];
-	        mappedArrayInfo.items[i] = mappedItem;
+	      
+	      util.arrayLengthAdjust(mappedArrayInfo.items, regularNew.length, function(){
+	        var mappedItem = [];
+	        var dupTarget;
+	        var dupSpawned;
 	        for(var j=0;j<targetLength;j++){
 	          dupTarget = mappedArrayInfo.dupTargets[j];
 	          dupSpawned = $(dupTarget.templateStr);
@@ -480,15 +474,16 @@ return /******/ (function(modules) { // webpackBootstrap
 	          dupTarget.insertPoint = dupSpawned;
 	          mappedItem[j] = dupSpawned;
 	        }
-	      }
-	      for(var i=regularNew.length;i<existingLength;i++){
-	        mappedItem = mappedArrayInfo.items[i];
+	        return mappedItem;
+	      }, function(mappedItem){
 	        for(var j=0;j<targetLength;j++){
 	          mappedItem[j].remove();
 	        }
-	      }
+	      });
+
 	      //reset insert point
 	      var lastItem = mappedArrayInfo.items[regularNew.length-1];
+	      var dupTarget;
 	      for(var j=0;j<targetLength;j++){
 	        dupTarget = mappedArrayInfo.dupTargets[j];
 	        dupTarget.insertPoint = lastItem ? lastItem[j] : dupTarget.placeHolder;
@@ -692,8 +687,8 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	var util = __webpack_require__(1);
 	var config = __webpack_require__(2);
-	var constant = __webpack_require__(8)
-	var ValueMonitor = __webpack_require__(13)
+	var constant = __webpack_require__(12)
+	var ValueMonitor = __webpack_require__(11)
 
 	var getWatchDelegateScope=function(bindContext, meta){
 	  var watchDelegateScope = bindContext.getResource("_watch", meta._meta_trace_id);
@@ -803,11 +798,11 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	var util = __webpack_require__(1);
 	var config = __webpack_require__(2);
-	var constant = __webpack_require__(8)
-	var Snippet = __webpack_require__(10)
+	var constant = __webpack_require__(12)
+	var Snippet = __webpack_require__(8)
 
-	var BindContext = __webpack_require__(12)
-	var ValueMonitor = __webpack_require__(13)
+	var BindContext = __webpack_require__(10)
+	var ValueMonitor = __webpack_require__(11)
 
 	var optionUtil = __webpack_require__(15)
 
@@ -1054,8 +1049,8 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	var util = __webpack_require__(1);
 	var config = __webpack_require__(2);
-	var constant = __webpack_require__(8)
-	var Snippet = __webpack_require__(10)
+	var constant = __webpack_require__(12)
+	var Snippet = __webpack_require__(8)
 
 	var api={};
 
@@ -1215,205 +1210,9 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	"use strict";
 
-	var constant={};
-
-	constant.metaRewritterPriority={
-	  _watch: 10000,
-	  _form : 20000,
-	  _duplicator: 30000,
-	  _selector : 40000,
-	  _attr_op : 50000,
-	  _selector_after_attr_op : 60000,
-	  _render : 70000,
-	  _register_dom_change: 80000,
-	  _on_change: 90000,
-	  _assign : 100000
-	};
-
-	constant.impossibleSearchKey = "aj-impossible-search-key-ashfdpnasvdnoaisdfn3423#$%$#$%0as8d23nalsfdasdf";
-
-
-	module.exports = constant;
-
-/***/ },
-/* 9 */
-/***/ function(module, exports, __webpack_require__) {
-
-	/* WEBPACK VAR INJECTION */(function(global, Buffer, module) {'use strict';
-
-	var clone = (function(global) {
-
-	/**
-	 * Clones (copies) an Object using deep copying.
-	 *
-	 * This function supports circular references by default, but if you are certain
-	 * there are no circular references in your object, you can save some CPU time
-	 * by calling clone(obj, false).
-	 *
-	 * Caution: if `circular` is false and `parent` contains circular references,
-	 * your program may enter an infinite loop and crash.
-	 *
-	 * @param `parent` - the object to be cloned
-	 * @param `circular` - set to true if the object to be cloned may contain
-	 *    circular references. (optional - true by default)
-	 * @param `depth` - set to a number if the object is only to be cloned to
-	 *    a particular depth. (optional - defaults to Infinity)
-	 * @param `prototype` - sets the prototype to be used when cloning an object.
-	 *    (optional - defaults to parent prototype).
-	*/
-
-	function clone(parent, circular, depth, prototype) {
-	  var filter;
-	  if (typeof circular === 'object') {
-	    depth = circular.depth;
-	    prototype = circular.prototype;
-	    filter = circular.filter;
-	    circular = circular.circular
-	  }
-	  // maintain two arrays for circular references, where corresponding parents
-	  // and children have the same index
-	  var allParents = [];
-	  var allChildren = [];
-
-	  var useBuffer = typeof Buffer != 'undefined';
-
-	  if (typeof circular == 'undefined')
-	    circular = true;
-
-	  if (typeof depth == 'undefined')
-	    depth = Infinity;
-
-	  // recurse this function so we don't reset allParents and allChildren
-	  function _clone(parent, depth) {
-	    // cloning null always returns null
-	    if (parent === null)
-	      return null;
-
-	    if (depth == 0)
-	      return parent;
-
-	    var child;
-	    var proto;
-	    if (typeof parent != 'object') {
-	      return parent;
-	    }
-
-	    if (isArray(parent)) {
-	      child = [];
-	    } else if (isRegExp(parent)) {
-	      child = new RegExp(parent.source, getRegExpFlags(parent));
-	      if (parent.lastIndex) child.lastIndex = parent.lastIndex;
-	    } else if (isDate(parent)) {
-	      child = new Date(parent.getTime());
-	    } else if (useBuffer && Buffer.isBuffer(parent)) {
-	      child = new Buffer(parent.length);
-	      parent.copy(child);
-	      return child;
-	    } else {
-	      if (typeof prototype == 'undefined') {
-	        proto = Object.getPrototypeOf(parent);
-	        child = Object.create(proto);
-	      }
-	      else {
-	        child = Object.create(prototype);
-	        proto = prototype;
-	      }
-	    }
-
-	    if (circular) {
-	      var index = allParents.indexOf(parent);
-
-	      if (index != -1) {
-	        return allChildren[index];
-	      }
-	      allParents.push(parent);
-	      allChildren.push(child);
-	    }
-
-	    for (var i in parent) {
-	      var attrs;
-	      if (proto) {
-	        attrs = Object.getOwnPropertyDescriptor(proto, i);
-	      }
-	      
-	      if (attrs && attrs.set == null) {
-	        continue;
-	      }
-	      child[i] = _clone(parent[i], depth - 1);
-	    }
-
-	    return child;
-	  }
-
-	  return _clone(parent, depth);
-	}
-
-	/**
-	 * Simple flat clone using prototype, accepts only objects, usefull for property
-	 * override on FLAT configuration object (no nested props).
-	 *
-	 * USE WITH CAUTION! This may not behave as you wish if you do not know how this
-	 * works.
-	 */
-	clone.clonePrototype = function(parent) {
-	  if (parent === null)
-	    return null;
-
-	  var c = function () {};
-	  c.prototype = parent;
-	  return new c();
-	};
-
-	function getRegExpFlags(re) {
-	  var flags = '';
-	  re.global && (flags += 'g');
-	  re.ignoreCase && (flags += 'i');
-	  re.multiline && (flags += 'm');
-	  return flags;
-	}
-
-	function objectToString(o) {
-	  return Object.prototype.toString.call(o);
-	}
-
-	function isDate(o) {
-	  return typeof o === 'object' && objectToString(o) === '[object Date]';
-	}
-
-	function isArray(o) {
-	  return typeof o === 'object' && objectToString(o) === '[object Array]';
-	}
-
-	function isRegExp(o) {
-	  return typeof o === 'object' && objectToString(o) === '[object RegExp]';
-	}
-
-	if (global.TESTING) {
-	  clone.getRegExpFlags = getRegExpFlags;
-	  clone.objectToString = objectToString;
-	  clone.isDate   = isDate;
-	  clone.isArray  = isArray;
-	  clone.isRegExp = isRegExp;
-	}
-
-	return clone;
-
-	})( typeof(global) === 'object' ? global :
-	    typeof(window) === 'object' ? window : this);
-
-	if (module && module.exports)
-	  module.exports = clone;
-	/* WEBPACK VAR INJECTION */}.call(exports, (function() { return this; }()), __webpack_require__(17).Buffer, __webpack_require__(18)(module)))
-
-/***/ },
-/* 10 */
-/***/ function(module, exports, __webpack_require__) {
-
-	"use strict";
-
 	var util = __webpack_require__(1);
-	var BindContext = __webpack_require__(12);
-	var ValueMonitor = __webpack_require__(13);
+	var BindContext = __webpack_require__(10);
+	var ValueMonitor = __webpack_require__(11);
 
 	var Snippet = function(arg){
 	  if (typeof arg === "string"){
@@ -1453,7 +1252,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	module.exports = Snippet;
 
 /***/ },
-/* 11 */
+/* 9 */
 /***/ function(module, exports, __webpack_require__) {
 
 	"use strict";
@@ -1462,7 +1261,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	var util=__webpack_require__(1);
 	var config=__webpack_require__(2);
-	var constant = __webpack_require__(8)
+	var constant = __webpack_require__(12)
 
 	var __reverseMetaKeys = ["_meta_type", "_meta_id", "_meta_trace_id", "_meta_desc", "_value", "_prop", "_splice", "_target_path"];
 
@@ -1688,7 +1487,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	            var arrayMap = newMeta._array_map;
 	            var arrayDiscard = newMeta._array_discard;
 	            
-	            if(!arrayMap || !arrayDiscard){
+	            if(!arrayMap){
 	              throw "_array_map and _array_discard is necessary for _item mapping but we got:" + JSON.stringify(newMeta);
 	            }
 	            var arrayChildContextCreator = newMeta._array_child_context_creator;
@@ -1703,9 +1502,11 @@ return /******/ (function(modules) { // webpackBootstrap
 	            newMeta._change_handler_creator = function(bindContext){
 	              var existingChangeFn = changeHandlerCreator ? changeHandlerCreator.call(this, bindContext) : undefined;
 	              //we have to discard the mapped array before current context is discarded.
-	              bindContext.addDiscardHook(function(){
-	                arrayDiscard.apply(newMeta);
-	              });
+	              if(arrayDiscard){
+	                bindContext.addDiscardHook(function(){
+	                  arrayDiscard.apply(newMeta);
+	                });
+	              }
 	              return function(newValue, oldValue, bindContext){
 	                var scope = bindContext._scope;
 	                if(existingChangeFn){
@@ -1718,7 +1519,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	                    
 	                     //retrieve mapped array for item monitor
 	                    var mappedArray = arrayMap.call(newMeta, newValue, newValue, bindContext);
-	                    
+	                    if(!mappedArray){
+	                      throw "Did you forget to return the mapped array from _array_map of: " + JSON.stringify(newMeta);
+	                    }
 	                    var addedCount = 0;
 	                    var removedCount = 0;
 
@@ -1755,6 +1558,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	                
 	                //retrieve mapped array for item monitor
 	                var mappedArray = arrayMap.call(newMeta, newValue, oldValue, bindContext);
+	                if(!mappedArray){
+	                  throw "Did you forget to return the mapped array from _array_map of: " + JSON.stringify(newMeta);
+	                }
 	                
 	                //bind item context
 	                var regularOld = util.regulateArray(oldValue);
@@ -1896,14 +1702,14 @@ return /******/ (function(modules) { // webpackBootstrap
 	module.exports = normalizeMeta
 
 /***/ },
-/* 12 */
+/* 10 */
 /***/ function(module, exports, __webpack_require__) {
 
 	"use strict";
 
 	var util = __webpack_require__(1);
 	var config = __webpack_require__(2);
-	var normalizeMeta = __webpack_require__(11);
+	var normalizeMeta = __webpack_require__(9);
 
 	var ResourceMap = __webpack_require__(16);
 
@@ -2064,7 +1870,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	module.exports=BindContext;
 
 /***/ },
-/* 13 */
+/* 11 */
 /***/ function(module, exports, __webpack_require__) {
 
 	"use strict";
@@ -2182,6 +1988,202 @@ return /******/ (function(modules) { // webpackBootstrap
 	}
 
 	module.exports=ValueMonitor;
+
+/***/ },
+/* 12 */
+/***/ function(module, exports, __webpack_require__) {
+
+	"use strict";
+
+	var constant={};
+
+	constant.metaRewritterPriority={
+	  _watch: 10000,
+	  _form : 20000,
+	  _duplicator: 30000,
+	  _selector : 40000,
+	  _attr_op : 50000,
+	  _selector_after_attr_op : 60000,
+	  _render : 70000,
+	  _register_dom_change: 80000,
+	  _on_change: 90000,
+	  _assign : 100000
+	};
+
+	constant.impossibleSearchKey = "aj-impossible-search-key-ashfdpnasvdnoaisdfn3423#$%$#$%0as8d23nalsfdasdf";
+
+
+	module.exports = constant;
+
+/***/ },
+/* 13 */
+/***/ function(module, exports, __webpack_require__) {
+
+	/* WEBPACK VAR INJECTION */(function(global, Buffer, module) {'use strict';
+
+	var clone = (function(global) {
+
+	/**
+	 * Clones (copies) an Object using deep copying.
+	 *
+	 * This function supports circular references by default, but if you are certain
+	 * there are no circular references in your object, you can save some CPU time
+	 * by calling clone(obj, false).
+	 *
+	 * Caution: if `circular` is false and `parent` contains circular references,
+	 * your program may enter an infinite loop and crash.
+	 *
+	 * @param `parent` - the object to be cloned
+	 * @param `circular` - set to true if the object to be cloned may contain
+	 *    circular references. (optional - true by default)
+	 * @param `depth` - set to a number if the object is only to be cloned to
+	 *    a particular depth. (optional - defaults to Infinity)
+	 * @param `prototype` - sets the prototype to be used when cloning an object.
+	 *    (optional - defaults to parent prototype).
+	*/
+
+	function clone(parent, circular, depth, prototype) {
+	  var filter;
+	  if (typeof circular === 'object') {
+	    depth = circular.depth;
+	    prototype = circular.prototype;
+	    filter = circular.filter;
+	    circular = circular.circular
+	  }
+	  // maintain two arrays for circular references, where corresponding parents
+	  // and children have the same index
+	  var allParents = [];
+	  var allChildren = [];
+
+	  var useBuffer = typeof Buffer != 'undefined';
+
+	  if (typeof circular == 'undefined')
+	    circular = true;
+
+	  if (typeof depth == 'undefined')
+	    depth = Infinity;
+
+	  // recurse this function so we don't reset allParents and allChildren
+	  function _clone(parent, depth) {
+	    // cloning null always returns null
+	    if (parent === null)
+	      return null;
+
+	    if (depth == 0)
+	      return parent;
+
+	    var child;
+	    var proto;
+	    if (typeof parent != 'object') {
+	      return parent;
+	    }
+
+	    if (isArray(parent)) {
+	      child = [];
+	    } else if (isRegExp(parent)) {
+	      child = new RegExp(parent.source, getRegExpFlags(parent));
+	      if (parent.lastIndex) child.lastIndex = parent.lastIndex;
+	    } else if (isDate(parent)) {
+	      child = new Date(parent.getTime());
+	    } else if (useBuffer && Buffer.isBuffer(parent)) {
+	      child = new Buffer(parent.length);
+	      parent.copy(child);
+	      return child;
+	    } else {
+	      if (typeof prototype == 'undefined') {
+	        proto = Object.getPrototypeOf(parent);
+	        child = Object.create(proto);
+	      }
+	      else {
+	        child = Object.create(prototype);
+	        proto = prototype;
+	      }
+	    }
+
+	    if (circular) {
+	      var index = allParents.indexOf(parent);
+
+	      if (index != -1) {
+	        return allChildren[index];
+	      }
+	      allParents.push(parent);
+	      allChildren.push(child);
+	    }
+
+	    for (var i in parent) {
+	      var attrs;
+	      if (proto) {
+	        attrs = Object.getOwnPropertyDescriptor(proto, i);
+	      }
+	      
+	      if (attrs && attrs.set == null) {
+	        continue;
+	      }
+	      child[i] = _clone(parent[i], depth - 1);
+	    }
+
+	    return child;
+	  }
+
+	  return _clone(parent, depth);
+	}
+
+	/**
+	 * Simple flat clone using prototype, accepts only objects, usefull for property
+	 * override on FLAT configuration object (no nested props).
+	 *
+	 * USE WITH CAUTION! This may not behave as you wish if you do not know how this
+	 * works.
+	 */
+	clone.clonePrototype = function(parent) {
+	  if (parent === null)
+	    return null;
+
+	  var c = function () {};
+	  c.prototype = parent;
+	  return new c();
+	};
+
+	function getRegExpFlags(re) {
+	  var flags = '';
+	  re.global && (flags += 'g');
+	  re.ignoreCase && (flags += 'i');
+	  re.multiline && (flags += 'm');
+	  return flags;
+	}
+
+	function objectToString(o) {
+	  return Object.prototype.toString.call(o);
+	}
+
+	function isDate(o) {
+	  return typeof o === 'object' && objectToString(o) === '[object Date]';
+	}
+
+	function isArray(o) {
+	  return typeof o === 'object' && objectToString(o) === '[object Array]';
+	}
+
+	function isRegExp(o) {
+	  return typeof o === 'object' && objectToString(o) === '[object RegExp]';
+	}
+
+	if (global.TESTING) {
+	  clone.getRegExpFlags = getRegExpFlags;
+	  clone.objectToString = objectToString;
+	  clone.isDate   = isDate;
+	  clone.isArray  = isArray;
+	  clone.isRegExp = isRegExp;
+	}
+
+	return clone;
+
+	})( typeof(global) === 'object' ? global :
+	    typeof(window) === 'object' ? window : this);
+
+	if (module && module.exports)
+	  module.exports = clone;
+	/* WEBPACK VAR INJECTION */}.call(exports, (function() { return this; }()), __webpack_require__(17).Buffer, __webpack_require__(18)(module)))
 
 /***/ },
 /* 14 */
@@ -3909,9 +3911,9 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	var util = __webpack_require__(1);
 	var config = __webpack_require__(2);
-	var constant = __webpack_require__(8)
-	var Snippet = __webpack_require__(10)
-	var normalizeMeta = __webpack_require__(11)
+	var constant = __webpack_require__(12)
+	var Snippet = __webpack_require__(8)
+	var normalizeMeta = __webpack_require__(9)
 
 
 	var getOptionBindingHub=function(bindContext, identifier){
@@ -4241,8 +4243,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	 */
 
 	var base64 = __webpack_require__(21)
-	var ieee754 = __webpack_require__(20)
-	var isArray = __webpack_require__(19)
+	var ieee754 = __webpack_require__(19)
+	var isArray = __webpack_require__(20)
 
 	exports.Buffer = Buffer
 	exports.SlowBuffer = SlowBuffer
@@ -5587,45 +5589,6 @@ return /******/ (function(modules) { // webpackBootstrap
 /* 19 */
 /***/ function(module, exports, __webpack_require__) {
 
-	
-	/**
-	 * isArray
-	 */
-
-	var isArray = Array.isArray;
-
-	/**
-	 * toString
-	 */
-
-	var str = Object.prototype.toString;
-
-	/**
-	 * Whether or not the given `val`
-	 * is an array.
-	 *
-	 * example:
-	 *
-	 *        isArray([]);
-	 *        // > true
-	 *        isArray(arguments);
-	 *        // > false
-	 *        isArray('');
-	 *        // > false
-	 *
-	 * @param {mixed} val
-	 * @return {bool}
-	 */
-
-	module.exports = isArray || function (val) {
-	  return !! val && '[object Array]' == str.call(val);
-	};
-
-
-/***/ },
-/* 20 */
-/***/ function(module, exports, __webpack_require__) {
-
 	exports.read = function(buffer, offset, isLE, mLen, nBytes) {
 	  var e, m,
 	      eLen = nBytes * 8 - mLen - 1,
@@ -5709,6 +5672,45 @@ return /******/ (function(modules) { // webpackBootstrap
 	  for (; eLen > 0; buffer[offset + i] = e & 0xff, i += d, e /= 256, eLen -= 8);
 
 	  buffer[offset + i - d] |= s * 128;
+	};
+
+
+/***/ },
+/* 20 */
+/***/ function(module, exports, __webpack_require__) {
+
+	
+	/**
+	 * isArray
+	 */
+
+	var isArray = Array.isArray;
+
+	/**
+	 * toString
+	 */
+
+	var str = Object.prototype.toString;
+
+	/**
+	 * Whether or not the given `val`
+	 * is an array.
+	 *
+	 * example:
+	 *
+	 *        isArray([]);
+	 *        // > true
+	 *        isArray(arguments);
+	 *        // > false
+	 *        isArray('');
+	 *        // > false
+	 *
+	 * @param {mixed} val
+	 * @return {bool}
+	 */
+
+	module.exports = isArray || function (val) {
+	  return !! val && '[object Array]' == str.call(val);
 	};
 
 

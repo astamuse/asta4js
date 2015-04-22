@@ -13,6 +13,7 @@ Aj.util = shallow(util, {}, [
   "regulateArray",
   "clone",
   "arraySwap",
+  "arrayLengthAdjust",
   "delay",
 ]);
 

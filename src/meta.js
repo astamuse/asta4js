@@ -230,7 +230,7 @@ var normalizeMeta = function(meta, metaId, propertyPath){
             var arrayMap = newMeta._array_map;
             var arrayDiscard = newMeta._array_discard;
             
-            if(!arrayMap || !arrayDiscard){
+            if(!arrayMap){
               throw "_array_map and _array_discard is necessary for _item mapping but we got:" + JSON.stringify(newMeta);
             }
             var arrayChildContextCreator = newMeta._array_child_context_creator;
@@ -245,9 +245,11 @@ var normalizeMeta = function(meta, metaId, propertyPath){
             newMeta._change_handler_creator = function(bindContext){
               var existingChangeFn = changeHandlerCreator ? changeHandlerCreator.call(this, bindContext) : undefined;
               //we have to discard the mapped array before current context is discarded.
-              bindContext.addDiscardHook(function(){
-                arrayDiscard.apply(newMeta);
-              });
+              if(arrayDiscard){
+                bindContext.addDiscardHook(function(){
+                  arrayDiscard.apply(newMeta);
+                });
+              }
               return function(newValue, oldValue, bindContext){
                 var scope = bindContext._scope;
                 if(existingChangeFn){
@@ -260,7 +262,9 @@ var normalizeMeta = function(meta, metaId, propertyPath){
                     
                      //retrieve mapped array for item monitor
                     var mappedArray = arrayMap.call(newMeta, newValue, newValue, bindContext);
-                    
+                    if(!mappedArray){
+                      throw "Did you forget to return the mapped array from _array_map of: " + JSON.stringify(newMeta);
+                    }
                     var addedCount = 0;
                     var removedCount = 0;
 
@@ -297,6 +301,9 @@ var normalizeMeta = function(meta, metaId, propertyPath){
                 
                 //retrieve mapped array for item monitor
                 var mappedArray = arrayMap.call(newMeta, newValue, oldValue, bindContext);
+                if(!mappedArray){
+                  throw "Did you forget to return the mapped array from _array_map of: " + JSON.stringify(newMeta);
+                }
                 
                 //bind item context
                 var regularOld = util.regulateArray(oldValue);

@@ -12,45 +12,22 @@ $(function () {
         $scope.observeData.value = newValue + "-observed";
       },
       list: {
-        _value: function(newValue){
-          var len = newValue ? newValue.length : 0;
-          var copyArray = new Array(len);
-          $scope.observeData.list = copyArray;
-        },
-        _splice: function(splices){
-          var removedCount = 0;
-          var addedCount = 0;
-
-          splices.forEach(function (s) {
-            removedCount += s.removed.length;
-            addedCount += s.addedCount;
-          });
-
-          var diff = addedCount - removedCount;
-          var len = $scope.observeData.list.length;
-          if(diff >0){
-            var callParam=[];
-            callParam.push(len-1);
-            callParam.push(0);
-            for(var i=0;i<diff;i++){
-              callParam.push(undefined);
-            }
-            Array.prototype.splice.apply($scope.observeData.list, callParam);
-          }else if(diff<0){
-            diff = 0-diff;
-            $scope.observeData.list.splice(len-diff-1, diff);
+        _array_map: function(newValue, oldValue){
+          var list = $scope.observeData.list;
+          if(!list){
+            list = [];
+            $scope.observeData.list = list;
           }
+          var hopeLength = Array.isArray(newValue) ? newValue.length : 0;
+          Aj.util.arrayLengthAdjust(list, hopeLength, function(){
+            return "";
+          });
+          return list;
         },
-        //we do not need to handle splice because the following assign will splice our target array automatically
         _item: {
           _value: function(newValue, oldValue, bindContext){
-            var targetIndex = bindContext._indexes[0];
-            Aj.delay(function(){
-              var len = $scope.observeData.list.length;
-              if(targetIndex<len){
-                $scope.observeData.list[targetIndex] = $scope.data.list[targetIndex] + "-observed-changed" + (new Date());
-              }
-            });
+            var targetIndex = bindContext.arrayIndexes[0];
+            $scope.observeData.list[targetIndex] = $scope.data.list[targetIndex] + "-observed-changed" + (new Date());
           }
         }
       }

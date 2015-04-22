@@ -108,12 +108,11 @@ var _duplicator = function(meta){
       var existingLength = mappedArrayInfo.items.length;
       var regularNew = util.regulateArray(newValue);
       var targetLength = mappedArrayInfo.dupTargets.length;
-      var dupTarget;
-      var dupSpawned;
-      var mappedItem;
-      for(var i=existingLength;i<regularNew.length;i++){
-        mappedItem = [];
-        mappedArrayInfo.items[i] = mappedItem;
+      
+      util.arrayLengthAdjust(mappedArrayInfo.items, regularNew.length, function(){
+        var mappedItem = [];
+        var dupTarget;
+        var dupSpawned;
         for(var j=0;j<targetLength;j++){
           dupTarget = mappedArrayInfo.dupTargets[j];
           dupSpawned = $(dupTarget.templateStr);
@@ -121,15 +120,16 @@ var _duplicator = function(meta){
           dupTarget.insertPoint = dupSpawned;
           mappedItem[j] = dupSpawned;
         }
-      }
-      for(var i=regularNew.length;i<existingLength;i++){
-        mappedItem = mappedArrayInfo.items[i];
+        return mappedItem;
+      }, function(mappedItem){
         for(var j=0;j<targetLength;j++){
           mappedItem[j].remove();
         }
-      }
+      });
+
       //reset insert point
       var lastItem = mappedArrayInfo.items[regularNew.length-1];
+      var dupTarget;
       for(var j=0;j<targetLength;j++){
         dupTarget = mappedArrayInfo.dupTargets[j];
         dupTarget.insertPoint = lastItem ? lastItem[j] : dupTarget.placeHolder;
