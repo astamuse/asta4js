@@ -89,6 +89,17 @@ var createAndRetrieveSubMetaRef = function(meta, subType){
   return ref;
 };
 
+var initBindingHookArray = function(meta, hookName){
+  if(meta[hookName]){
+    if(Array.isArray(meta[hookName])){
+      meta[hookName] = [].concat(meta[hookName]);
+    }else{
+      throw hookName + " must be array but we got:" + JSON.stringify(meta);
+    }
+  }else{
+    meta[hookName] = [];
+  }
+}
 
 var normalizeMeta = function(meta, metaId, propertyPath){
   
@@ -187,16 +198,11 @@ var normalizeMeta = function(meta, metaId, propertyPath){
         }
       }
       
-      //post binding
-      if(newMeta._post_binding){
-        if(!Array.isArray(newMeta._post_binding)){
-          throw "_post_binding must be array but we got:" + JSON.stringify(newMeta._post_binding);
-        }
-        //else is OK
-      }else{
-        newMeta._post_binding = [];
-      }
-      
+      //binding hooks
+      initBindingHookArray(newMeta, "_pre_binding");
+      initBindingHookArray(newMeta, "_post_binding");
+
+      //rewrite meta
       getOrderedMetaRewritter().forEach(function (mr) {
         var m = newMeta[mr.key];
         if (m !== undefined && m !== null) {

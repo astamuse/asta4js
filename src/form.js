@@ -44,6 +44,13 @@ var _form = function (meta) {
   if (!meta._selector) {
     meta._selector = "[name=" + formDef._name + "]";
   }
+  
+  // init option bind hub
+  /*
+  meta._pre_binding.push(function(bindContext){
+    
+  });
+  */
 
   if (!meta._render) {
     meta._render = function (target, newValue, oldValue, bindContext) {
@@ -86,26 +93,27 @@ var _form = function (meta) {
             target.prop("checked", false);
           }
         }else{
+          var optionBindingHub = optionUtil.getOptionBindingHub(bindContext, meta._meta_trace_id);
           var va = util.regulateArray(newValue);
           if(inputType === "radio" && va.length > 1){
             throw "There are over than one candidate value for radio:" + va;
           }
           var unmatchedValue = [];
-          //there must be "aj-placeholder-id"
-          var placeHolderId = target.attr("aj-placeholder-id");
+          var optionId = optionBindingHub.optionId;
           
-          if(!placeHolderId){//option bind has not been called yet or static option
+          if(!optionId){//option bind has not been called yet
             return;
           }
           
-          var snippet = bindContext._snippet;
+          var snippet = bindContext.snippet;
           
           //remove the auto generated diverge elements
-          snippet.find("[aj-diverge-value=" + placeHolderId + "]").remove();
+          snippet.find("[aj-diverge-value=" + optionId + "]").remove();
           
           //find out all the existing options
-          var ops = snippet.find("[aj-generated=" + placeHolderId + "]");
-          util.findWithRoot(ops, "input[type="+type+"]").prop("checked", false);
+          var ops = snippet.find("[aj-option-binding=" + optionId + "]");
+          //set all to false at first
+          util.findWithRoot(ops, "input[type="+inputType+"]").prop("checked", false);
           va.forEach(function(v){
             if(v === null || v === undefined){
               v = "";
@@ -120,26 +128,24 @@ var _form = function (meta) {
             }
           });
           if(unmatchedValue.length > 0){
+            //there must be "aj-placeholder-id"
+            var placeHolderId = target.attr("aj-placeholder-id");
             var insertPoint = snippet.find("#" + placeHolderId);
             unmatchedValue.forEach(function(v){
               var uid = util.createUID();
-              var clone = target.clone().attr("id", uid).val(v).prop("checked", true);
+              var input = target.clone().attr("id", uid).val(v).prop("checked", true);
               var label = $("<label>").attr("for",uid).text(v);
               
-              var diverge = $("<span>").attr("aj-diverge-value", placeHolderId);
-              diverge.append(clone).append(label);
+              var diverge = $("<span>").attr("aj-diverge-value", optionId);
+              diverge.append(input).append(label);
               
               insertPoint.after(diverge);
-              insertPoint = diverge;
             });
           }
         }
       }else{
         target.val(newValue);
       } //end inputType
-      
-      //save the current value to target as data attribute
-      util.getDataRef(target, "aj-form-binding-ref").value = newValue;
     } // end _render = function...
   } // end !meta._render
 
@@ -161,8 +167,9 @@ var _form = function (meta) {
     if (changeEvents.length > 0) {
       meta._register_dom_change = function (target, changeHandler, bindContext) {
         var inputType = getInputType(target);
+        var optionBindingHub;
         if(inputType && !formDef._single_check){
-          var optionBindingHub = optionUtil.getOptionBindingHub(bindContext, meta._meta_trace_id);
+          optionBindingHub = optionUtil.getOptionBindingHub(bindContext, meta._meta_trace_id);
           optionBindingHub.inputType = inputType;
         }
 
@@ -173,13 +180,9 @@ var _form = function (meta) {
               changeHandler(v, bindContext);
             }); 
           }else{
-            var observer = new _lib_observe.PathObserver(ref, "value");
-            observer.open(function(newValue, oldValue){
-              changeHandler(newValue, bindContext);
-            });
-            snippet._discardHooks.push(function(){
-              observer.close();
-            });
+            optionBindingHub.optionId = util.createUID();
+            optionBindingHub.targetValueRef = bindContext.valueMonitor.getValueRef(propertyPath);
+            optionBindingHub.changeEvents = changeEvents;
           }
         }else{
           target.bind(changeEvents.join(" "), function () {
@@ -212,7 +215,9 @@ var _form = function (meta) {
         optionMeta = optionUtil.rewriteOptionMeta(formDef._option, optionBindingHub.inputType);
       }
       
-      optionBindingHub.notifyOptionChange=function(){
+      //above can be cached
+      
+      optionBindingHub.notifyOptionChanged=function(){
         bindContext.forceSyncFromObserveTarget(meta._meta_trace_id);
       };
 

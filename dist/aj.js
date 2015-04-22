@@ -862,6 +862,13 @@ return /******/ (function(modules) { // webpackBootstrap
 	  if (!meta._selector) {
 	    meta._selector = "[name=" + formDef._name + "]";
 	  }
+	  
+	  // init option bind hub
+	  /*
+	  meta._pre_binding.push(function(bindContext){
+	    
+	  });
+	  */
 
 	  if (!meta._render) {
 	    meta._render = function (target, newValue, oldValue, bindContext) {
@@ -904,26 +911,27 @@ return /******/ (function(modules) { // webpackBootstrap
 	            target.prop("checked", false);
 	          }
 	        }else{
+	          var optionBindingHub = optionUtil.getOptionBindingHub(bindContext, meta._meta_trace_id);
 	          var va = util.regulateArray(newValue);
 	          if(inputType === "radio" && va.length > 1){
 	            throw "There are over than one candidate value for radio:" + va;
 	          }
 	          var unmatchedValue = [];
-	          //there must be "aj-placeholder-id"
-	          var placeHolderId = target.attr("aj-placeholder-id");
+	          var optionId = optionBindingHub.optionId;
 	          
-	          if(!placeHolderId){//option bind has not been called yet or static option
+	          if(!optionId){//option bind has not been called yet
 	            return;
 	          }
 	          
-	          var snippet = bindContext._snippet;
+	          var snippet = bindContext.snippet;
 	          
 	          //remove the auto generated diverge elements
-	          snippet.find("[aj-diverge-value=" + placeHolderId + "]").remove();
+	          snippet.find("[aj-diverge-value=" + optionId + "]").remove();
 	          
 	          //find out all the existing options
-	          var ops = snippet.find("[aj-generated=" + placeHolderId + "]");
-	          util.findWithRoot(ops, "input[type="+type+"]").prop("checked", false);
+	          var ops = snippet.find("[aj-option-binding=" + optionId + "]");
+	          //set all to false at first
+	          util.findWithRoot(ops, "input[type="+inputType+"]").prop("checked", false);
 	          va.forEach(function(v){
 	            if(v === null || v === undefined){
 	              v = "";
@@ -938,26 +946,24 @@ return /******/ (function(modules) { // webpackBootstrap
 	            }
 	          });
 	          if(unmatchedValue.length > 0){
+	            //there must be "aj-placeholder-id"
+	            var placeHolderId = target.attr("aj-placeholder-id");
 	            var insertPoint = snippet.find("#" + placeHolderId);
 	            unmatchedValue.forEach(function(v){
 	              var uid = util.createUID();
-	              var clone = target.clone().attr("id", uid).val(v).prop("checked", true);
+	              var input = target.clone().attr("id", uid).val(v).prop("checked", true);
 	              var label = $("<label>").attr("for",uid).text(v);
 	              
-	              var diverge = $("<span>").attr("aj-diverge-value", placeHolderId);
-	              diverge.append(clone).append(label);
+	              var diverge = $("<span>").attr("aj-diverge-value", optionId);
+	              diverge.append(input).append(label);
 	              
 	              insertPoint.after(diverge);
-	              insertPoint = diverge;
 	            });
 	          }
 	        }
 	      }else{
 	        target.val(newValue);
 	      } //end inputType
-	      
-	      //save the current value to target as data attribute
-	      util.getDataRef(target, "aj-form-binding-ref").value = newValue;
 	    } // end _render = function...
 	  } // end !meta._render
 
@@ -979,8 +985,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	    if (changeEvents.length > 0) {
 	      meta._register_dom_change = function (target, changeHandler, bindContext) {
 	        var inputType = getInputType(target);
+	        var optionBindingHub;
 	        if(inputType && !formDef._single_check){
-	          var optionBindingHub = optionUtil.getOptionBindingHub(bindContext, meta._meta_trace_id);
+	          optionBindingHub = optionUtil.getOptionBindingHub(bindContext, meta._meta_trace_id);
 	          optionBindingHub.inputType = inputType;
 	        }
 
@@ -991,13 +998,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	              changeHandler(v, bindContext);
 	            }); 
 	          }else{
-	            var observer = new _lib_observe.PathObserver(ref, "value");
-	            observer.open(function(newValue, oldValue){
-	              changeHandler(newValue, bindContext);
-	            });
-	            snippet._discardHooks.push(function(){
-	              observer.close();
-	            });
+	            optionBindingHub.optionId = util.createUID();
+	            optionBindingHub.targetValueRef = bindContext.valueMonitor.getValueRef(propertyPath);
+	            optionBindingHub.changeEvents = changeEvents;
 	          }
 	        }else{
 	          target.bind(changeEvents.join(" "), function () {
@@ -1030,7 +1033,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	        optionMeta = optionUtil.rewriteOptionMeta(formDef._option, optionBindingHub.inputType);
 	      }
 	      
-	      optionBindingHub.notifyOptionChange=function(){
+	      //above can be cached
+	      
+	      optionBindingHub.notifyOptionChanged=function(){
 	        bindContext.forceSyncFromObserveTarget(meta._meta_trace_id);
 	      };
 
@@ -1561,6 +1566,17 @@ return /******/ (function(modules) { // webpackBootstrap
 	  return ref;
 	};
 
+	var initBindingHookArray = function(meta, hookName){
+	  if(meta[hookName]){
+	    if(Array.isArray(meta[hookName])){
+	      meta[hookName] = [].concat(meta[hookName]);
+	    }else{
+	      throw hookName + " must be array but we got:" + JSON.stringify(meta);
+	    }
+	  }else{
+	    meta[hookName] = [];
+	  }
+	}
 
 	var normalizeMeta = function(meta, metaId, propertyPath){
 	  
@@ -1659,16 +1675,11 @@ return /******/ (function(modules) { // webpackBootstrap
 	        }
 	      }
 	      
-	      //post binding
-	      if(newMeta._post_binding){
-	        if(!Array.isArray(newMeta._post_binding)){
-	          throw "_post_binding must be array but we got:" + JSON.stringify(newMeta._post_binding);
-	        }
-	        //else is OK
-	      }else{
-	        newMeta._post_binding = [];
-	      }
-	      
+	      //binding hooks
+	      initBindingHookArray(newMeta, "_pre_binding");
+	      initBindingHookArray(newMeta, "_post_binding");
+
+	      //rewrite meta
 	      getOrderedMetaRewritter().forEach(function (mr) {
 	        var m = newMeta[mr.key];
 	        if (m !== undefined && m !== null) {
@@ -1951,6 +1962,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  util.shallowCopy(override, ov);
 	  var context = new BindContext(ov, indexes);
 	  this.childContextMap.add(index, identifier, context);
+	  context.parentContext = this;
 	  return context;
 	}
 
@@ -1981,6 +1993,11 @@ return /******/ (function(modules) { // webpackBootstrap
 	}
 
 	BindContext.prototype.bindMetaActions=function(meta){
+	  if(meta._pre_binding){
+	    for(var k=0;k<meta._pre_binding.length;k++){
+	      meta._pre_binding[k].call(meta, this);
+	    }
+	  }
 	  if(meta._register_on_change){
 	    var changeHandler = meta._change_handler_creator.call(meta, this);
 	    var force = meta._register_on_change.call(meta, this, function(){
@@ -3939,7 +3956,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  }
 	  
 	  targetPropMetaRoot._value = function(newValue, oldValue, bindContext){
-	    var fn = bindContext.optionBindingHub.notifyOptionChange;
+	    var fn = bindContext.optionBindingHub.notifyOptionChanged;
 	    if(fn){
 	      //delay it 3 delay cycle to make sure all the necessary change handlers related to option has finished.
 	      util.delay(fn, 0, 3);
@@ -3977,7 +3994,90 @@ return /******/ (function(modules) { // webpackBootstrap
 	        target.text(textFn(newValue));
 	      };
 	    }
-	  }
+	  }else if (inputType === "checkbox" || inputType === "radio"){
+	    if(!targetPropMetaRoot._duplicator){
+	       throw "_duplicator must be specified for options of checkbox or radio:" + JSON.stringify(targetPropMetaRoot);
+	    }
+	    if(!itemDef._selector){
+	      itemDef._selector = ":root";
+	    }
+	    if(itemDef._register_dom_change || itemDef._register_assign || itemDef._assign){
+	      throw "_register_dom_change/_register_assign/_assign cannot be specified for checkbox/radio option";
+	    }else{
+	      itemDef._register_dom_change = function (target, changeHandler, bindContext){
+	        var optionContext = bindContext.parentContext;
+	        var optionBindingHub = optionContext.optionBindingHub;
+	        var changeEvents = optionBindingHub.changeEvents;
+	        var events = optionBindingHub.changeEvents.join(" ");
+	        target.find("input").bind(events, function () {
+	          var je = $(this);
+	          var value = je.val();
+	          var checked = je.prop("checked");
+	          changeHandler({
+	            "value": value,
+	            "checked": checked
+	          }, bindContext);
+	        });
+	        //if there is click being bound to input, we do not need to bind any event on label
+	        //because the click handle will be invoked automatically when the label is clicked.
+	        if(changeEvents.indexOf("click") < 0){
+	          target.find("label").bind(events, function(){
+	            var je= $(this);
+	            var id = je.attr("for");
+	            var input = target.find("#" + id);
+	            var value = input.val();
+	            //label click may before checkbox "being clicked"
+	            var checked = !input.prop("checked");
+	            changeHandler({
+	              "value": value,
+	              "checked": checked
+	            }, bindContext);
+	          });  
+	        }
+	        /*
+	        
+	        */
+	      }
+	      itemDef._assign = function (changedValue, bindContext) {
+	        var optionContext = bindContext.parentContext;
+	        var optionBindingHub = optionContext.optionBindingHub;
+	        var targetValueRef = optionBindingHub.targetValueRef;
+	        var inputType = optionBindingHub.inputType;
+	        
+	        var value = changedValue.value;
+	        var checked = changedValue.checked;
+	        if(inputType === "checkbox"){
+	          var newResult = util.regulateArray(targetValueRef.getValue());
+	          var vidx = newResult.indexOf(value);
+	          if(checked && vidx>= 0){
+	            //it is ok
+	          }else if(checked && vidx < 0){
+	            //add
+	            newResult.push(value);
+	          }else if(!checked && vidx >= 0){
+	            //remove
+	            newResult.splice(vidx, 1);
+	          }else{// !checked && vidx < 0
+	            //it is ok
+	          }
+	          targetValueRef.setValue(newResult);
+	        }else{
+	          targetValueRef.setValue(value);
+	        }
+	      } //_assign
+	    } // else of (itemDef._register_dom_change || itemDef._assign)
+	    if (!itemDef._render) {
+	      itemDef._render = function (target, newValue, oldValue, bindContext) {
+	        var optionContext = bindContext.parentContext;
+	        var optionBindingHub = optionContext.optionBindingHub;
+	        var snippet = bindContext.snippet;
+	        var uid = util.createUID();
+	        snippet.find(":root").attr("aj-option-binding", optionBindingHub.optionId);
+	        snippet.find("input[type="+optionBindingHub.inputType+"]").attr("id", uid).val(valueFn(newValue));;
+	        snippet.find("label").attr("for", uid).text(textFn(newValue));
+	      };
+	    }
+	  }//end checkbox or radio
 	  return normalizeMeta(newMeta);
 
 	}//end optionRewrite

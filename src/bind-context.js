@@ -42,6 +42,7 @@ BindContext.prototype.createChildContext=function(identifier, index, override){
   util.shallowCopy(override, ov);
   var context = new BindContext(ov, indexes);
   this.childContextMap.add(index, identifier, context);
+  context.parentContext = this;
   return context;
 }
 
@@ -72,6 +73,11 @@ BindContext.prototype.forceSyncToObserveTarget=function(metaTraceId){
 }
 
 BindContext.prototype.bindMetaActions=function(meta){
+  if(meta._pre_binding){
+    for(var k=0;k<meta._pre_binding.length;k++){
+      meta._pre_binding[k].call(meta, this);
+    }
+  }
   if(meta._register_on_change){
     var changeHandler = meta._change_handler_creator.call(meta, this);
     var force = meta._register_on_change.call(meta, this, function(){

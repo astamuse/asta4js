@@ -8,13 +8,11 @@ $(function () {
 
     $scope.data = {};
     $scope.snippet("body").bind($scope.data, {
-      /*
       name : [
         "#name-pre", {
           _form : {}
         }
       ],
-      */
       bloodType : [
         "#bloodType-pre", {
           _form : {
@@ -23,7 +21,6 @@ $(function () {
           }
         }
       ],
-      /*
       sex : [
         "#sex-pre", 
         Aj.form().withOption($scope.dataOption,{
@@ -45,7 +42,6 @@ $(function () {
           }
         }
       ],
-      */
       /*
       language2 : [
         "#language2-pre", {
@@ -53,7 +49,6 @@ $(function () {
         }
       ],
       */
-      /*
       "private": {
         _form: {
           _name : "private",
@@ -74,7 +69,6 @@ $(function () {
           }
         }
       ]
-      */
     });
 
     $("#confirm-value").click(function () {
