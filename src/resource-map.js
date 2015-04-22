@@ -2,6 +2,16 @@
 
 var util = require("./util");
 
+var discardNode=function(node){
+  if(node){
+    if(node.discard){
+      node.discard();
+    }else if(node.close){
+      node.close();
+    }
+  }
+}
+
 var ResourceList=function(){
   this.head = {};
   this.tail = this.head;
@@ -26,7 +36,7 @@ ResourceList.prototype.remove=function(identifier){
   var node = this.head.next;
   while(node){
     if(node.identifier === identifier){
-      node.discardable.discard();
+      discardNode(node);
       node.prev.next = node.next;
       if(node.next){
         node.next.prev = node.prev;
@@ -52,9 +62,9 @@ ResourceList.prototype.get=function(identifier){
 }
 
 ResourceList.prototype.discard=function(){
-  var node = this.head;
+  var node = this.head.next;
   while(node){
-    node.discardable.discard();
+    discardNode(node);
     node = node.next;
   }
   //cannot be used any more

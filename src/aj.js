@@ -12,7 +12,8 @@ Aj.util = shallow(util, {}, [
   "createUID",
   "regulateArray",
   "clone",
-  "arraySwap"
+  "arraySwap",
+  "delay",
 ]);
 
 Aj.sync = util.sync;
@@ -20,13 +21,6 @@ Aj.sync = util.sync;
 Aj.init = function(initFunc){
   var scope = Aj.config.scope.create();
   initFunc(scope);
-}
-
-Aj.delay=function(callback, timeout){
-  setTimeout(function(){
-    callback.apply();
-    Aj.sync();
-  }, timeout ? timeout : 0);
 }
 
 //entry point

@@ -19,8 +19,7 @@ var BindContext=function(override, arrayIndexes){
   this.discardHook = [];
   
   this.forceSyncFromObserveTargetMap={};
-  this.forceSyncToObserveTargetMap={};
-  
+  this.forceSyncToObserveTargetMap={};  
 
 }
 
@@ -72,6 +71,31 @@ BindContext.prototype.forceSyncToObserveTarget=function(metaTraceId){
   forceSyncWithObserveTarget(this.forceSyncToObserveTargetMap, metaTraceId);
 }
 
+BindContext.prototype.bindMetaActions=function(meta){
+  if(meta._register_on_change){
+    var changeHandler = meta._change_handler_creator.call(meta, this);
+    var force = meta._register_on_change.call(meta, this, function(){
+      changeHandler.apply(meta, arguments);
+    });
+    this.forceSyncFromObserveTargetMap[meta._meta_trace_id] = force;
+    console.log(this._trace_id, "added force from target of:", meta._meta_trace_id);
+    force.apply();
+  }
+  if(meta._register_assign){
+    var assignChangeHandler = meta._assign_change_handler_creator.call(meta, this);
+    var force = meta._register_assign.call(meta, this, function(){
+      assignChangeHandler.apply(meta, arguments);
+      util.sync();
+    });
+    this.forceSyncToObserveTargetMap[meta._meta_trace_id] = force;
+  }
+  if(meta._post_binding){
+    for(var k=0;k<meta._post_binding.length;k++){
+      meta._post_binding[k].call(meta, this);
+    }
+  }
+}
+
 BindContext.prototype.bind=function(meta){  
   if(Array.isArray(meta)){
     for(var i=0;i<meta.length;i++){
@@ -80,7 +104,7 @@ BindContext.prototype.bind=function(meta){
     return;
   }
   
-  if(!meta._trace_id){
+  if(!meta._meta_trace_id){
     meta = normalizeMeta(meta);
   }
 
@@ -92,27 +116,7 @@ BindContext.prototype.bind=function(meta){
     }
     for(var j=0;j<sub.length;j++){
       var sm = sub[j];
-      if(sm._register_on_change){
-        var changeHandler = sm._change_handler_creator.call(sm, this);
-        var force = sm._register_on_change.call(sm, this, function(){
-          changeHandler.apply(sm, arguments);
-        });
-        this.forceSyncFromObserveTarget[sm._meta_trace_id] = force;
-        force.apply();
-      }
-      if(sm._register_assign){
-        var assignChangeHandler = sm._assign_change_handler_creator.call(sm, this);
-        var force = sm._register_assign.call(sm, this, function(){
-          assignChangeHandler.apply(sm, arguments);
-          Aj.sync();
-        });
-        this.forceSyncToObserveTarget[sm._meta_trace_id] = force;
-      }
-      if(sm._post_binding){
-        for(var k=0;k<sm._post_binding.length;k++){
-          sm._post_binding[k].call(sm, this);
-        }
-      }
+      this.bindMetaActions(sm);
     };
   }
   
@@ -141,7 +145,7 @@ BindContext.prototype.discard=function(){
   var p;
   for(var k in this){
     p = this[k];
-    if(p.discard){
+    if(p && p.discard){
       p.discard();
     }
   }

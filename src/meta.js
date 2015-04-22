@@ -6,7 +6,7 @@ var util=require("./util");
 var config=require("./config");
 var constant = require("./constant")
 
-var __reverseMetaKeys = ["_meta_type", "_meta_id", "_meta_trace_id", "_value", "_prop", "_splice", "_target_path"];
+var __reverseMetaKeys = ["_meta_type", "_meta_id", "_meta_trace_id", "_meta_desc", "_value", "_prop", "_splice", "_target_path"];
 
 var __ordered_metaRewritter = null;
 
@@ -315,7 +315,7 @@ var normalizeMeta = function(meta, metaId, propertyPath){
               };//returned change handler
             };
           }//_item
-
+          /*
           if(newMeta._meta_type == "_splice"){
             var spliceChangeHandlerCreator = newMeta._change_handler_creator;
             newMeta._change_handler_creator = function(bindContext){
@@ -325,6 +325,7 @@ var normalizeMeta = function(meta, metaId, propertyPath){
               }
             }
           }//_splice
+          */
         }
       }
       //set default assign even we do not need it
@@ -405,9 +406,9 @@ config.meta.nonObjectMetaConvertor = function(meta){
 };
 
 config.meta.fieldClassifier = function (fieldName, metaId) {
-  if (fieldName === "_duplicator"){
-    return ["_value", "_splice"];
-  }else if (fieldName === "_index") {
+  if (fieldName === "_index"){
+    return "_prop";
+  } else if (fieldName === "_indexes") {
     return "_prop";
   } else if (fieldName === "_splice"){
     return "_splice";

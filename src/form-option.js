@@ -70,9 +70,10 @@ var rewriteOptionMeta=function(optionMeta, inputType){
   }
   
   targetPropMetaRoot._value = function(newValue, oldValue, bindContext){
-    var fn = bindContext.optionBindingHub.notifyOptionChange();
+    var fn = bindContext.optionBindingHub.notifyOptionChange;
     if(fn){
-      fn.apply();
+      //delay it 3 delay cycle to make sure all the necessary change handlers related to option has finished.
+      util.delay(fn, 0, 3);
     }
   }
   
@@ -102,7 +103,7 @@ var rewriteOptionMeta=function(optionMeta, inputType){
       itemDef._selector = ":root";
     }
     if (!itemDef._render) {
-      itemDef._render = function (target, newValue, bindContext) {
+      itemDef._render = function (target, newValue, oldValue, bindContext) {
         target.val(valueFn(newValue));
         target.text(textFn(newValue));
       };

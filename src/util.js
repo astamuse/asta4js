@@ -145,4 +145,16 @@ util.replaceIndexesInPath = function(path, replaceIndexes){
   }
   return path;
 }
+
+util.delay=function(callback, timeout, delayMoreCycles){
+  if(delayMoreCycles && delayMoreCycles > 0){
+    util.delay(callback, timeout, delayMoreCycles-1);
+    return;
+  }
+  setTimeout(function(){
+    callback.apply();
+    util.sync();
+  }, timeout ? timeout : 0);
+}
+
 module.exports = util;

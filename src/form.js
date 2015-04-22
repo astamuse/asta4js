@@ -49,21 +49,35 @@ var _form = function (meta) {
     meta._render = function (target, newValue, oldValue, bindContext) {
       var inputType = getInputType(target);
       if(inputType === "select"){
+        
         //move diverge value option at first
         target.find("[aj-diverge-value]").remove();
-        target.val(newValue);
-        var domValue = target.val();
-        if (domValue === null) { //which means there is no corresponding option
-          var op = $("<option aj-diverge-value>").val(newValue).text(newValue);
-          target.append(op);
-          target.val(newValue);
+        
+        var va = util.regulateArray(newValue);
+        if(!target.prop("multiple") && va.length == 0){
+          //single select with 0 length value array means we have a undefined/null/empty value
+          va[0] = "";
         }
-        /*
-        var optionBindingHub = optionUtil.getOptionBindingHub(bindContext, meta._meta_trace_id);
-        if(optionBindingHub.notifyValueChanged){
-          optionBindingHub.notifyValueChanged();
+        var unmatchedValue = [];
+        var v;
+        for(var i=0;i<va.length;i++){
+          v = va[i];
+          if(v === null || v === undefined){
+            v = "";
+          }
+          var foundOption = target.find("option[value='"+v+"']");
+          if(foundOption.length === 0){
+            unmatchedValue.push(v);
+          }else{
+            foundOption.prop("selected", true);
+          }
         }
-        */
+        if(unmatchedValue.length > 0){
+          for(var i=0;i<unmatchedValue.length;i++){
+            var op = $("<option aj-diverge-value selected>").val(newValue).text(newValue);
+            target.prepend(op);
+          }
+        }
       }else if(inputType === "checkbox" || inputType === "radio"){
         if(formDef._single_check){
           if(newValue){
@@ -183,11 +197,14 @@ var _form = function (meta) {
     var varRefSearchKey = formDef._option._var_ref_search_key;
     delete formDef._option._var_path;
     delete formDef._option._var_ref;
+    delete formDef._option._var_ref_search_key;
     var optionMeta;
     meta._post_binding.push(function (bindContext) {
       if(!varPath){
         var scope = bindContext.valueMonitor.scope;
         varPath = util.determineRefPath(scope, varRef, varRefSearchKey);
+        delete varRef[varRefSearchKey];
+        delete scope[varPath][varRefSearchKey];
       }
       
       var optionBindingHub = optionUtil.getOptionBindingHub(bindContext, meta._meta_trace_id);//must have
