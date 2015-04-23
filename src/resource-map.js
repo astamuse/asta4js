@@ -4,10 +4,15 @@ var util = require("./util");
 
 var discardNode=function(node){
   if(node){
-    if(node.discard){
-      node.discard();
-    }else if(node.close){
-      node.close();
+    var discardable = node.discardable;
+    if(discardable._discard){
+      discardable._discard();
+    }else if(discardable.discard){
+      discardable.discard();
+    }else if(discardable.close){
+      discardable.close();
+    }else{
+      //
     }
   }
 }

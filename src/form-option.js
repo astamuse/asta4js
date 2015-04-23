@@ -8,10 +8,10 @@ var normalizeMeta = require("./meta")
 
 
 var getOptionBindingHub=function(bindContext, identifier){
-  var info = bindContext.getResource("optionBindingHub", identifier);
+  var info = bindContext._getResource("optionBindingHub", identifier);
   if(!info){
     info = {};
-    bindContext.addResource("optionBindingHub", identifier, info);
+    bindContext._addResource("optionBindingHub", identifier, info);
   }
   return info;
 }
@@ -70,7 +70,7 @@ var rewriteOptionMeta=function(optionMeta, inputType){
   }
   
   targetPropMetaRoot._value = function(newValue, oldValue, bindContext){
-    var fn = bindContext.optionBindingHub.notifyOptionChanged;
+    var fn = bindContext._optionBindingHub.notifyOptionChanged;
     if(fn){
       //delay it 3 delay cycle to make sure all the necessary change handlers related to option has finished.
       util.delay(fn, 0, 3);
@@ -119,8 +119,8 @@ var rewriteOptionMeta=function(optionMeta, inputType){
       throw "_register_dom_change/_register_assign/_assign cannot be specified for checkbox/radio option";
     }else{
       itemDef._register_dom_change = function (target, changeHandler, bindContext){
-        var optionContext = bindContext.parentContext;
-        var optionBindingHub = optionContext.optionBindingHub;
+        var optionContext = bindContext._parentContext;
+        var optionBindingHub = optionContext._optionBindingHub;
         var changeEvents = optionBindingHub.changeEvents;
         var events = optionBindingHub.changeEvents.join(" ");
         target.find("input").bind(events, function () {
@@ -153,8 +153,8 @@ var rewriteOptionMeta=function(optionMeta, inputType){
         */
       }
       itemDef._assign = function (changedValue, bindContext) {
-        var optionContext = bindContext.parentContext;
-        var optionBindingHub = optionContext.optionBindingHub;
+        var optionContext = bindContext._parentContext;
+        var optionBindingHub = optionContext._optionBindingHub;
         var targetValueRef = optionBindingHub.targetValueRef;
         var inputType = optionBindingHub.inputType;
         
@@ -182,9 +182,9 @@ var rewriteOptionMeta=function(optionMeta, inputType){
     } // else of (itemDef._register_dom_change || itemDef._assign)
     if (!itemDef._render) {
       itemDef._render = function (target, newValue, oldValue, bindContext) {
-        var optionContext = bindContext.parentContext;
-        var optionBindingHub = optionContext.optionBindingHub;
-        var snippet = bindContext.snippet;
+        var optionContext = bindContext._parentContext;
+        var optionBindingHub = optionContext._optionBindingHub;
+        var snippet = bindContext._snippet;
         var uid = util.createUID();
         snippet.find(":root").attr("aj-option-binding", optionBindingHub.optionId);
         snippet.find("input[type="+optionBindingHub.inputType+"]").attr("id", uid).val(valueFn(newValue));;

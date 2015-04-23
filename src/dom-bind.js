@@ -9,21 +9,21 @@ var Snippet = require("./snippet");
 var BindContext = require("./bind-context");
 
 var ComposedBindContext=function(contexts){
-  this.contexts = contexts;
+  this._contexts = contexts;
 }
 
 //extends from BindContext
 util.shallowCopy(BindContext.prototype, ComposedBindContext.prototype);
 
-ComposedBindContext.prototype.bind=function(meta){
-  for(var i=0;i<this.contexts.length;i++){
-    this.contexts[i].bind(meta);
+ComposedBindContext.prototype._bind=function(meta){
+  for(var i=0;i<this._contexts.length;i++){
+    this._contexts[i]._bind(meta);
   }
 }
 
-ComposedBindContext.prototype.discard=function(){
-  for(var i=0;i<contexts.length;i++){
-    contexts[i].discard();
+ComposedBindContext.prototype._discard=function(){
+  for(var i=0;i<this._contexts.length;i++){
+    this._contexts[i].discard();
   }
 }
 
@@ -32,24 +32,24 @@ var _duplicator = function(meta){
   var targetPath = meta._target_path;
   if(!meta._array_map && !meta._array_discard){
     meta._array_discard = function(){
-      var mappedArrayInfo = bindContext.getResource("_duplicator", duplicator);
+      var mappedArrayInfo = bindContext._getResource("_duplicator", duplicator);
       if(!mappedArrayInfo){
         //it seems that we do not need to remove all the existing DOMs
       }
-      bindContext.removeResource("_duplicator", duplicator);
+      bindContext._removeResource("_duplicator", duplicator);
     };
     
     meta._array_child_context_creator = function(parentContext, contextOverride, index, itemMeta){
-      var mappedArrayInfo = parentContext.getResource("_duplicator", duplicator);//must have
+      var mappedArrayInfo = parentContext._getResource("_duplicator", duplicator);//must have
       var item = mappedArrayInfo.items[index];
       var childContexts = [];
       var context;
       for(var i=0;i<item.length;i++){
         context = {
-          snippet: new Snippet(item[i])
+          _snippet: new Snippet(item[i])
         };
         util.shallowCopy(contextOverride, context);
-        context = parentContext.createChildContext(this._item._meta_trace_id, index, context);
+        context = parentContext._createChildContext(this._item._meta_trace_id, index, context);
         childContexts[i] = context;
       }
       var composedContext = new ComposedBindContext(childContexts);
@@ -57,24 +57,24 @@ var _duplicator = function(meta){
     }
     
     meta._array_discard = function(){
-      var mappedArrayInfo = bindContext.getResource("_duplicator", duplicator);
+      var mappedArrayInfo = bindContext._getResource("_duplicator", duplicator);
       if(!mappedArrayInfo){
         //it seems that we do not need to remove all the existing DOMs
       }
-      bindContext.removeResource("_duplicator", duplicator);
+      bindContext._removeResource("_duplicator", duplicator);
     };
     meta._array_map = function(newValue, oldValue, bindContext){
-      var mappedArrayInfo = bindContext.getResource("_duplicator", duplicator);
+      var mappedArrayInfo = bindContext._getResource("_duplicator", duplicator);
       if(!mappedArrayInfo){
         mappedArrayInfo = {
           discard: function(){},
           dupTargets: [],
           items: []//[][]
         };
-        bindContext.addResource("_duplicator", duplicator, mappedArrayInfo);
+        bindContext._addResource("_duplicator", duplicator, mappedArrayInfo);
 
         //initialize the place holder and template
-        var snippet = bindContext.snippet;
+        var snippet = bindContext._snippet;
         var targets = snippet.find(duplicator);
         for(var i=0;i<targets.length;i++){
           var elem = targets.get(i);
@@ -256,17 +256,17 @@ var _render = function (meta) {
     var selector = meta._selector;
     var targetPath = meta._target_path;
     meta._change_handler_creator = function(bindContext){
-      var snippet = bindContext.snippet;
+      var snippet = bindContext._snippet;
       var target = snippet.find(selector);
       if(targetPath === "_index"){
         //we do not need to observe anything, just return a force render handler
         return function(){
-          renderFn(target, bindContext.arrayIndexes[bindContext.arrayIndexes.length - 1], undefined, bindContext);
+          renderFn(target, bindContext._arrayIndexes[bindContext._arrayIndexes.length - 1], undefined, bindContext);
         }
       }else if (targetPath == "_indexes"){
         //we do not need to observe anything, just return a force render handler
         return function(){
-          renderFn(target, bindContext.arrayIndexes, undefined, bindContext);
+          renderFn(target, bindContext._arrayIndexes, undefined, bindContext);
         }
       }else{
         return function(newValue, oldValue, bindContext){
@@ -283,7 +283,7 @@ var _register_dom_change = function (meta) {
     var _register_dom_change = meta._register_dom_change;
     var selector = meta._selector;
     meta._register_assign = function(bindContext, changeHandler){
-      var snippet = bindContext.snippet;
+      var snippet = bindContext._snippet;
       var target = snippet.find(selector);
       return _register_dom_change(target, changeHandler, bindContext);
     }

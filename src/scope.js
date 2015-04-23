@@ -18,21 +18,21 @@ var createValueMonitorContext=function(scope, varRef){
   var monitor = new ValueMonitor(scope, refPath);
   
   return {
-    valueMonitor: monitor
+    _valueMonitor: monitor
   };
 
 }
 
 var createSnippetContext=function(snippet){
   return {
-    snippet: snippet
+    _snippet: snippet
   };
 }
 
 Scope.prototype.observe = function(varRef, meta){
   var context = createValueMonitorContext(this, varRef);
   var bindContext = new BindContext(context);
-  bindContext.bind(meta);
+  bindContext._bind(meta);
 }
 
 
@@ -43,7 +43,7 @@ Scope.prototype.snippet = function(selector){
     var context = createValueMonitorContext(scope, varRef);
     context = util.shallowCopy(createSnippetContext(snippet), context);
     var bindContext = new BindContext(context);
-    bindContext.bind(meta);
+    bindContext._bind(meta);
     return this;
   };
   return snippet;

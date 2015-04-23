@@ -216,10 +216,10 @@ var normalizeMeta = function(meta, metaId, propertyPath){
         if(!newMeta._register_on_change){
           var targetPath = newMeta._target_path;
           newMeta._register_on_change = function (bindContext, changeHandler) {
-            bindContext.valueMonitor.pathObserve(newMeta._meta_trace_id, targetPath, function(newValue, oldValue){
+            bindContext._valueMonitor.pathObserve(newMeta._meta_trace_id, targetPath, function(newValue, oldValue){
               changeHandler(newValue, oldValue, bindContext);
             });
-            var vr = bindContext.valueMonitor.getValueRef(targetPath);
+            var vr = bindContext._valueMonitor.getValueRef(targetPath);
             return function(){
               changeHandler(vr.getValue(), undefined, bindContext);
             };
@@ -237,7 +237,7 @@ var normalizeMeta = function(meta, metaId, propertyPath){
             var arrayChildContextCreator = newMeta._array_child_context_creator;
             if(!arrayChildContextCreator){
               arrayChildContextCreator = function(parentContext, contextOverride, index){
-                var childContext = parentContext.createChildContext(this._item._meta_trace_id, index, contextOverride);
+                var childContext = parentContext._createChildContext(this._item._meta_trace_id, index, contextOverride);
                 return childContext;
               };
               //may not be necessary, but...
@@ -247,19 +247,18 @@ var normalizeMeta = function(meta, metaId, propertyPath){
               var existingChangeFn = changeHandlerCreator ? changeHandlerCreator.call(this, bindContext) : undefined;
               //we have to discard the mapped array before current context is discarded.
               if(arrayDiscard){
-                bindContext.addDiscardHook(function(){
+                bindContext._addDiscardHook(function(){
                   arrayDiscard.apply(newMeta);
                 });
               }
               return function(newValue, oldValue, bindContext){
-                var scope = bindContext._scope;
                 if(existingChangeFn){
                   existingChangeFn.call(this, arguments);
                 }
                 
                 //register spice at first
                 if(newValue){
-                  bindContext.valueMonitor.arrayObserve(newMeta._meta_trace_id, newValue, function(splices){
+                  bindContext._valueMonitor.arrayObserve(newMeta._meta_trace_id, newValue, function(splices){
                     
                      //retrieve mapped array for item monitor
                     var mappedArray = arrayMap ? arrayMap.call(newMeta, newValue, newValue, bindContext) : newValue;
@@ -281,23 +280,23 @@ var normalizeMeta = function(meta, metaId, propertyPath){
                       var newRootMonitorPath;
                       for (var i = diff; i >0; i--) {
                         newRootMonitorPath = targetPath + "[" + (newLength - i) +"]";
-                        newMonitor = bindContext.valueMonitor.createSubMonitor(newRootMonitorPath);
+                        newMonitor = bindContext._valueMonitor.createSubMonitor(newRootMonitorPath);
                         var childContext = {
-                          valueMonitor: newMonitor,
-                          mappedItem: mappedArray[i] //must be not null
+                          _valueMonitor: newMonitor,
+                          _mappedItem: mappedArray[i] //must be not null
                         };
                         childContext = arrayChildContextCreator.call(newMeta, bindContext, childContext, newLength - i);
-                        childContext.bind(itemMeta);
+                        childContext._bind(itemMeta);
                       }
                     }else{
                       diff = 0 - diff;
                       for(var i=0;i<diff;i++){
-                        bindContext.removeChildContext(itemMeta._meta_trace_id, newLength + i);
+                        bindContext._removeChildContext(itemMeta._meta_trace_id, newLength + i);
                       }
                     }
                   });
                 }else if(oldValue){//which means we need to remove previous registered array observer
-                  bindContext.valueMonitor.removeArrayObserve(newMeta._meta_trace_id);
+                  bindContext._valueMonitor.removeArrayObserve(newMeta._meta_trace_id);
                 }
                 
                 //retrieve mapped array for item monitor
@@ -315,16 +314,16 @@ var normalizeMeta = function(meta, metaId, propertyPath){
                 //add new child context binding
                 for(var i=regularOld.length;i<regularNew.length;i++){
                   newRootMonitorPath = targetPath + "[" + i +"]";
-                  newMonitor = bindContext.valueMonitor.createSubMonitor(newRootMonitorPath);
+                  newMonitor = bindContext._valueMonitor.createSubMonitor(newRootMonitorPath);
                   var childContext = {
-                    valueMonitor: newMonitor,
-                    mappedItem: mappedArray[i] //must be not null
+                    _valueMonitor: newMonitor,
+                    _mappedItem: mappedArray[i] //must be not null
                   };
                   childContext = arrayChildContextCreator.call(newMeta, bindContext, childContext, i);
-                  childContext.bind(itemMeta);
+                  childContext._bind(itemMeta);
                 }
                 for(var i=regularNew.length;i<regularOld.length;i++){
-                  bindContext.removeChildContext(itemMeta._meta_trace_id, i);
+                  bindContext._removeChildContext(itemMeta._meta_trace_id, i);
                 }
               };//returned change handler
             };
@@ -336,9 +335,9 @@ var normalizeMeta = function(meta, metaId, propertyPath){
               var spliceFn = spliceChangeHandlerCreator.call(this, bindContext);
               return function(newValue, oldValue, bindContext){
                 if(newValue){
-                  bindContext.valueMonitor.arrayObserve(newMeta._meta_trace_id, newValue, spliceFn);
+                  bindContext._valueMonitor.arrayObserve(newMeta._meta_trace_id, newValue, spliceFn);
                 }else if(oldValue){//which means we need to remove previous registered array observer
-                  bindContext.valueMonitor.removeArrayObserve(newMeta._meta_trace_id);
+                  bindContext._valueMonitor.removeArrayObserve(newMeta._meta_trace_id);
                 }
               }
             }
@@ -349,7 +348,7 @@ var normalizeMeta = function(meta, metaId, propertyPath){
       if(!newMeta._assign_change_handler_creator){
         var targetPath = newMeta._target_path;
         newMeta._assign_change_handler_creator = function(bindContext){
-          var vr = bindContext.valueMonitor.getValueRef(targetPath)
+          var vr = bindContext._valueMonitor.getValueRef(targetPath)
           return function(value, bindContext){
             vr.setValue(value);
           };

@@ -8,7 +8,7 @@ var constant = require("./constant")
 var ValueMonitor = require("./value-monitor")
 
 var getWatchDelegateScope=function(bindContext, meta){
-  var watchDelegateScope = bindContext.getResource("_watch", meta._meta_trace_id);
+  var watchDelegateScope = bindContext._getResource("_watch", meta._meta_trace_id);
   if(!watchDelegateScope){
     watchDelegateScope = {
       value: undefined,
@@ -19,7 +19,7 @@ var getWatchDelegateScope=function(bindContext, meta){
     watchDelegateScope.discard=function(){
       this.valueMonitor.discard();
     }
-    bindContext.addResource("_watch", meta._meta_trace_id, watchDelegateScope);
+    bindContext._addResource("_watch", meta._meta_trace_id, watchDelegateScope);
   }
   return watchDelegateScope;
 }
@@ -65,7 +65,7 @@ var _watch = function (meta) {
       var watchDelegateScope = getWatchDelegateScope(bindContext, meta);
       watchDelegateScope.valueRef.setValue(value);
       if(watchDef._store){
-        bindContext.valueMonitor.getValueRef(meta._target_path).setValue(value);
+        bindContext._valueMonitor.getValueRef(meta._target_path).setValue(value);
       }
     };
   }
@@ -73,14 +73,14 @@ var _watch = function (meta) {
   if(!meta._register_assign){
     meta._register_assign = function (bindContext, changeHandler){
       var watchDelegateScope = getWatchDelegateScope(bindContext, meta);
-      bindContext.valueMonitor.compoundObserve(meta._meta_trace_id, observerTargets, function(newValues, oldValues){
+      bindContext._valueMonitor.compoundObserve(meta._meta_trace_id, observerTargets, function(newValues, oldValues){
         if(watchDef._cal){
           changeHandler(watchDef._cal.apply(null, newValues), bindContext);
         }else{
           changeHandler(newValues, bindContext);
         }
       });
-      var valueRef = bindContext.valueMonitor.getCompoundValueRef(observerTargets);
+      var valueRef = bindContext._valueMonitor.getCompoundValueRef(observerTargets);
       var force = function(){
         var targetValues = valueRef.getValues();
         var value;

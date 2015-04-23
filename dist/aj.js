@@ -315,21 +315,21 @@ return /******/ (function(modules) { // webpackBootstrap
 	  var monitor = new ValueMonitor(scope, refPath);
 	  
 	  return {
-	    valueMonitor: monitor
+	    _valueMonitor: monitor
 	  };
 
 	}
 
 	var createSnippetContext=function(snippet){
 	  return {
-	    snippet: snippet
+	    _snippet: snippet
 	  };
 	}
 
 	Scope.prototype.observe = function(varRef, meta){
 	  var context = createValueMonitorContext(this, varRef);
 	  var bindContext = new BindContext(context);
-	  bindContext.bind(meta);
+	  bindContext._bind(meta);
 	}
 
 
@@ -340,7 +340,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    var context = createValueMonitorContext(scope, varRef);
 	    context = util.shallowCopy(createSnippetContext(snippet), context);
 	    var bindContext = new BindContext(context);
-	    bindContext.bind(meta);
+	    bindContext._bind(meta);
 	    return this;
 	  };
 	  return snippet;
@@ -365,21 +365,21 @@ return /******/ (function(modules) { // webpackBootstrap
 	var BindContext = __webpack_require__(12);
 
 	var ComposedBindContext=function(contexts){
-	  this.contexts = contexts;
+	  this._contexts = contexts;
 	}
 
 	//extends from BindContext
 	util.shallowCopy(BindContext.prototype, ComposedBindContext.prototype);
 
-	ComposedBindContext.prototype.bind=function(meta){
-	  for(var i=0;i<this.contexts.length;i++){
-	    this.contexts[i].bind(meta);
+	ComposedBindContext.prototype._bind=function(meta){
+	  for(var i=0;i<this._contexts.length;i++){
+	    this._contexts[i]._bind(meta);
 	  }
 	}
 
-	ComposedBindContext.prototype.discard=function(){
-	  for(var i=0;i<contexts.length;i++){
-	    contexts[i].discard();
+	ComposedBindContext.prototype._discard=function(){
+	  for(var i=0;i<this._contexts.length;i++){
+	    this._contexts[i].discard();
 	  }
 	}
 
@@ -388,24 +388,24 @@ return /******/ (function(modules) { // webpackBootstrap
 	  var targetPath = meta._target_path;
 	  if(!meta._array_map && !meta._array_discard){
 	    meta._array_discard = function(){
-	      var mappedArrayInfo = bindContext.getResource("_duplicator", duplicator);
+	      var mappedArrayInfo = bindContext._getResource("_duplicator", duplicator);
 	      if(!mappedArrayInfo){
 	        //it seems that we do not need to remove all the existing DOMs
 	      }
-	      bindContext.removeResource("_duplicator", duplicator);
+	      bindContext._removeResource("_duplicator", duplicator);
 	    };
 	    
 	    meta._array_child_context_creator = function(parentContext, contextOverride, index, itemMeta){
-	      var mappedArrayInfo = parentContext.getResource("_duplicator", duplicator);//must have
+	      var mappedArrayInfo = parentContext._getResource("_duplicator", duplicator);//must have
 	      var item = mappedArrayInfo.items[index];
 	      var childContexts = [];
 	      var context;
 	      for(var i=0;i<item.length;i++){
 	        context = {
-	          snippet: new Snippet(item[i])
+	          _snippet: new Snippet(item[i])
 	        };
 	        util.shallowCopy(contextOverride, context);
-	        context = parentContext.createChildContext(this._item._meta_trace_id, index, context);
+	        context = parentContext._createChildContext(this._item._meta_trace_id, index, context);
 	        childContexts[i] = context;
 	      }
 	      var composedContext = new ComposedBindContext(childContexts);
@@ -413,24 +413,24 @@ return /******/ (function(modules) { // webpackBootstrap
 	    }
 	    
 	    meta._array_discard = function(){
-	      var mappedArrayInfo = bindContext.getResource("_duplicator", duplicator);
+	      var mappedArrayInfo = bindContext._getResource("_duplicator", duplicator);
 	      if(!mappedArrayInfo){
 	        //it seems that we do not need to remove all the existing DOMs
 	      }
-	      bindContext.removeResource("_duplicator", duplicator);
+	      bindContext._removeResource("_duplicator", duplicator);
 	    };
 	    meta._array_map = function(newValue, oldValue, bindContext){
-	      var mappedArrayInfo = bindContext.getResource("_duplicator", duplicator);
+	      var mappedArrayInfo = bindContext._getResource("_duplicator", duplicator);
 	      if(!mappedArrayInfo){
 	        mappedArrayInfo = {
 	          discard: function(){},
 	          dupTargets: [],
 	          items: []//[][]
 	        };
-	        bindContext.addResource("_duplicator", duplicator, mappedArrayInfo);
+	        bindContext._addResource("_duplicator", duplicator, mappedArrayInfo);
 
 	        //initialize the place holder and template
-	        var snippet = bindContext.snippet;
+	        var snippet = bindContext._snippet;
 	        var targets = snippet.find(duplicator);
 	        for(var i=0;i<targets.length;i++){
 	          var elem = targets.get(i);
@@ -612,17 +612,17 @@ return /******/ (function(modules) { // webpackBootstrap
 	    var selector = meta._selector;
 	    var targetPath = meta._target_path;
 	    meta._change_handler_creator = function(bindContext){
-	      var snippet = bindContext.snippet;
+	      var snippet = bindContext._snippet;
 	      var target = snippet.find(selector);
 	      if(targetPath === "_index"){
 	        //we do not need to observe anything, just return a force render handler
 	        return function(){
-	          renderFn(target, bindContext.arrayIndexes[bindContext.arrayIndexes.length - 1], undefined, bindContext);
+	          renderFn(target, bindContext._arrayIndexes[bindContext._arrayIndexes.length - 1], undefined, bindContext);
 	        }
 	      }else if (targetPath == "_indexes"){
 	        //we do not need to observe anything, just return a force render handler
 	        return function(){
-	          renderFn(target, bindContext.arrayIndexes, undefined, bindContext);
+	          renderFn(target, bindContext._arrayIndexes, undefined, bindContext);
 	        }
 	      }else{
 	        return function(newValue, oldValue, bindContext){
@@ -639,7 +639,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    var _register_dom_change = meta._register_dom_change;
 	    var selector = meta._selector;
 	    meta._register_assign = function(bindContext, changeHandler){
-	      var snippet = bindContext.snippet;
+	      var snippet = bindContext._snippet;
 	      var target = snippet.find(selector);
 	      return _register_dom_change(target, changeHandler, bindContext);
 	    }
@@ -693,7 +693,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	var ValueMonitor = __webpack_require__(13)
 
 	var getWatchDelegateScope=function(bindContext, meta){
-	  var watchDelegateScope = bindContext.getResource("_watch", meta._meta_trace_id);
+	  var watchDelegateScope = bindContext._getResource("_watch", meta._meta_trace_id);
 	  if(!watchDelegateScope){
 	    watchDelegateScope = {
 	      value: undefined,
@@ -704,7 +704,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    watchDelegateScope.discard=function(){
 	      this.valueMonitor.discard();
 	    }
-	    bindContext.addResource("_watch", meta._meta_trace_id, watchDelegateScope);
+	    bindContext._addResource("_watch", meta._meta_trace_id, watchDelegateScope);
 	  }
 	  return watchDelegateScope;
 	}
@@ -750,7 +750,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	      var watchDelegateScope = getWatchDelegateScope(bindContext, meta);
 	      watchDelegateScope.valueRef.setValue(value);
 	      if(watchDef._store){
-	        bindContext.valueMonitor.getValueRef(meta._target_path).setValue(value);
+	        bindContext._valueMonitor.getValueRef(meta._target_path).setValue(value);
 	      }
 	    };
 	  }
@@ -758,14 +758,14 @@ return /******/ (function(modules) { // webpackBootstrap
 	  if(!meta._register_assign){
 	    meta._register_assign = function (bindContext, changeHandler){
 	      var watchDelegateScope = getWatchDelegateScope(bindContext, meta);
-	      bindContext.valueMonitor.compoundObserve(meta._meta_trace_id, observerTargets, function(newValues, oldValues){
+	      bindContext._valueMonitor.compoundObserve(meta._meta_trace_id, observerTargets, function(newValues, oldValues){
 	        if(watchDef._cal){
 	          changeHandler(watchDef._cal.apply(null, newValues), bindContext);
 	        }else{
 	          changeHandler(newValues, bindContext);
 	        }
 	      });
-	      var valueRef = bindContext.valueMonitor.getCompoundValueRef(observerTargets);
+	      var valueRef = bindContext._valueMonitor.getCompoundValueRef(observerTargets);
 	      var force = function(){
 	        var targetValues = valueRef.getValues();
 	        var value;
@@ -901,7 +901,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	            return;
 	          }
 	          
-	          var snippet = bindContext.snippet;
+	          var snippet = bindContext._snippet;
 	          
 	          //remove the auto generated diverge elements
 	          snippet.find("[aj-diverge-value=" + optionId + "]").remove();
@@ -940,7 +940,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	          }
 	        }
 	      }else{
-	        target.val(newValue);
+	        if(target.val() != newValue){
+	          target.val(newValue);
+	        }
 	      } //end inputType
 	    } // end _render = function...
 	  } // end !meta._render
@@ -977,7 +979,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	            }); 
 	          }else{
 	            optionBindingHub.optionId = util.createUID();
-	            optionBindingHub.targetValueRef = bindContext.valueMonitor.getValueRef(propertyPath);
+	            optionBindingHub.targetValueRef = bindContext._valueMonitor.getValueRef(propertyPath);
 	            optionBindingHub.changeEvents = changeEvents;
 	          }
 	        }else{
@@ -1000,7 +1002,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    var optionMeta;
 	    meta._post_binding.push(function (bindContext) {
 	      if(!varPath){
-	        var scope = bindContext.valueMonitor.scope;
+	        var scope = bindContext._valueMonitor.scope;
 	        varPath = util.determineRefPath(scope, varRef, varRefSearchKey);
 	        delete varRef[varRefSearchKey];
 	        delete scope[varPath][varRefSearchKey];
@@ -1014,22 +1016,22 @@ return /******/ (function(modules) { // webpackBootstrap
 	      //above can be cached
 	      
 	      optionBindingHub.notifyOptionChanged=function(){
-	        bindContext.forceSyncFromObserveTarget(meta._meta_trace_id);
+	        bindContext._forceSyncFromObserveTarget(meta._meta_trace_id);
 	      };
 
 	      var optionMonitor = new ValueMonitor(scope, varPath);
-	      var snippet = bindContext.snippet;
+	      var snippet = bindContext._snippet;
 	      
 	      var optionContext = new BindContext({
-	        valueMonitor: optionMonitor,
-	        snippet: snippet,
-	        optionBindingHub: optionBindingHub,
-	        inputTargetBindContext: bindContext,
+	        _valueMonitor: optionMonitor,
+	        _snippet: snippet,
+	        _optionBindingHub: optionBindingHub,
+	        _inputTargetBindContext: bindContext,
 	      });
-	      bindContext.addDiscardHook(function(){
-	        optionContext.discard();
+	      bindContext._addDiscardHook(function(){
+	        optionContext._discard();
 	      });
-	      optionContext.bind(optionMeta);
+	      optionContext._bind(optionMeta);
 	    });
 	  }
 	}
@@ -1414,33 +1416,26 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	var Snippet = function(arg){
 	  if (typeof arg === "string"){
-	    this.root = $(arg);//as selector
+	    this._root = $(arg);//as selector
 	  }else{
-	    this.root = arg;
+	    this._root = arg;
 	  }
-	  if(this.root.length == 0){
+	  if(this._root.length == 0){
 	    var err = new Error("Snippet was not found for given selector:" + this.root.selector);
 	    console.error(err);
 	  }
 	}
 
-	Snippet.prototype.discard = function(){
-	  this.root.remove();
-	}
-
-	Snippet.prototype.createBindingContext = function(){
-	  var THIS = this;
-	  return {
-	    snippet: THIS
-	  };
+	Snippet.prototype._discard = function(){
+	  this._root.remove();
 	}
 
 	Snippet.prototype.find = function(selector){
-	  return util.findWithRoot(this.root, selector);
+	  return util.findWithRoot(this._root, selector);
 	}
 
 	Snippet.prototype.on = function (event, selector, fn) {
-	  this.root.on(event, selector, function(){
+	  this._root.on(event, selector, function(){
 	    fn.apply(this, arguments);
 	    util.sync();
 	  });
@@ -1671,10 +1666,10 @@ return /******/ (function(modules) { // webpackBootstrap
 	        if(!newMeta._register_on_change){
 	          var targetPath = newMeta._target_path;
 	          newMeta._register_on_change = function (bindContext, changeHandler) {
-	            bindContext.valueMonitor.pathObserve(newMeta._meta_trace_id, targetPath, function(newValue, oldValue){
+	            bindContext._valueMonitor.pathObserve(newMeta._meta_trace_id, targetPath, function(newValue, oldValue){
 	              changeHandler(newValue, oldValue, bindContext);
 	            });
-	            var vr = bindContext.valueMonitor.getValueRef(targetPath);
+	            var vr = bindContext._valueMonitor.getValueRef(targetPath);
 	            return function(){
 	              changeHandler(vr.getValue(), undefined, bindContext);
 	            };
@@ -1692,7 +1687,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	            var arrayChildContextCreator = newMeta._array_child_context_creator;
 	            if(!arrayChildContextCreator){
 	              arrayChildContextCreator = function(parentContext, contextOverride, index){
-	                var childContext = parentContext.createChildContext(this._item._meta_trace_id, index, contextOverride);
+	                var childContext = parentContext._createChildContext(this._item._meta_trace_id, index, contextOverride);
 	                return childContext;
 	              };
 	              //may not be necessary, but...
@@ -1702,19 +1697,18 @@ return /******/ (function(modules) { // webpackBootstrap
 	              var existingChangeFn = changeHandlerCreator ? changeHandlerCreator.call(this, bindContext) : undefined;
 	              //we have to discard the mapped array before current context is discarded.
 	              if(arrayDiscard){
-	                bindContext.addDiscardHook(function(){
+	                bindContext._addDiscardHook(function(){
 	                  arrayDiscard.apply(newMeta);
 	                });
 	              }
 	              return function(newValue, oldValue, bindContext){
-	                var scope = bindContext._scope;
 	                if(existingChangeFn){
 	                  existingChangeFn.call(this, arguments);
 	                }
 	                
 	                //register spice at first
 	                if(newValue){
-	                  bindContext.valueMonitor.arrayObserve(newMeta._meta_trace_id, newValue, function(splices){
+	                  bindContext._valueMonitor.arrayObserve(newMeta._meta_trace_id, newValue, function(splices){
 	                    
 	                     //retrieve mapped array for item monitor
 	                    var mappedArray = arrayMap ? arrayMap.call(newMeta, newValue, newValue, bindContext) : newValue;
@@ -1736,23 +1730,23 @@ return /******/ (function(modules) { // webpackBootstrap
 	                      var newRootMonitorPath;
 	                      for (var i = diff; i >0; i--) {
 	                        newRootMonitorPath = targetPath + "[" + (newLength - i) +"]";
-	                        newMonitor = bindContext.valueMonitor.createSubMonitor(newRootMonitorPath);
+	                        newMonitor = bindContext._valueMonitor.createSubMonitor(newRootMonitorPath);
 	                        var childContext = {
-	                          valueMonitor: newMonitor,
-	                          mappedItem: mappedArray[i] //must be not null
+	                          _valueMonitor: newMonitor,
+	                          _mappedItem: mappedArray[i] //must be not null
 	                        };
 	                        childContext = arrayChildContextCreator.call(newMeta, bindContext, childContext, newLength - i);
-	                        childContext.bind(itemMeta);
+	                        childContext._bind(itemMeta);
 	                      }
 	                    }else{
 	                      diff = 0 - diff;
 	                      for(var i=0;i<diff;i++){
-	                        bindContext.removeChildContext(itemMeta._meta_trace_id, newLength + i);
+	                        bindContext._removeChildContext(itemMeta._meta_trace_id, newLength + i);
 	                      }
 	                    }
 	                  });
 	                }else if(oldValue){//which means we need to remove previous registered array observer
-	                  bindContext.valueMonitor.removeArrayObserve(newMeta._meta_trace_id);
+	                  bindContext._valueMonitor.removeArrayObserve(newMeta._meta_trace_id);
 	                }
 	                
 	                //retrieve mapped array for item monitor
@@ -1770,16 +1764,16 @@ return /******/ (function(modules) { // webpackBootstrap
 	                //add new child context binding
 	                for(var i=regularOld.length;i<regularNew.length;i++){
 	                  newRootMonitorPath = targetPath + "[" + i +"]";
-	                  newMonitor = bindContext.valueMonitor.createSubMonitor(newRootMonitorPath);
+	                  newMonitor = bindContext._valueMonitor.createSubMonitor(newRootMonitorPath);
 	                  var childContext = {
-	                    valueMonitor: newMonitor,
-	                    mappedItem: mappedArray[i] //must be not null
+	                    _valueMonitor: newMonitor,
+	                    _mappedItem: mappedArray[i] //must be not null
 	                  };
 	                  childContext = arrayChildContextCreator.call(newMeta, bindContext, childContext, i);
-	                  childContext.bind(itemMeta);
+	                  childContext._bind(itemMeta);
 	                }
 	                for(var i=regularNew.length;i<regularOld.length;i++){
-	                  bindContext.removeChildContext(itemMeta._meta_trace_id, i);
+	                  bindContext._removeChildContext(itemMeta._meta_trace_id, i);
 	                }
 	              };//returned change handler
 	            };
@@ -1791,9 +1785,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	              var spliceFn = spliceChangeHandlerCreator.call(this, bindContext);
 	              return function(newValue, oldValue, bindContext){
 	                if(newValue){
-	                  bindContext.valueMonitor.arrayObserve(newMeta._meta_trace_id, newValue, spliceFn);
+	                  bindContext._valueMonitor.arrayObserve(newMeta._meta_trace_id, newValue, spliceFn);
 	                }else if(oldValue){//which means we need to remove previous registered array observer
-	                  bindContext.valueMonitor.removeArrayObserve(newMeta._meta_trace_id);
+	                  bindContext._valueMonitor.removeArrayObserve(newMeta._meta_trace_id);
 	                }
 	              }
 	            }
@@ -1804,7 +1798,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	      if(!newMeta._assign_change_handler_creator){
 	        var targetPath = newMeta._target_path;
 	        newMeta._assign_change_handler_creator = function(bindContext){
-	          var vr = bindContext.valueMonitor.getValueRef(targetPath)
+	          var vr = bindContext._valueMonitor.getValueRef(targetPath)
 	          return function(value, bindContext){
 	            vr.setValue(value);
 	          };
@@ -1920,43 +1914,51 @@ return /******/ (function(modules) { // webpackBootstrap
 	    util.shallowCopy(override, this);
 	  }
 
-	  this.arrayIndexes = arrayIndexes;
-	  this.resourceMap = new ResourceMap();
+	  this._arrayIndexes = arrayIndexes;
+	  this._resourceMap = new ResourceMap();
 	  //we declared an independent map for child context due to performance reason
-	  this.childContextMap = new ResourceMap();
+	  this._childContextMap = new ResourceMap();
 	  
-	  this.discardHook = [];
+	  this._discardHook = [];
 	  
-	  this.forceSyncFromObserveTargetMap={};
-	  this.forceSyncToObserveTargetMap={};  
+	  this._forceSyncFromObserveTargetMap={};
+	  this._forceSyncToObserveTargetMap={};  
 
 	}
 
-	BindContext.prototype.addResource=function(category, identifier, discardable){
-	  this.resourceMap.add(category, identifier, discardable);
+	BindContext.prototype._getArrayIndexes=function(){
+	  return this._arrayIndexes;
 	}
 
-	BindContext.prototype.removeResource=function(category, identifier){
-	  this.resourceMap.remove(category, identifier);
+	BindContext.prototype._getArrayIndex=function(){
+	  return this._arrayIndexes[this._arrayIndexes.length-1];
 	}
 
-	BindContext.prototype.getResource=function(category, identifier){
-	  return this.resourceMap.get(category, identifier);
+	BindContext.prototype._addResource=function(category, identifier, discardable){
+	  this._resourceMap.add(category, identifier, discardable);
 	}
 
-	BindContext.prototype.createChildContext=function(identifier, index, override){
-	  var indexes = this.arrayIndexes ? util.clone(this.arrayIndexes) : [];
+	BindContext.prototype._removeResource=function(category, identifier){
+	  this._resourceMap.remove(category, identifier);
+	}
+
+	BindContext.prototype._getResource=function(category, identifier){
+	  return this._resourceMap.get(category, identifier);
+	}
+
+	BindContext.prototype._createChildContext=function(identifier, index, override){
+	  var indexes = this._arrayIndexes ? util.clone(this._arrayIndexes) : [];
 	  indexes.push(index);
 	  var ov = util.shallowCopy(this);
 	  util.shallowCopy(override, ov);
 	  var context = new BindContext(ov, indexes);
-	  this.childContextMap.add(index, identifier, context);
-	  context.parentContext = this;
+	  this._childContextMap.add(index, identifier, context);
+	  context._parentContext = this;
 	  return context;
 	}
 
-	BindContext.prototype.removeChildContext=function(identifier, index){
-	  this.childContextMap.remove(index, identifier);
+	BindContext.prototype._removeChildContext=function(identifier, index){
+	  this._childContextMap.remove(index, identifier);
 	}
 
 	var forceSyncWithObserveTarget=function(targetMap, metaTraceId){
@@ -1973,15 +1975,15 @@ return /******/ (function(modules) { // webpackBootstrap
 	  }
 	}
 
-	BindContext.prototype.forceSyncFromObserveTarget=function(metaTraceId){
-	  forceSyncWithObserveTarget(this.forceSyncFromObserveTargetMap, metaTraceId);
+	BindContext.prototype._forceSyncFromObserveTarget=function(metaTraceId){
+	  forceSyncWithObserveTarget(this._forceSyncFromObserveTargetMap, metaTraceId);
 	}
 
-	BindContext.prototype.forceSyncToObserveTarget=function(metaTraceId){
-	  forceSyncWithObserveTarget(this.forceSyncToObserveTargetMap, metaTraceId);
+	BindContext.prototype._forceSyncToObserveTarget=function(metaTraceId){
+	  forceSyncWithObserveTarget(this._forceSyncToObserveTargetMap, metaTraceId);
 	}
 
-	BindContext.prototype.bindMetaActions=function(meta){
+	BindContext.prototype._bindMetaActions=function(meta){
 	  if(meta._pre_binding){
 	    for(var k=0;k<meta._pre_binding.length;k++){
 	      meta._pre_binding[k].call(meta, this);
@@ -1992,7 +1994,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    var force = meta._register_on_change.call(meta, this, function(){
 	      changeHandler.apply(meta, arguments);
 	    });
-	    this.forceSyncFromObserveTargetMap[meta._meta_trace_id] = force;
+	    this._forceSyncFromObserveTargetMap[meta._meta_trace_id] = force;
 	    force.apply();
 	  }
 	  if(meta._register_assign){
@@ -2001,7 +2003,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	      assignChangeHandler.apply(meta, arguments);
 	      util.sync();
 	    });
-	    this.forceSyncToObserveTargetMap[meta._meta_trace_id] = force;
+	    this._forceSyncToObserveTargetMap[meta._meta_trace_id] = force;
 	  }
 	  if(meta._post_binding){
 	    for(var k=0;k<meta._post_binding.length;k++){
@@ -2010,10 +2012,10 @@ return /******/ (function(modules) { // webpackBootstrap
 	  }
 	}
 
-	BindContext.prototype.bind=function(meta){  
+	BindContext.prototype._bind=function(meta){  
 	  if(Array.isArray(meta)){
 	    for(var i=0;i<meta.length;i++){
-	      this.bind(meta[i]);
+	      this._bind(meta[i]);
 	    }
 	    return;
 	  }
@@ -2030,7 +2032,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    }
 	    for(var j=0;j<sub.length;j++){
 	      var sm = sub[j];
-	      this.bindMetaActions(sm);
+	      this._bindMetaActions(sm);
 	    };
 	  }
 	  
@@ -2044,18 +2046,18 @@ return /******/ (function(modules) { // webpackBootstrap
 	    for(var p in ps){
 	      var pm = ps[p];
 	      if(typeof pm === "object"){
-	        this.bind(pm);
+	        this._bind(pm);
 	      }
 	    }
 	  }
 
 	};
 
-	BindContext.prototype.addDiscardHook=function(fn){
-	  this.discardHook.push(fn);
+	BindContext.prototype._addDiscardHook=function(fn){
+	  this._discardHook.push(fn);
 	};
 
-	BindContext.prototype.discard=function(){
+	BindContext.prototype._discard=function(){
 	  var p;
 	  for(var k in this){
 	    p = this[k];
@@ -2063,8 +2065,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	      p.discard();
 	    }
 	  }
-	  for(var i=0;i<this.discardHook.length;i++){
-	    this.discardHook[i].apply();
+	  for(var i=0;i<this._discardHook.length;i++){
+	    this._discardHook[i].apply();
 	  }
 	};
 
@@ -3922,10 +3924,10 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 	var getOptionBindingHub=function(bindContext, identifier){
-	  var info = bindContext.getResource("optionBindingHub", identifier);
+	  var info = bindContext._getResource("optionBindingHub", identifier);
 	  if(!info){
 	    info = {};
-	    bindContext.addResource("optionBindingHub", identifier, info);
+	    bindContext._addResource("optionBindingHub", identifier, info);
 	  }
 	  return info;
 	}
@@ -3984,7 +3986,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  }
 	  
 	  targetPropMetaRoot._value = function(newValue, oldValue, bindContext){
-	    var fn = bindContext.optionBindingHub.notifyOptionChanged;
+	    var fn = bindContext._optionBindingHub.notifyOptionChanged;
 	    if(fn){
 	      //delay it 3 delay cycle to make sure all the necessary change handlers related to option has finished.
 	      util.delay(fn, 0, 3);
@@ -4033,8 +4035,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	      throw "_register_dom_change/_register_assign/_assign cannot be specified for checkbox/radio option";
 	    }else{
 	      itemDef._register_dom_change = function (target, changeHandler, bindContext){
-	        var optionContext = bindContext.parentContext;
-	        var optionBindingHub = optionContext.optionBindingHub;
+	        var optionContext = bindContext._parentContext;
+	        var optionBindingHub = optionContext._optionBindingHub;
 	        var changeEvents = optionBindingHub.changeEvents;
 	        var events = optionBindingHub.changeEvents.join(" ");
 	        target.find("input").bind(events, function () {
@@ -4067,8 +4069,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	        */
 	      }
 	      itemDef._assign = function (changedValue, bindContext) {
-	        var optionContext = bindContext.parentContext;
-	        var optionBindingHub = optionContext.optionBindingHub;
+	        var optionContext = bindContext._parentContext;
+	        var optionBindingHub = optionContext._optionBindingHub;
 	        var targetValueRef = optionBindingHub.targetValueRef;
 	        var inputType = optionBindingHub.inputType;
 	        
@@ -4096,9 +4098,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	    } // else of (itemDef._register_dom_change || itemDef._assign)
 	    if (!itemDef._render) {
 	      itemDef._render = function (target, newValue, oldValue, bindContext) {
-	        var optionContext = bindContext.parentContext;
-	        var optionBindingHub = optionContext.optionBindingHub;
-	        var snippet = bindContext.snippet;
+	        var optionContext = bindContext._parentContext;
+	        var optionBindingHub = optionContext._optionBindingHub;
+	        var snippet = bindContext._snippet;
 	        var uid = util.createUID();
 	        snippet.find(":root").attr("aj-option-binding", optionBindingHub.optionId);
 	        snippet.find("input[type="+optionBindingHub.inputType+"]").attr("id", uid).val(valueFn(newValue));;
@@ -4127,10 +4129,15 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	var discardNode=function(node){
 	  if(node){
-	    if(node.discard){
-	      node.discard();
-	    }else if(node.close){
-	      node.close();
+	    var discardable = node.discardable;
+	    if(discardable._discard){
+	      discardable._discard();
+	    }else if(discardable.discard){
+	      discardable.discard();
+	    }else if(discardable.close){
+	      discardable.close();
+	    }else{
+	      //
 	    }
 	  }
 	}

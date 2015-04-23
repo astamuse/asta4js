@@ -5,6 +5,7 @@ $(function () {
 
     $scope.data = {};
     $scope.observeData = {
+      list: []
     };
 
     $scope.observe($scope.data, {
@@ -14,19 +15,17 @@ $(function () {
       list: {
         _array_map: function(newValue, oldValue){
           var list = $scope.observeData.list;
-          if(!list){
-            list = [];
-            $scope.observeData.list = list;
-          }
           var hopeLength = Array.isArray(newValue) ? newValue.length : 0;
-          Aj.util.arrayLengthAdjust(list, hopeLength, function(){
+          Aj.util.arrayLengthAdjust(list, hopeLength, function(){//initialize new item
             return "";
+          }, function(){//discard mapped array
+            list = [];
           });
           return list;
         },
         _item: {
           _value: function(newValue, oldValue, bindContext){
-            var targetIndex = bindContext.arrayIndexes[0];
+            var targetIndex = bindContext._getArrayIndex();
             $scope.observeData.list[targetIndex] = $scope.data.list[targetIndex] + "-observed-changed" + (new Date());
           }
         }

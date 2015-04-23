@@ -11,43 +11,51 @@ var BindContext=function(override, arrayIndexes){
     util.shallowCopy(override, this);
   }
 
-  this.arrayIndexes = arrayIndexes;
-  this.resourceMap = new ResourceMap();
+  this._arrayIndexes = arrayIndexes;
+  this._resourceMap = new ResourceMap();
   //we declared an independent map for child context due to performance reason
-  this.childContextMap = new ResourceMap();
+  this._childContextMap = new ResourceMap();
   
-  this.discardHook = [];
+  this._discardHook = [];
   
-  this.forceSyncFromObserveTargetMap={};
-  this.forceSyncToObserveTargetMap={};  
+  this._forceSyncFromObserveTargetMap={};
+  this._forceSyncToObserveTargetMap={};  
 
 }
 
-BindContext.prototype.addResource=function(category, identifier, discardable){
-  this.resourceMap.add(category, identifier, discardable);
+BindContext.prototype._getArrayIndexes=function(){
+  return this._arrayIndexes;
 }
 
-BindContext.prototype.removeResource=function(category, identifier){
-  this.resourceMap.remove(category, identifier);
+BindContext.prototype._getArrayIndex=function(){
+  return this._arrayIndexes[this._arrayIndexes.length-1];
 }
 
-BindContext.prototype.getResource=function(category, identifier){
-  return this.resourceMap.get(category, identifier);
+BindContext.prototype._addResource=function(category, identifier, discardable){
+  this._resourceMap.add(category, identifier, discardable);
 }
 
-BindContext.prototype.createChildContext=function(identifier, index, override){
-  var indexes = this.arrayIndexes ? util.clone(this.arrayIndexes) : [];
+BindContext.prototype._removeResource=function(category, identifier){
+  this._resourceMap.remove(category, identifier);
+}
+
+BindContext.prototype._getResource=function(category, identifier){
+  return this._resourceMap.get(category, identifier);
+}
+
+BindContext.prototype._createChildContext=function(identifier, index, override){
+  var indexes = this._arrayIndexes ? util.clone(this._arrayIndexes) : [];
   indexes.push(index);
   var ov = util.shallowCopy(this);
   util.shallowCopy(override, ov);
   var context = new BindContext(ov, indexes);
-  this.childContextMap.add(index, identifier, context);
-  context.parentContext = this;
+  this._childContextMap.add(index, identifier, context);
+  context._parentContext = this;
   return context;
 }
 
-BindContext.prototype.removeChildContext=function(identifier, index){
-  this.childContextMap.remove(index, identifier);
+BindContext.prototype._removeChildContext=function(identifier, index){
+  this._childContextMap.remove(index, identifier);
 }
 
 var forceSyncWithObserveTarget=function(targetMap, metaTraceId){
@@ -64,15 +72,15 @@ var forceSyncWithObserveTarget=function(targetMap, metaTraceId){
   }
 }
 
-BindContext.prototype.forceSyncFromObserveTarget=function(metaTraceId){
-  forceSyncWithObserveTarget(this.forceSyncFromObserveTargetMap, metaTraceId);
+BindContext.prototype._forceSyncFromObserveTarget=function(metaTraceId){
+  forceSyncWithObserveTarget(this._forceSyncFromObserveTargetMap, metaTraceId);
 }
 
-BindContext.prototype.forceSyncToObserveTarget=function(metaTraceId){
-  forceSyncWithObserveTarget(this.forceSyncToObserveTargetMap, metaTraceId);
+BindContext.prototype._forceSyncToObserveTarget=function(metaTraceId){
+  forceSyncWithObserveTarget(this._forceSyncToObserveTargetMap, metaTraceId);
 }
 
-BindContext.prototype.bindMetaActions=function(meta){
+BindContext.prototype._bindMetaActions=function(meta){
   if(meta._pre_binding){
     for(var k=0;k<meta._pre_binding.length;k++){
       meta._pre_binding[k].call(meta, this);
@@ -83,7 +91,7 @@ BindContext.prototype.bindMetaActions=function(meta){
     var force = meta._register_on_change.call(meta, this, function(){
       changeHandler.apply(meta, arguments);
     });
-    this.forceSyncFromObserveTargetMap[meta._meta_trace_id] = force;
+    this._forceSyncFromObserveTargetMap[meta._meta_trace_id] = force;
     force.apply();
   }
   if(meta._register_assign){
@@ -92,7 +100,7 @@ BindContext.prototype.bindMetaActions=function(meta){
       assignChangeHandler.apply(meta, arguments);
       util.sync();
     });
-    this.forceSyncToObserveTargetMap[meta._meta_trace_id] = force;
+    this._forceSyncToObserveTargetMap[meta._meta_trace_id] = force;
   }
   if(meta._post_binding){
     for(var k=0;k<meta._post_binding.length;k++){
@@ -101,10 +109,10 @@ BindContext.prototype.bindMetaActions=function(meta){
   }
 }
 
-BindContext.prototype.bind=function(meta){  
+BindContext.prototype._bind=function(meta){  
   if(Array.isArray(meta)){
     for(var i=0;i<meta.length;i++){
-      this.bind(meta[i]);
+      this._bind(meta[i]);
     }
     return;
   }
@@ -121,7 +129,7 @@ BindContext.prototype.bind=function(meta){
     }
     for(var j=0;j<sub.length;j++){
       var sm = sub[j];
-      this.bindMetaActions(sm);
+      this._bindMetaActions(sm);
     };
   }
   
@@ -135,18 +143,18 @@ BindContext.prototype.bind=function(meta){
     for(var p in ps){
       var pm = ps[p];
       if(typeof pm === "object"){
-        this.bind(pm);
+        this._bind(pm);
       }
     }
   }
 
 };
 
-BindContext.prototype.addDiscardHook=function(fn){
-  this.discardHook.push(fn);
+BindContext.prototype._addDiscardHook=function(fn){
+  this._discardHook.push(fn);
 };
 
-BindContext.prototype.discard=function(){
+BindContext.prototype._discard=function(){
   var p;
   for(var k in this){
     p = this[k];
@@ -154,8 +162,8 @@ BindContext.prototype.discard=function(){
       p.discard();
     }
   }
-  for(var i=0;i<this.discardHook.length;i++){
-    this.discardHook[i].apply();
+  for(var i=0;i<this._discardHook.length;i++){
+    this._discardHook[i].apply();
   }
 };
 

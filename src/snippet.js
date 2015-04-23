@@ -6,33 +6,26 @@ var ValueMonitor = require("./value-monitor");
 
 var Snippet = function(arg){
   if (typeof arg === "string"){
-    this.root = $(arg);//as selector
+    this._root = $(arg);//as selector
   }else{
-    this.root = arg;
+    this._root = arg;
   }
-  if(this.root.length == 0){
+  if(this._root.length == 0){
     var err = new Error("Snippet was not found for given selector:" + this.root.selector);
     console.error(err);
   }
 }
 
-Snippet.prototype.discard = function(){
-  this.root.remove();
-}
-
-Snippet.prototype.createBindingContext = function(){
-  var THIS = this;
-  return {
-    snippet: THIS
-  };
+Snippet.prototype._discard = function(){
+  this._root.remove();
 }
 
 Snippet.prototype.find = function(selector){
-  return util.findWithRoot(this.root, selector);
+  return util.findWithRoot(this._root, selector);
 }
 
 Snippet.prototype.on = function (event, selector, fn) {
-  this.root.on(event, selector, function(){
+  this._root.on(event, selector, function(){
     fn.apply(this, arguments);
     util.sync();
   });

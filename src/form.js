@@ -105,7 +105,7 @@ var _form = function (meta) {
             return;
           }
           
-          var snippet = bindContext.snippet;
+          var snippet = bindContext._snippet;
           
           //remove the auto generated diverge elements
           snippet.find("[aj-diverge-value=" + optionId + "]").remove();
@@ -144,7 +144,9 @@ var _form = function (meta) {
           }
         }
       }else{
-        target.val(newValue);
+        if(target.val() != newValue){
+          target.val(newValue);
+        }
       } //end inputType
     } // end _render = function...
   } // end !meta._render
@@ -181,7 +183,7 @@ var _form = function (meta) {
             }); 
           }else{
             optionBindingHub.optionId = util.createUID();
-            optionBindingHub.targetValueRef = bindContext.valueMonitor.getValueRef(propertyPath);
+            optionBindingHub.targetValueRef = bindContext._valueMonitor.getValueRef(propertyPath);
             optionBindingHub.changeEvents = changeEvents;
           }
         }else{
@@ -204,7 +206,7 @@ var _form = function (meta) {
     var optionMeta;
     meta._post_binding.push(function (bindContext) {
       if(!varPath){
-        var scope = bindContext.valueMonitor.scope;
+        var scope = bindContext._valueMonitor.scope;
         varPath = util.determineRefPath(scope, varRef, varRefSearchKey);
         delete varRef[varRefSearchKey];
         delete scope[varPath][varRefSearchKey];
@@ -218,22 +220,22 @@ var _form = function (meta) {
       //above can be cached
       
       optionBindingHub.notifyOptionChanged=function(){
-        bindContext.forceSyncFromObserveTarget(meta._meta_trace_id);
+        bindContext._forceSyncFromObserveTarget(meta._meta_trace_id);
       };
 
       var optionMonitor = new ValueMonitor(scope, varPath);
-      var snippet = bindContext.snippet;
+      var snippet = bindContext._snippet;
       
       var optionContext = new BindContext({
-        valueMonitor: optionMonitor,
-        snippet: snippet,
-        optionBindingHub: optionBindingHub,
-        inputTargetBindContext: bindContext,
+        _valueMonitor: optionMonitor,
+        _snippet: snippet,
+        _optionBindingHub: optionBindingHub,
+        _inputTargetBindContext: bindContext,
       });
-      bindContext.addDiscardHook(function(){
-        optionContext.discard();
+      bindContext._addDiscardHook(function(){
+        optionContext._discard();
       });
-      optionContext.bind(optionMeta);
+      optionContext._bind(optionMeta);
     });
   }
 }
