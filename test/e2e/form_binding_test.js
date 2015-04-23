@@ -1,51 +1,9 @@
 var assert = require('assert');
+var testUtil = require("../testUtil");
 
 describe('form binding tests', function() {
     
     var url = 'http://localhost:9001/devstub/form_binding.html';
-    
-    var getValueOfCR=function(page, selector, callback){
-      //var elemIds = [];
-      var retVals = [];
-      page.elements(selector, function(err, ret){
-        if(err){
-          callback(err);
-          return;
-        }
-        ret.value.forEach(function(r){
-          var id = r.ELEMENT;
-          page.elementIdAttribute(id, "checked", function(err,ck){
-            if(err){
-              callback(err);
-              return;
-            }
-            if(ck.value){
-              page.elementIdAttribute(id, "value", function(err, r){
-                if(err){
-                  callback(err);
-                  return;
-                }
-                retVals.push(r.value);
-              });
-            }
-          });
-        });
-      });
-      //fake operation to arrange the callback
-      page.status(function(err, status){
-        callback(null, retVals);
-      });
-    }
-    
-    var clickCheckBoxLabel=function(page, name, v){
-        var checkBoxId;
-        page.getAttribute("[name="+name+"][value=" + v + "]", "id", function(err, id){
-          checkBoxId = id;
-        });
-        page.status(function(){
-          page.click("label[for="+checkBoxId+"]");;
-        })
-    }
     
     it("title test", function(done){
       var page = browser.url(url);
@@ -58,8 +16,6 @@ describe('form binding tests', function() {
     
     it("form input test(value before option)", function(done){
       var page = browser.url(url);
-      
-
       
       page.click("#confirm-value");
       page.getText("#confirm-value-pre", function(err, text){
@@ -92,14 +48,14 @@ describe('form binding tests', function() {
         assert.strictEqual(text, "AB");
       });
       
-      getValueOfCR(page, "[name=sex]", function(err, vals){
+      testUtil.getValueOfCR(page, "[name=sex]", function(err, vals){
         assert.deepEqual(vals, ["0"]);
       });
       page.getText("#sex-pre", function(err, text){
         assert.strictEqual(text, "0");
       });
       
-      getValueOfCR(page, "[name=language]", function(err, vals){
+      testUtil.getValueOfCR(page, "[name=language]", function(err, vals){
         assert.deepEqual(vals, ["English"]);
       });
       page.getText("#language-pre", function(err, text){
@@ -200,12 +156,12 @@ describe('form binding tests', function() {
         assert.strictEqual(text, "");
       });
       
-      clickCheckBoxLabel(page, "language", "Japanese");
+      testUtil.clickCheckBoxLabel(page, "[name=language][value=Japanese]");
       page.getText("#language-pre", function(err, text){
         assert.strictEqual(text, "Japanese");
       });
       
-      clickCheckBoxLabel(page, "language", "Chinese");
+      testUtil.clickCheckBoxLabel(page, "[name=language][value=Chinese]");
       page.getText("#language-pre", function(err, text){
         assert(text.indexOf("Japanese")>=0);
         assert(text.indexOf("Chinese")>=0);
@@ -222,6 +178,48 @@ describe('form binding tests', function() {
           "private": true,
           "desc": "aaa\nbbb\nccc"
         });
+      });
+      
+      page.click("[name=sex][value='1']");
+      //not changed yet due to onblur only
+      page.getText("#sex-pre", function(err, text){
+        assert.strictEqual(text, "0");
+      });
+      page.click("#confirm-value");
+      page.getText("#confirm-value-pre", function(err, text){
+        var obj = JSON.parse(text);
+        assert.deepEqual(obj, {
+          "name": "nnn-added",
+          "bloodType": "AB",
+          "sex": "1",
+          "language": ["Japanese", "Chinese"],
+          "private": true,
+          "desc": "aaa\nbbb\nccc"
+        });
+      });
+      page.getText("#sex-pre", function(err, text){
+        assert.strictEqual(text, "1");
+      });
+      
+      testUtil.clickCheckBoxLabel(page, "[name=sex][value='0']");
+      //not changed yet due to onblur only
+      page.getText("#sex-pre", function(err, text){
+        assert.strictEqual(text, "1");
+      });
+      page.click("#confirm-value");
+      page.getText("#confirm-value-pre", function(err, text){
+        var obj = JSON.parse(text);
+        assert.deepEqual(obj, {
+          "name": "nnn-added",
+          "bloodType": "AB",
+          "sex": "0",
+          "language": ["Japanese", "Chinese"],
+          "private": true,
+          "desc": "aaa\nbbb\nccc"
+        });
+      });
+      page.getText("#sex-pre", function(err, text){
+        assert.strictEqual(text, "0");
       });
       
       page.click("[name=private]");
@@ -279,14 +277,14 @@ describe('form binding tests', function() {
         assert.strictEqual(text, "AB");
       });
       
-      getValueOfCR(page, "[name=sex]", function(err, vals){
+      testUtil.getValueOfCR(page, "[name=sex]", function(err, vals){
         assert.deepEqual(vals, ["0"]);
       });
       page.getText("#sex-pre", function(err, text){
         assert.strictEqual(text, "0");
       });
       
-      getValueOfCR(page, "[name=language]", function(err, vals){
+      testUtil.getValueOfCR(page, "[name=language]", function(err, vals){
         assert.deepEqual(vals, ["English"]);
       });
       page.getText("#language-pre", function(err, text){
@@ -353,12 +351,12 @@ describe('form binding tests', function() {
         });
       });
       
-      clickCheckBoxLabel(page, "language", "Japanese");
+      testUtil.clickCheckBoxLabel(page, "[name=language][value=Japanese]");
       page.getText("#language-pre", function(err, text){
         assert.strictEqual(text, "Japanese");
       });
       
-      clickCheckBoxLabel(page, "language", "Chinese");
+      testUtil.clickCheckBoxLabel(page, "[name=language][value=Chinese]");
       page.getText("#language-pre", function(err, text){
         assert(text.indexOf("Japanese")>=0);
         assert(text.indexOf("Chinese")>=0);
@@ -375,6 +373,48 @@ describe('form binding tests', function() {
           "private": true,
           "desc": "aaa\nbbb\nccc"
         });
+      });
+      
+      page.click("[name=sex][value='1']");
+      //not changed yet due to onblur only
+      page.getText("#sex-pre", function(err, text){
+        assert.strictEqual(text, "0");
+      });
+      page.click("#confirm-value");
+      page.getText("#confirm-value-pre", function(err, text){
+        var obj = JSON.parse(text);
+        assert.deepEqual(obj, {
+          "name": "nnn-added",
+          "bloodType": "AB",
+          "sex": "1",
+          "language": ["Japanese", "Chinese"],
+          "private": true,
+          "desc": "aaa\nbbb\nccc"
+        });
+      });
+      page.getText("#sex-pre", function(err, text){
+        assert.strictEqual(text, "1");
+      });
+      
+      testUtil.clickCheckBoxLabel(page, "[name=sex][value='0']");
+      //not changed yet due to onblur only
+      page.getText("#sex-pre", function(err, text){
+        assert.strictEqual(text, "1");
+      });
+      page.click("#confirm-value");
+      page.getText("#confirm-value-pre", function(err, text){
+        var obj = JSON.parse(text);
+        assert.deepEqual(obj, {
+          "name": "nnn-added",
+          "bloodType": "AB",
+          "sex": "0",
+          "language": ["Japanese", "Chinese"],
+          "private": true,
+          "desc": "aaa\nbbb\nccc"
+        });
+      });
+      page.getText("#sex-pre", function(err, text){
+        assert.strictEqual(text, "0");
       });
       
       page.click("[name=private]");

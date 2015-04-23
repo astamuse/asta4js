@@ -822,6 +822,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	  return inputType;
 	}
 
+	var optionMetaCache = {};
+
 	var _form = function (meta) {
 	  var formDef = meta._form;
 	  var propertyPath = meta._target_path;
@@ -999,21 +1001,34 @@ return /******/ (function(modules) { // webpackBootstrap
 	    delete formDef._option._var_path;
 	    delete formDef._option._var_ref;
 	    delete formDef._option._var_ref_search_key;
-	    var optionMeta;
+	    optionMetaCache[meta._meta_trace_id] = {
+	      varPath: varPath,
+	      varRef: varRef,
+	      varRefSearchKey: varRefSearchKey,
+	      optionMeta: undefined
+	    };
 	    meta._post_binding.push(function (bindContext) {
+	      var scope = bindContext._valueMonitor.scope;
+	      var optionBindingHub = optionUtil.getOptionBindingHub(bindContext, meta._meta_trace_id);//must have
+	      
+	      var cachedOptionMetaInfo = optionMetaCache[meta._meta_trace_id];
+	      var varPath = cachedOptionMetaInfo.varPath;
+	      var optionMeta = cachedOptionMetaInfo.optionMeta;
+
 	      if(!varPath){
-	        var scope = bindContext._valueMonitor.scope;
-	        varPath = util.determineRefPath(scope, varRef, varRefSearchKey);
+	        varPath = util.determineRefPath(scope, cachedOptionMetaInfo.varRef, cachedOptionMetaInfo.varRefSearchKey);
+	        cachedOptionMetaInfo.varPath = varPath;
+	        
 	        delete varRef[varRefSearchKey];
 	        delete scope[varPath][varRefSearchKey];
+	        delete cachedOptionMetaInfo.varRef;
+	        delete cachedOptionMetaInfo.varRefSearchKey;
 	      }
 	      
-	      var optionBindingHub = optionUtil.getOptionBindingHub(bindContext, meta._meta_trace_id);//must have
 	      if(!optionMeta){
 	        optionMeta = optionUtil.rewriteOptionMeta(formDef._option, optionBindingHub.inputType);
+	        cachedOptionMetaInfo.optionMeta = optionMeta;
 	      }
-	      
-	      //above can be cached
 	      
 	      optionBindingHub.notifyOptionChanged=function(){
 	        bindContext._forceSyncFromObserveTarget(meta._meta_trace_id);
