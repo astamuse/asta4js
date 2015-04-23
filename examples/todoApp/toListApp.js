@@ -32,18 +32,9 @@ $(function () {
         //mainDisplay: "",
         //completeCount: 0,
     };
-    
-    //bind ui control data
-    $scope.snippet("#todoapp").bind($scope.uiControlData,{
-      mainDisplay: "#main@>[style:display=]",
-      clearDisplay: "#clear-completed@>[style:display=]",
-      completeCount: ".x-complete-count",
-      unCompleteCount: ".x-uncomplete-count",
-      allCompleted: Aj.form.singleCheck("#toggle-all", "click")
-    });
-    
+
     //handler to recalculate all the control data
-    $scope.calUIControlData = function(){
+    var calUIControlData = function(){
       var control = $scope.uiControlData;
       
       var list = $scope.data.list;
@@ -69,14 +60,23 @@ $(function () {
     
     //observe the data to response ui control recalculating
     $scope.observe($scope.data, {
-      list: [
-      $scope.calUIControlData,
+      list:
       {
-        length: $scope.calUIControlData,
+        _splice: calUIControlData,
+        _value : calUIControlData,
         _item:{
-          complete: $scope.calUIControlData
+          complete: calUIControlData
         }
-      }]
+      }
+    });
+    
+    //bind ui control data
+    $scope.snippet("#todoapp").bind($scope.uiControlData,{
+      mainDisplay: "#main@>[style:display=]",
+      clearDisplay: "#clear-completed@>[style:display=]",
+      completeCount: ".x-complete-count",
+      unCompleteCount: ".x-uncomplete-count",
+      allCompleted: Aj.form.singleCheck("#toggle-all", "click")
     });
     
 

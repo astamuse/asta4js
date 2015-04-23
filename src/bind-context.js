@@ -84,7 +84,6 @@ BindContext.prototype.bindMetaActions=function(meta){
       changeHandler.apply(meta, arguments);
     });
     this.forceSyncFromObserveTargetMap[meta._meta_trace_id] = force;
-    console.log(this._trace_id, "added force from target of:", meta._meta_trace_id);
     force.apply();
   }
   if(meta._register_assign){

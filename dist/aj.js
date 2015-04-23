@@ -1684,10 +1684,11 @@ return /******/ (function(modules) { // webpackBootstrap
 	            var itemMeta = newMeta._item;
 	            var arrayMap = newMeta._array_map;
 	            var arrayDiscard = newMeta._array_discard;
-	            
+	            /*
 	            if(!arrayMap){
 	              throw "_array_map and _array_discard is necessary for _item mapping but we got:" + JSON.stringify(newMeta);
 	            }
+	            */
 	            var arrayChildContextCreator = newMeta._array_child_context_creator;
 	            if(!arrayChildContextCreator){
 	              arrayChildContextCreator = function(parentContext, contextOverride, index){
@@ -1716,8 +1717,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	                  bindContext.valueMonitor.arrayObserve(newMeta._meta_trace_id, newValue, function(splices){
 	                    
 	                     //retrieve mapped array for item monitor
-	                    var mappedArray = arrayMap.call(newMeta, newValue, newValue, bindContext);
-	                    if(!mappedArray){
+	                    var mappedArray = arrayMap ? arrayMap.call(newMeta, newValue, newValue, bindContext) : newValue;
+	                    if(!mappedArray && newValue){
 	                      throw "Did you forget to return the mapped array from _array_map of: " + JSON.stringify(newMeta);
 	                    }
 	                    var addedCount = 0;
@@ -1755,8 +1756,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	                }
 	                
 	                //retrieve mapped array for item monitor
-	                var mappedArray = arrayMap.call(newMeta, newValue, oldValue, bindContext);
-	                if(!mappedArray){
+	                var mappedArray = arrayMap ? arrayMap.call(newMeta, newValue, oldValue, bindContext): newValue;
+	                if(!mappedArray && newValue){
 	                  throw "Did you forget to return the mapped array from _array_map of: " + JSON.stringify(newMeta);
 	                }
 	                
@@ -1783,17 +1784,20 @@ return /******/ (function(modules) { // webpackBootstrap
 	              };//returned change handler
 	            };
 	          }//_item
-	          /*
+	          
 	          if(newMeta._meta_type == "_splice"){
 	            var spliceChangeHandlerCreator = newMeta._change_handler_creator;
 	            newMeta._change_handler_creator = function(bindContext){
 	              var spliceFn = spliceChangeHandlerCreator.call(this, bindContext);
 	              return function(newValue, oldValue, bindContext){
-	                bindContext.valueMonitor.arrayObserve(newMeta._meta_trace_id, newMeta._target_path, spliceFn);
+	                if(newValue){
+	                  bindContext.valueMonitor.arrayObserve(newMeta._meta_trace_id, newValue, spliceFn);
+	                }else if(oldValue){//which means we need to remove previous registered array observer
+	                  bindContext.valueMonitor.removeArrayObserve(newMeta._meta_trace_id);
+	                }
 	              }
 	            }
 	          }//_splice
-	          */
 	        }
 	      }
 	      //set default assign even we do not need it
@@ -1989,7 +1993,6 @@ return /******/ (function(modules) { // webpackBootstrap
 	      changeHandler.apply(meta, arguments);
 	    });
 	    this.forceSyncFromObserveTargetMap[meta._meta_trace_id] = force;
-	    console.log(this._trace_id, "added force from target of:", meta._meta_trace_id);
 	    force.apply();
 	  }
 	  if(meta._register_assign){
