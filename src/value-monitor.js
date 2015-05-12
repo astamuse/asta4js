@@ -37,13 +37,36 @@ ValueMonitor.prototype.pathObserve=function(identifier, subPath, changeFn){
   this.observerMap.add(observePath, identifier, observer);
 }
 
+function setValueWithSpawn(ref, path, value){
+  var dotIndex = path.indexOf(".");
+  if(dotIndex < 0){
+    ref[path] = value;
+  }else{
+    var firstSeg = path.substring(0, dotIndex);
+    var leftSeg = path.substring(dotIndex+1);
+    if(!ref[firstSeg]){
+      ref[firstSeg] = {};
+    }
+    setValueWithSpawn(ref[firstSeg], leftSeg, value);
+  }
+}
+
 ValueMonitor.prototype.getValueRef=function(subPath){
   var observePath = convertObservePath(this.varRefRoot, subPath);
   var path = _.Path.get(observePath);
   var scope = this.scope;
   return {
-    setValue : function(v){
-      path.setValueFrom(scope, v);
+    setValue : function(v, spawnUnreachablePath){
+      var success = path.setValueFrom(scope, v);
+      if(!success){//unreachable path
+          var spawn = spawnUnreachablePath;
+          if(spawn === undefined){
+            spawn = true; //default to generate all necessary sub path
+          }
+          if(spawn){
+            setValueWithSpawn(scope, observePath, v);
+          }
+      }
     },
     getValue : function(){
       return path.getValueFrom(scope);
