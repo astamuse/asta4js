@@ -111,7 +111,7 @@ describe('form binding tests', function() {
       */
       
       page.addValue("[name=name]", "-added");
-      //the name input should has not been synchronized since the default change event is onBlur
+      //the name input should has not been synchronized since the default change event will be fired after on blur
       page.getText("#name-pre", function(err, text){
         assert.strictEqual(text, "nnn");
       });
@@ -181,9 +181,8 @@ describe('form binding tests', function() {
       });
       
       page.click("[name=sex][value='1']");
-      //not changed yet due to onblur only
       page.getText("#sex-pre", function(err, text){
-        assert.strictEqual(text, "0");
+        assert.strictEqual(text, "1");
       });
       page.click("#confirm-value");
       page.getText("#confirm-value-pre", function(err, text){
@@ -202,9 +201,8 @@ describe('form binding tests', function() {
       });
       
       testUtil.clickCheckBoxLabel(page, "[name=sex][value='0']");
-      //not changed yet due to onblur only
       page.getText("#sex-pre", function(err, text){
-        assert.strictEqual(text, "1");
+        assert.strictEqual(text, "0");
       });
       page.click("#confirm-value");
       page.getText("#confirm-value-pre", function(err, text){
@@ -324,7 +322,7 @@ describe('form binding tests', function() {
       });
       
       page.addValue("[name=name]", "-added");
-      //the name input should has not been synchronized since the default change event is onBlur
+      //the name input should has not been synchronized since the default change event will be fired after on blur
       page.getText("#name-pre", function(err, text){
         assert.strictEqual(text, "nnn");
       });
@@ -376,9 +374,8 @@ describe('form binding tests', function() {
       });
       
       page.click("[name=sex][value='1']");
-      //not changed yet due to onblur only
       page.getText("#sex-pre", function(err, text){
-        assert.strictEqual(text, "0");
+        assert.strictEqual(text, "1");
       });
       page.click("#confirm-value");
       page.getText("#confirm-value-pre", function(err, text){
@@ -397,9 +394,8 @@ describe('form binding tests', function() {
       });
       
       testUtil.clickCheckBoxLabel(page, "[name=sex][value='0']");
-      //not changed yet due to onblur only
       page.getText("#sex-pre", function(err, text){
-        assert.strictEqual(text, "1");
+        assert.strictEqual(text, "0");
       });
       page.click("#confirm-value");
       page.getText("#confirm-value-pre", function(err, text){

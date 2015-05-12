@@ -950,48 +950,49 @@ return /******/ (function(modules) { // webpackBootstrap
 	  } // end !meta._render
 
 	  if (!meta._register_dom_change) {
-	    var changeEvents = new Array();
+	    meta._register_dom_change = function (target, changeHandler, bindContext) {
+	      var inputType = getInputType(target);
+	      var changeEvents = new Array();
 
-	    var defaultChangeEvent = formDef._default_change_event;
-	    if (defaultChangeEvent === undefined) {
-	      changeEvents.push("blur");
-	    } else if (defaultChangeEvent) {
-	      changeEvents.push(defaultChangeEvent);
-	    }
-
-	    var extraChangeEvents = formDef._extra_change_events;
-	    extraChangeEvents = util.regulateArray(extraChangeEvents);
-	    Array.prototype.push.apply(changeEvents, extraChangeEvents);
-	    
-
-	    if (changeEvents.length > 0) {
-	      meta._register_dom_change = function (target, changeHandler, bindContext) {
-	        var inputType = getInputType(target);
-	        var optionBindingHub;
-	        if(inputType && !formDef._single_check){
-	          optionBindingHub = optionUtil.getOptionBindingHub(bindContext, meta._meta_trace_id);
-	          optionBindingHub.inputType = inputType;
-	        }
-
+	      var defaultChangeEvent = formDef._default_change_event;
+	      if (defaultChangeEvent === undefined) {
 	        if(inputType === "checkbox" || inputType === "radio"){
-	          if(formDef._single_check){
-	            target.bind(changeEvents.join(" "), function () {
-	              var v = $(this).prop("checked");
-	              changeHandler(v, bindContext);
-	            }); 
-	          }else{
-	            optionBindingHub.optionId = util.createUID();
-	            optionBindingHub.targetValueRef = bindContext._valueMonitor.getValueRef(propertyPath);
-	            optionBindingHub.changeEvents = changeEvents;
-	          }
+	          changeEvents.push("click");
 	        }else{
+	          changeEvents.push("change");
+	        }
+	      } else if (defaultChangeEvent) {
+	        changeEvents.push(defaultChangeEvent);
+	      }
+
+	      var extraChangeEvents = formDef._extra_change_events;
+	      extraChangeEvents = util.regulateArray(extraChangeEvents);
+	      Array.prototype.push.apply(changeEvents, extraChangeEvents);
+	    
+	      var optionBindingHub;
+	      if(inputType && !formDef._single_check){
+	        optionBindingHub = optionUtil.getOptionBindingHub(bindContext, meta._meta_trace_id);
+	        optionBindingHub.inputType = inputType;
+	      }
+
+	      if(inputType === "checkbox" || inputType === "radio"){
+	        if(formDef._single_check){
 	          target.bind(changeEvents.join(" "), function () {
-	            var v = $(this).val();
+	            var v = $(this).prop("checked");
 	            changeHandler(v, bindContext);
 	          }); 
+	        }else{
+	          optionBindingHub.optionId = util.createUID();
+	          optionBindingHub.targetValueRef = bindContext._valueMonitor.getValueRef(propertyPath);
+	          optionBindingHub.changeEvents = changeEvents;
 	        }
-	      }// end meta._register_assign
-	    };// end changeEvents.length > 0
+	      }else{
+	        target.bind(changeEvents.join(" "), function () {
+	          var v = $(this).val();
+	          changeHandler(v, bindContext);
+	        }); 
+	      }
+	    }// end meta._register_assign
 	  }// end !meta._register_assign
 	  
 	  if (formDef._option) {
@@ -4028,7 +4029,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  
 	  if(inputType === "select"){
 	    if(!targetPropMetaRoot._duplicator){
-	      targetPropMetaRoot._duplicator = "option:first";
+	      targetPropMetaRoot._duplicator = "option:not([aj-diverge-value]):first";
 	    }
 	    if(!itemDef._selector){
 	      itemDef._selector = ":root";

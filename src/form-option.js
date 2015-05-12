@@ -97,7 +97,7 @@ var rewriteOptionMeta=function(optionMeta, inputType){
   
   if(inputType === "select"){
     if(!targetPropMetaRoot._duplicator){
-      targetPropMetaRoot._duplicator = "option:first";
+      targetPropMetaRoot._duplicator = "option:not([aj-diverge-value]):first";
     }
     if(!itemDef._selector){
       itemDef._selector = ":root";
