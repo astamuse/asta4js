@@ -199,7 +199,7 @@ module.exports = function (grunt) {
   grunt.registerTask('cover', ['karma:coverage'])
   //grunt.registerTask('casperx', ['casper:test'])
 
-  //grunt.registerTask('test', ['casper'])
+  grunt.registerTask('test', ['unit', 'wtest'])
   grunt.registerTask('wtest',  ['dev', 'connect', 'webdriver'])
   grunt.registerTask('wtestc', ['dev', 'connect', 'webdriver:chrome'])
   grunt.registerTask('wtestf', ['dev', 'connect', 'webdriver:firefox'])
