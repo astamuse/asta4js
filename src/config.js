@@ -6,7 +6,11 @@ module.exports = {
   meta  : {
     nonObjectMetaConvertor : function(meta){},
     fieldClassifier    : function(fieldName, metaId){},
-    rewritterMap          : {}
+    rewritterMap          : {},
+    typedFormHandler: {
+      _render:{},
+      _register_dom_change:{}
+    },
   },
   scope : {
     create: function(){}

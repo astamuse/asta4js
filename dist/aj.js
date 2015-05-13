@@ -282,7 +282,11 @@ return /******/ (function(modules) { // webpackBootstrap
 	  meta  : {
 	    nonObjectMetaConvertor : function(meta){},
 	    fieldClassifier    : function(fieldName, metaId){},
-	    rewritterMap          : {}
+	    rewritterMap          : {},
+	    typedFormHandler: {
+	      _render:{},
+	      _register_dom_change:{}
+	    },
 	  },
 	  scope : {
 	    create: function(){}
@@ -822,6 +826,160 @@ return /******/ (function(modules) { // webpackBootstrap
 	  return inputType;
 	}
 
+	var combinedChangeEvents = function(formDef, inputType){
+	  var changeEvents = new Array();
+
+	  var defaultChangeEvent = formDef._default_change_event;
+	  if (defaultChangeEvent === undefined) {
+	    if(inputType === "checkbox" || inputType === "radio"){
+	      changeEvents.push("click");
+	    }else{
+	      changeEvents.push("change");
+	    }
+	  } else if (defaultChangeEvent) {
+	    changeEvents.push(defaultChangeEvent);
+	  }
+
+	  var extraChangeEvents = formDef._extra_change_events;
+	  extraChangeEvents = util.regulateArray(extraChangeEvents);
+	  Array.prototype.push.apply(changeEvents, extraChangeEvents);
+	  return changeEvents;
+	}
+
+	var defaultFormRender = function(meta, formDef, inputType, target, newValue, oldValue, bindContext){
+	  if(target.val() != newValue){
+	    target.val(newValue);
+	  }
+	}
+
+	var defaultFormRegisterDomChange = function(meta, formDef, inputType, target, changeHandler, bindContext){
+	  target.bind(combinedChangeEvents(formDef, inputType).join(" "), function () {
+	    var v = $(this).val();
+	    changeHandler(v, bindContext);
+	  });
+	}
+
+	var selectRender = function(meta, formDef, inputType, target, newValue, oldValue, bindContext){
+	  //move diverge value option at first
+	  target.find("[aj-diverge-value]").remove();
+	  
+	  var va = util.regulateArray(newValue);
+	  if(!target.prop("multiple") && va.length == 0){
+	    //single select with 0 length value array means we have a undefined/null/empty value
+	    va[0] = "";
+	  }
+	  var unmatchedValue = [];
+	  var v;
+	  for(var i=0;i<va.length;i++){
+	    v = va[i];
+	    if(v === null || v === undefined){
+	      v = "";
+	    }
+	    var foundOption = target.find("option[value='"+v+"']");
+	    if(foundOption.length === 0){
+	      unmatchedValue.push(v);
+	    }else{
+	      foundOption.prop("selected", true);
+	    }
+	  }
+	  if(unmatchedValue.length > 0){
+	    for(var i=0;i<unmatchedValue.length;i++){
+	      var op = $("<option aj-diverge-value selected>").val(newValue).text(newValue);
+	      target.prepend(op);
+	    }
+	  }
+	}
+
+	/*
+	var selectRegisterDomChange = function(meta, formDef, inputType, target, changeHandler, bindContext){
+	  
+	}
+	*/
+
+	var checkboxOrRadioRender = function(meta, formDef, inputType, target, newValue, oldValue, bindContext){
+	  if(formDef._single_check){
+	    if(newValue){
+	      target.prop("checked", true);
+	    }else{
+	      target.prop("checked", false);
+	    }
+	  }else{
+	    var optionBindingHub = optionUtil.getOptionBindingHub(bindContext, meta._meta_trace_id);
+	    var va = util.regulateArray(newValue);
+	    if(inputType === "radio" && va.length > 1){
+	      throw "There are over than one candidate value for radio:" + va;
+	    }
+	    var unmatchedValue = [];
+	    var optionId = optionBindingHub.optionId;
+	    
+	    if(!optionId){//option bind has not been called yet
+	      return;
+	    }
+	    
+	    var snippet = bindContext._snippet;
+	    
+	    //remove the auto generated diverge elements
+	    snippet.find("[aj-diverge-value=" + optionId + "]").remove();
+	    
+	    //find out all the existing options
+	    var ops = snippet.find("[aj-option-binding=" + optionId + "]");
+	    //set all to false at first
+	    util.findWithRoot(ops, "input[type="+inputType+"]").prop("checked", false);
+	    va.forEach(function(v){
+	      if(v === null || v === undefined){
+	        v = "";
+	      }
+	      var foundInput = util.findWithRoot(ops, "input[value='"+v+"']");
+	      if(foundInput.length === 0){
+	        if(v){
+	          unmatchedValue.push(v);
+	        }
+	      }else{
+	        foundInput.prop("checked", true);
+	      }
+	    });
+	    if(unmatchedValue.length > 0){
+	      //there must be "aj-placeholder-id"
+	      var placeHolderId = target.attr("aj-placeholder-id");
+	      var insertPoint = snippet.find("#" + placeHolderId);
+	      unmatchedValue.forEach(function(v){
+	        var uid = util.createUID();
+	        var input = target.clone().attr("id", uid).val(v).prop("checked", true);
+	        var label = $("<label>").attr("for",uid).text(v);
+	        
+	        var diverge = $("<span>").attr("aj-diverge-value", optionId);
+	        diverge.append(input).append(label);
+	        
+	        insertPoint.after(diverge);
+	      });
+	    }
+	  }
+	}
+
+	var checkboxOrRadioRegisterDomChange = function(meta,formDef, inputType, target, changeHandler, bindContext){
+	  var optionBindingHub = optionUtil.getOptionBindingHub(bindContext, meta._meta_trace_id);
+	  var changeEvents = combinedChangeEvents(formDef, inputType);
+	  if(formDef._single_check){
+	    target.bind(changeEvents.join(" "), function () {
+	      var v = $(this).prop("checked");
+	      changeHandler(v, bindContext);
+	    }); 
+	  }else{
+	    optionBindingHub.optionId = util.createUID();
+	    optionBindingHub.targetValueRef = bindContext._valueMonitor.getValueRef(meta._target_path);
+	    optionBindingHub.changeEvents = changeEvents;
+	  }
+	}
+
+	var findTypedHandler=function(handlerMap, inputType){
+	  var fn = handlerMap[inputType];
+	  if(fn){
+	    return fn;
+	  }else{
+	    return handlerMap["__default__"];//must have
+	  }
+	}
+
 	var optionMetaCache = {};
 
 	var _form = function (meta) {
@@ -853,147 +1011,25 @@ return /******/ (function(modules) { // webpackBootstrap
 	  if (!meta._render) {
 	    meta._render = function (target, newValue, oldValue, bindContext) {
 	      var inputType = getInputType(target);
-	      if(inputType === "select"){
-	        
-	        //move diverge value option at first
-	        target.find("[aj-diverge-value]").remove();
-	        
-	        var va = util.regulateArray(newValue);
-	        if(!target.prop("multiple") && va.length == 0){
-	          //single select with 0 length value array means we have a undefined/null/empty value
-	          va[0] = "";
-	        }
-	        var unmatchedValue = [];
-	        var v;
-	        for(var i=0;i<va.length;i++){
-	          v = va[i];
-	          if(v === null || v === undefined){
-	            v = "";
-	          }
-	          var foundOption = target.find("option[value='"+v+"']");
-	          if(foundOption.length === 0){
-	            unmatchedValue.push(v);
-	          }else{
-	            foundOption.prop("selected", true);
-	          }
-	        }
-	        if(unmatchedValue.length > 0){
-	          for(var i=0;i<unmatchedValue.length;i++){
-	            var op = $("<option aj-diverge-value selected>").val(newValue).text(newValue);
-	            target.prepend(op);
-	          }
-	        }
-	      }else if(inputType === "checkbox" || inputType === "radio"){
-	        if(formDef._single_check){
-	          if(newValue){
-	            target.prop("checked", true);
-	          }else{
-	            target.prop("checked", false);
-	          }
-	        }else{
-	          var optionBindingHub = optionUtil.getOptionBindingHub(bindContext, meta._meta_trace_id);
-	          var va = util.regulateArray(newValue);
-	          if(inputType === "radio" && va.length > 1){
-	            throw "There are over than one candidate value for radio:" + va;
-	          }
-	          var unmatchedValue = [];
-	          var optionId = optionBindingHub.optionId;
-	          
-	          if(!optionId){//option bind has not been called yet
-	            return;
-	          }
-	          
-	          var snippet = bindContext._snippet;
-	          
-	          //remove the auto generated diverge elements
-	          snippet.find("[aj-diverge-value=" + optionId + "]").remove();
-	          
-	          //find out all the existing options
-	          var ops = snippet.find("[aj-option-binding=" + optionId + "]");
-	          //set all to false at first
-	          util.findWithRoot(ops, "input[type="+inputType+"]").prop("checked", false);
-	          va.forEach(function(v){
-	            if(v === null || v === undefined){
-	              v = "";
-	            }
-	            var foundInput = util.findWithRoot(ops, "input[value='"+v+"']");
-	            if(foundInput.length === 0){
-	              if(v){
-	                unmatchedValue.push(v);
-	              }
-	            }else{
-	              foundInput.prop("checked", true);
-	            }
-	          });
-	          if(unmatchedValue.length > 0){
-	            //there must be "aj-placeholder-id"
-	            var placeHolderId = target.attr("aj-placeholder-id");
-	            var insertPoint = snippet.find("#" + placeHolderId);
-	            unmatchedValue.forEach(function(v){
-	              var uid = util.createUID();
-	              var input = target.clone().attr("id", uid).val(v).prop("checked", true);
-	              var label = $("<label>").attr("for",uid).text(v);
-	              
-	              var diverge = $("<span>").attr("aj-diverge-value", optionId);
-	              diverge.append(input).append(label);
-	              
-	              insertPoint.after(diverge);
-	            });
-	          }
-	        }
-	      }else{
-	        if(target.val() != newValue){
-	          target.val(newValue);
-	        }
-	      } //end inputType
-	    } // end _render = function...
-	  } // end !meta._render
+	      var handler = findTypedHandler(config.meta.typedFormHandler._render, inputType);
+	      handler(meta, formDef, inputType, target, newValue, oldValue, bindContext);
+	    };
+	  } 
 
 	  if (!meta._register_dom_change) {
 	    meta._register_dom_change = function (target, changeHandler, bindContext) {
 	      var inputType = getInputType(target);
-	      var changeEvents = new Array();
-
-	      var defaultChangeEvent = formDef._default_change_event;
-	      if (defaultChangeEvent === undefined) {
-	        if(inputType === "checkbox" || inputType === "radio"){
-	          changeEvents.push("click");
-	        }else{
-	          changeEvents.push("change");
-	        }
-	      } else if (defaultChangeEvent) {
-	        changeEvents.push(defaultChangeEvent);
-	      }
-
-	      var extraChangeEvents = formDef._extra_change_events;
-	      extraChangeEvents = util.regulateArray(extraChangeEvents);
-	      Array.prototype.push.apply(changeEvents, extraChangeEvents);
-	    
+	      var handler = findTypedHandler(config.meta.typedFormHandler._register_dom_change, inputType);
+	      
 	      var optionBindingHub;
 	      if(inputType && !formDef._single_check){
 	        optionBindingHub = optionUtil.getOptionBindingHub(bindContext, meta._meta_trace_id);
 	        optionBindingHub.inputType = inputType;
 	      }
-
-	      if(inputType === "checkbox" || inputType === "radio"){
-	        if(formDef._single_check){
-	          target.bind(changeEvents.join(" "), function () {
-	            var v = $(this).prop("checked");
-	            changeHandler(v, bindContext);
-	          }); 
-	        }else{
-	          optionBindingHub.optionId = util.createUID();
-	          optionBindingHub.targetValueRef = bindContext._valueMonitor.getValueRef(propertyPath);
-	          optionBindingHub.changeEvents = changeEvents;
-	        }
-	      }else{
-	        target.bind(changeEvents.join(" "), function () {
-	          var v = $(this).val();
-	          changeHandler(v, bindContext);
-	        }); 
-	      }
-	    }// end meta._register_assign
-	  }// end !meta._register_assign
+	      
+	      handler(meta, formDef, inputType, target, changeHandler, bindContext);
+	    }
+	  }
 	  
 	  if (formDef._option) {
 	    var varPath = formDef._option._var_path;
@@ -1056,6 +1092,15 @@ return /******/ (function(modules) { // webpackBootstrap
 	  priority : constant.metaRewritterPriority["_form"],
 	  fn : _form
 	};
+
+	config.meta.typedFormHandler._render["__default__"] = defaultFormRender;
+	config.meta.typedFormHandler._render["select"] = selectRender;
+	config.meta.typedFormHandler._render["checkbox"] = checkboxOrRadioRender;
+	config.meta.typedFormHandler._render["radio"] = checkboxOrRadioRender;
+
+	config.meta.typedFormHandler._register_dom_change["__default__"] = defaultFormRegisterDomChange;
+	config.meta.typedFormHandler._register_dom_change["checkbox"] = checkboxOrRadioRegisterDomChange;
+	config.meta.typedFormHandler._register_dom_change["radio"] = checkboxOrRadioRegisterDomChange;
 
 
 
