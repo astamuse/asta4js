@@ -63,12 +63,20 @@ api.form = function(target, event1, event2){
   };
   var defaultChangeEvent;
   var extraChangeEvents;
-  if(typeof event1 === "string"){
-    defaultChangeEvent = event1;
-    extraChangeEvents = event2;
-  }else if (Array.isArray(event1)){
-    extraChangeEvents = event2;
+  if(event1){
+    if(typeof event1 === "string"){
+      defaultChangeEvent = event1;
+      extraChangeEvents = event2;
+    }else if (Array.isArray(event1)){
+      extraChangeEvents = event2;
+    }
+  }else{
+    //the client may call me as ({}, null, ["xxx"]), so the event1 is null but event2 exists
+    if(event2){
+      extraChangeEvents = event2;
+    }
   }
+
   
   if(defaultChangeEvent){
     ret._form._default_change_event = defaultChangeEvent;

@@ -1,8 +1,12 @@
 var assert = require('assert');
 
-describe('array binding tests', function() {
+describe('array binding with observe', function() {
     
-    var url = 'http://localhost:9001/devstub/array_binding.html';
+    var url = 'http://localhost:9001/devstub/array_binding_with_observe.html';
+    
+    var getIndexXPath = function(idx){
+      return "//li[@class='row'][position()=" + idx + "]//span[@class='x-index']";
+    };
     
     var getInputXPath = function(idx){
       return "//li[@class='row'][position()=" + idx + "]//input";
@@ -16,24 +20,60 @@ describe('array binding tests', function() {
       return "//li[@class='row'][position()=" + idx + "]//button[contains(@class, '"+btn+"')]";
     };
     
+    var getObIndexXPath = function(idx){
+      return "//li[@class='row-ob'][position()=" + idx + "]//span[@class='x-index-ob']";
+    };
+
+    var getObPreviewXPath = function(idx){
+      return "//li[@class='row-ob'][position()=" + idx + "]//span[@id='preview-ob']";
+    };
+    
     var confirmItemValue = function(page, values){
       for(var i=1;i<=values.length;i++){
         (function(idx){
           var v = values[idx-1];
+          page.getText(getIndexXPath(idx),function(err, ret){
+            assert.strictEqual(ret, (idx-1)+"");
+          });
           page.getValue(getInputXPath(idx),function(err, ret){
             assert.strictEqual(ret, v);
           });
           page.getText(getPreviewXPath(idx),function(err, ret){
             assert.strictEqual(ret, v);
           });
+          page.getText(getObIndexXPath(idx),function(err, ret){
+            assert.strictEqual(ret, (idx-1)+"");
+          });
+          page.getText(getObPreviewXPath(idx),function(err, ret){
+            assert.strictEqual(ret, v + "-observed-changed");
+          });
         })(i);
       }
+      page.getText(".x-length", function(err, res){
+        assert.strictEqual(res, values.length+"");
+      });
+      page.getText(".x-length-ob", function(err, res){
+        assert.strictEqual(res, values.length+"");
+      });
     }
     
     it("title test", function(done){
       var page = browser.url(url);
       page.getTitle(function(err,title) {
-         assert.strictEqual(title,'array_binding');
+         assert.strictEqual(title,'array binding with observe');
+      });
+      page.call(done);
+    });
+    
+    it("simple observe test", function(done){
+      var page = browser.url(url);
+      var v = "aaaaaa";
+      page.setValue("#value-input", v);
+      page.getText(".x-value", function(err, res){
+        assert.strictEqual(res, v);
+      });
+      page.getText(".x-value-ob", function(err, res){
+        assert.strictEqual(res, v + "-observed");
       });
       page.call(done);
     });
@@ -42,14 +82,15 @@ describe('array binding tests', function() {
       var page = browser.url(url);
       
       //confirm set value
-      page.setValue("#data-input", ["r1", "r2", "r3"].join("\n"));
-      page.click("#set-value");
+      page.setValue("#list-data-input", ["r1", "r2", "r3"].join("\n"));
+      page.click("#set-list-value");
 
       page.elements("li.row", function(err, res){
         assert.strictEqual(res.value.length, 3);
       });
       
       confirmItemValue(page, ["r1", "r2", "r3"]);
+
     
       var newValues = ["r1", "r2", "r3"];
       for(var i=1;i<=3;i++){
