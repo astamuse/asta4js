@@ -92,8 +92,51 @@ api.form = function(target, event1, event2){
     return this;
   }
   
+  ret.transform = function(transform){
+    this._transform = transform;
+    return this;
+  };
+  
+  ret.asInt = function(radix){
+    var r = radix ? radix : 10;
+    this._transform = {
+      setValue: function(v){
+        var nv = parseInt(v, r);
+        if(isNaN(nv)){
+          return v;
+        }else{
+          return nv;
+        }
+      },
+      getValue: function(v){
+        return (v).toString(r);
+      }
+    };
+    return this;
+  }
+  
+  ret.asFloat = function(){
+    this._transform = {
+      setValue: function(v){
+        var nv = parseFloat(v);
+        if(isNaN(nv)){
+          return v;
+        }else{
+          return nv;
+        }
+      },
+      getValue: function(v){
+        return (v).toString();
+      }
+    };
+    return this;
+  }
+  
   ret.withOption.nonMeta = true;
   ret.asSingleCheck.nonMeta = true;
+  ret.transform.nonMeta = true;
+  ret.asInt.nonMeta = true;
+  ret.asFloat.nonMeta = true;
 
   return ret;
 }

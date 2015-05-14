@@ -101,6 +101,15 @@ var initBindingHookArray = function(meta, hookName){
   }
 }
 
+var defaultTransformFn = function(v){
+  return v;
+}
+
+var defaultTransform = {
+  setValue: defaultTransformFn,
+  getValue: defaultTransformFn,
+}
+
 var normalizeMeta = function(meta, metaId, propertyPath){
   
   if(propertyPath === undefined || propertyPath === null){
@@ -196,6 +205,31 @@ var normalizeMeta = function(meta, metaId, propertyPath){
         if(itemMeta){
           newMeta._item = normalizeMeta(itemMeta, newMeta._meta_id, "");
         }
+        //transform
+        if(newMeta._transform){
+          var regulateTransform;
+          var type = typeof newMeta._transform;
+          if(type === "object"){
+            regulateTransform = util.shallowCopy(newMeta._transform, {});
+            if(!regulateTransform.setValue){
+              regulateTransform.setValue = defaultTransformFn;
+            }
+            if(!regulateTransform.getValue){
+              regulateTransform.getValue = defaultTransformFn;
+            }
+          }else if(type === "function"){//treat function as getValue for most common case
+            regulateTransform = {
+              setValue: defaultTransformFn,
+              getValue: newMeta._transform,
+            };
+          }else{
+            throw "unsupported _transform define:" + JSON.stringify(newMeta._transform);
+          }
+          newMeta._transform = regulateTransform;
+        }else{
+          newMeta._transform = defaultTransform;
+        }
+        
       }
       
       //binding hooks
@@ -218,8 +252,8 @@ var normalizeMeta = function(meta, metaId, propertyPath){
           newMeta._register_on_change = function (bindContext, changeHandler) {
             bindContext._valueMonitor.pathObserve(newMeta._meta_trace_id, targetPath, function(newValue, oldValue){
               changeHandler(newValue, oldValue, bindContext);
-            });
-            var vr = bindContext._valueMonitor.getValueRef(targetPath);
+            }, newMeta._transform);
+            var vr = bindContext._valueMonitor.getValueRef(targetPath, newMeta._transform);
             return function(){
               changeHandler(vr.getValue(), undefined, bindContext);
             };
@@ -348,7 +382,7 @@ var normalizeMeta = function(meta, metaId, propertyPath){
       if(!newMeta._assign_change_handler_creator){
         var targetPath = newMeta._target_path;
         newMeta._assign_change_handler_creator = function(bindContext){
-          var vr = bindContext._valueMonitor.getValueRef(targetPath)
+          var vr = bindContext._valueMonitor.getValueRef(targetPath, newMeta._transform)
           return function(value, bindContext){
             vr.setValue(value);
           };

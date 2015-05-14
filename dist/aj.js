@@ -1213,8 +1213,51 @@ return /******/ (function(modules) { // webpackBootstrap
 	    return this;
 	  }
 	  
+	  ret.transform = function(transform){
+	    this._transform = transform;
+	    return this;
+	  };
+	  
+	  ret.asInt = function(radix){
+	    var r = radix ? radix : 10;
+	    this._transform = {
+	      setValue: function(v){
+	        var nv = parseInt(v, r);
+	        if(isNaN(nv)){
+	          return v;
+	        }else{
+	          return nv;
+	        }
+	      },
+	      getValue: function(v){
+	        return (v).toString(r);
+	      }
+	    };
+	    return this;
+	  }
+	  
+	  ret.asFloat = function(){
+	    this._transform = {
+	      setValue: function(v){
+	        var nv = parseFloat(v);
+	        if(isNaN(nv)){
+	          return v;
+	        }else{
+	          return nv;
+	        }
+	      },
+	      getValue: function(v){
+	        return (v).toString();
+	      }
+	    };
+	    return this;
+	  }
+	  
 	  ret.withOption.nonMeta = true;
 	  ret.asSingleCheck.nonMeta = true;
+	  ret.transform.nonMeta = true;
+	  ret.asInt.nonMeta = true;
+	  ret.asFloat.nonMeta = true;
 
 	  return ret;
 	}
@@ -1631,6 +1674,15 @@ return /******/ (function(modules) { // webpackBootstrap
 	  }
 	}
 
+	var defaultTransformFn = function(v){
+	  return v;
+	}
+
+	var defaultTransform = {
+	  setValue: defaultTransformFn,
+	  getValue: defaultTransformFn,
+	}
+
 	var normalizeMeta = function(meta, metaId, propertyPath){
 	  
 	  if(propertyPath === undefined || propertyPath === null){
@@ -1726,6 +1778,31 @@ return /******/ (function(modules) { // webpackBootstrap
 	        if(itemMeta){
 	          newMeta._item = normalizeMeta(itemMeta, newMeta._meta_id, "");
 	        }
+	        //transform
+	        if(newMeta._transform){
+	          var regulateTransform;
+	          var type = typeof newMeta._transform;
+	          if(type === "object"){
+	            regulateTransform = util.shallowCopy(newMeta._transform, {});
+	            if(!regulateTransform.setValue){
+	              regulateTransform.setValue = defaultTransformFn;
+	            }
+	            if(!regulateTransform.getValue){
+	              regulateTransform.getValue = defaultTransformFn;
+	            }
+	          }else if(type === "function"){//treat function as getValue for most common case
+	            regulateTransform = {
+	              setValue: defaultTransformFn,
+	              getValue: newMeta._transform,
+	            };
+	          }else{
+	            throw "unsupported _transform define:" + JSON.stringify(newMeta._transform);
+	          }
+	          newMeta._transform = regulateTransform;
+	        }else{
+	          newMeta._transform = defaultTransform;
+	        }
+	        
 	      }
 	      
 	      //binding hooks
@@ -1748,8 +1825,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	          newMeta._register_on_change = function (bindContext, changeHandler) {
 	            bindContext._valueMonitor.pathObserve(newMeta._meta_trace_id, targetPath, function(newValue, oldValue){
 	              changeHandler(newValue, oldValue, bindContext);
-	            });
-	            var vr = bindContext._valueMonitor.getValueRef(targetPath);
+	            }, newMeta._transform);
+	            var vr = bindContext._valueMonitor.getValueRef(targetPath, newMeta._transform);
 	            return function(){
 	              changeHandler(vr.getValue(), undefined, bindContext);
 	            };
@@ -1878,7 +1955,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	      if(!newMeta._assign_change_handler_creator){
 	        var targetPath = newMeta._target_path;
 	        newMeta._assign_change_handler_creator = function(bindContext){
-	          var vr = bindContext._valueMonitor.getValueRef(targetPath)
+	          var vr = bindContext._valueMonitor.getValueRef(targetPath, newMeta._transform)
 	          return function(value, bindContext){
 	            vr.setValue(value);
 	          };
@@ -2188,10 +2265,19 @@ return /******/ (function(modules) { // webpackBootstrap
 	  return new ValueMonitor(this.scope, observePath);
 	};
 
-	ValueMonitor.prototype.pathObserve=function(identifier, subPath, changeFn){
+	ValueMonitor.prototype.pathObserve=function(identifier, subPath, changeFn, transform){
 	  var observePath = convertObservePath(this.varRefRoot, subPath);
 	  var observer = new _.PathObserver(this.scope, observePath);
-	  observer.open(changeFn);
+	  if(transform){
+	    observer.open(function(newValue, oldValue){
+	      changeFn(
+	        transform.getValue(newValue),
+	        transform.getValue(oldValue)
+	      );
+	    });
+	  }else{
+	    observer.open(changeFn);
+	  }
 	  this.observerMap.add(observePath, identifier, observer);
 	}
 
@@ -2209,25 +2295,27 @@ return /******/ (function(modules) { // webpackBootstrap
 	  }
 	}
 
-	ValueMonitor.prototype.getValueRef=function(subPath){
+	ValueMonitor.prototype.getValueRef=function(subPath, transform){
 	  var observePath = convertObservePath(this.varRefRoot, subPath);
 	  var path = _.Path.get(observePath);
 	  var scope = this.scope;
 	  return {
 	    setValue : function(v, spawnUnreachablePath){
-	      var success = path.setValueFrom(scope, v);
+	      var tv = transform ? transform.setValue(v) : v;
+	      var success = path.setValueFrom(scope, tv);
 	      if(!success){//unreachable path
 	          var spawn = spawnUnreachablePath;
 	          if(spawn === undefined){
 	            spawn = true; //default to generate all necessary sub path
 	          }
 	          if(spawn){
-	            setValueWithSpawn(scope, observePath, v);
+	            setValueWithSpawn(scope, observePath, tv);
 	          }
 	      }
 	    },
 	    getValue : function(){
-	      return path.getValueFrom(scope);
+	      var v = path.getValueFrom(scope);
+	      return transform ? transform.getValue(v) : v;
 	    },
 	  };
 	}

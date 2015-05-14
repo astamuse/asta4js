@@ -30,10 +30,19 @@ ValueMonitor.prototype.createSubMonitor=function(subPath){
   return new ValueMonitor(this.scope, observePath);
 };
 
-ValueMonitor.prototype.pathObserve=function(identifier, subPath, changeFn){
+ValueMonitor.prototype.pathObserve=function(identifier, subPath, changeFn, transform){
   var observePath = convertObservePath(this.varRefRoot, subPath);
   var observer = new _.PathObserver(this.scope, observePath);
-  observer.open(changeFn);
+  if(transform){
+    observer.open(function(newValue, oldValue){
+      changeFn(
+        transform.getValue(newValue),
+        transform.getValue(oldValue)
+      );
+    });
+  }else{
+    observer.open(changeFn);
+  }
   this.observerMap.add(observePath, identifier, observer);
 }
 
@@ -51,25 +60,27 @@ function setValueWithSpawn(ref, path, value){
   }
 }
 
-ValueMonitor.prototype.getValueRef=function(subPath){
+ValueMonitor.prototype.getValueRef=function(subPath, transform){
   var observePath = convertObservePath(this.varRefRoot, subPath);
   var path = _.Path.get(observePath);
   var scope = this.scope;
   return {
     setValue : function(v, spawnUnreachablePath){
-      var success = path.setValueFrom(scope, v);
+      var tv = transform ? transform.setValue(v) : v;
+      var success = path.setValueFrom(scope, tv);
       if(!success){//unreachable path
           var spawn = spawnUnreachablePath;
           if(spawn === undefined){
             spawn = true; //default to generate all necessary sub path
           }
           if(spawn){
-            setValueWithSpawn(scope, observePath, v);
+            setValueWithSpawn(scope, observePath, tv);
           }
       }
     },
     getValue : function(){
-      return path.getValueFrom(scope);
+      var v = path.getValueFrom(scope);
+      return transform ? transform.getValue(v) : v;
     },
   };
 }
