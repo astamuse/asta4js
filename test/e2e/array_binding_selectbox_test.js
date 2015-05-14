@@ -1,7 +1,7 @@
 var assert = require('assert');
 var testUtil = require("../testUtil");
 
-describe('array binding checkbox tests', function() {
+describe('array binding select tests', function() {
     
     var url = 'http://localhost:9001/devstub/array_binding_selectbox.html';
     
@@ -14,7 +14,7 @@ describe('array binding checkbox tests', function() {
     });
     
     
-    it("selectbox in array test", function(done){
+    it("selectbox in array", function(done){
       var page = browser.url(url);
 
       page.selectByValue("select[aindex='0']", "a");

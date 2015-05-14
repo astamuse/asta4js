@@ -890,11 +890,21 @@ return /******/ (function(modules) { // webpackBootstrap
 	  }
 	}
 
-	/*
+
 	var selectRegisterDomChange = function(meta, formDef, inputType, target, changeHandler, bindContext){
-	  
+	    //just for register option binding info
+	    
+	    var optionSnippet = new Snippet(target);
+	    bindContext._addDiscardHook(function(){
+	      optionSnippet._discard();
+	    });
+	    
+	    var optionBindingHub = optionUtil.getOptionBindingHub(bindContext, meta._meta_trace_id);
+	    optionBindingHub.optionSnippet = optionSnippet;
+
+	    defaultFormRegisterDomChange(meta, formDef, inputType, target, changeHandler, bindContext);
 	}
-	*/
+
 
 	var checkboxOrRadioRender = function(meta, formDef, inputType, target, newValue, oldValue, bindContext){
 	  if(formDef._single_check){
@@ -1072,7 +1082,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	      };
 
 	      var optionMonitor = new ValueMonitor(scope, varPath);
-	      var snippet = bindContext._snippet;
+	      var snippet = optionBindingHub.optionSnippet ? optionBindingHub.optionSnippet : bindContext._snippet;
 	      
 	      var optionContext = new BindContext({
 	        _valueMonitor: optionMonitor,
@@ -1099,6 +1109,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	config.meta.typedFormHandler._render["radio"] = checkboxOrRadioRender;
 
 	config.meta.typedFormHandler._register_dom_change["__default__"] = defaultFormRegisterDomChange;
+	config.meta.typedFormHandler._register_dom_change["select"] = selectRegisterDomChange;
 	config.meta.typedFormHandler._register_dom_change["checkbox"] = checkboxOrRadioRegisterDomChange;
 	config.meta.typedFormHandler._register_dom_change["radio"] = checkboxOrRadioRegisterDomChange;
 
