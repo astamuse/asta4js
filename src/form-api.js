@@ -49,7 +49,7 @@ api.form = function(target, event1, event2){
   if(target){
     if(typeof target === "string"){
       //treat as name or selector
-      selector = "[name="+target+"]"+ ", " + target;
+      selector = "[name='"+target+"']"+ ", " + target;
     }else{
       selector = target["selector"];
       name = target["name"];

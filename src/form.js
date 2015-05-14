@@ -208,7 +208,7 @@ var _form = function (meta) {
   }
 
   if (!meta._selector) {
-    meta._selector = "[name=" + formDef._name + "]";
+    meta._selector = "[name='" + formDef._name + "']";
   }
   
   // init option bind hub

@@ -1008,7 +1008,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  }
 
 	  if (!meta._selector) {
-	    meta._selector = "[name=" + formDef._name + "]";
+	    meta._selector = "[name='" + formDef._name + "']";
 	  }
 	  
 	  // init option bind hub
@@ -1170,7 +1170,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  if(target){
 	    if(typeof target === "string"){
 	      //treat as name or selector
-	      selector = "[name="+target+"]"+ ", " + target;
+	      selector = "[name='"+target+"']"+ ", " + target;
 	    }else{
 	      selector = target["selector"];
 	      name = target["name"];
