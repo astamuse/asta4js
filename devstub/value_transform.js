@@ -4,7 +4,10 @@ $(function () {
     console.log($scope);
 
     $scope.data = {};
-    $scope.caledData = {};
+    $scope.caledData = {
+      div: null,
+      add: null
+    };
 
     $scope.snippet("body").bind($scope.data, {
       _value: [
@@ -17,13 +20,15 @@ $(function () {
         }
       ]
     }).bind($scope.caledData, {
-      _value: "#caled"
+      div: "#div-caled",
+      add: "#add-caled",
     });
     
     $scope.observe($scope.data, {
       _value: {
         _on_change: function(newValue, oldValue){
-          $scope.caledData = newValue / 2;
+          $scope.caledData.div = newValue / 2;
+          $scope.caledData.add = newValue + 1;
         }
       }
     });
