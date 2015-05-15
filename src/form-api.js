@@ -3,6 +3,7 @@
 var _lib_observe = require("../lib/observe");
 
 var util = require("./util");
+var transformers = require("./transformers");
 var config = require("./config");
 var constant = require("./constant")
 var Snippet = require("./snippet")
@@ -83,68 +84,62 @@ api.form = function(target, event1, event2){
   }
   ret._form._extra_change_events = extraChangeEvents;
   
-  ret.withOption = function(){
-    this._form._option = api.optionBind.apply(Aj, arguments);
-    return this;
-  }
-  ret.asSingleCheck = function(){
-    this._form._single_check = true;
-    return this;
-  }
-  
-  ret.transform = function(transform){
-    this._transform = transform;
-    return this;
-  };
-  
-  ret.asInt = function(radix){
-    var r = radix ? radix : 10;
-    this._transform = {
-      setValue: function(v){
-        var nv = parseInt(v, r);
-        if(isNaN(nv)){
-          return v;
-        }else{
-          return nv;
-        }
-      },
-      getValue: function(v){
-        return (v).toString(r);
-      }
-    };
-    return this;
-  }
-  
-  ret.asFloat = function(){
-    this._transform = {
-      setValue: function(v){
-        var nv = parseFloat(v);
-        if(isNaN(nv)){
-          return v;
-        }else{
-          return nv;
-        }
-      },
-      getValue: function(v){
-        return (v).toString();
-      }
-    };
-    return this;
-  }
-  
-  ret.withOption.nonMeta = true;
-  ret.asSingleCheck.nonMeta = true;
-  ret.transform.nonMeta = true;
-  ret.asInt.nonMeta = true;
-  ret.asFloat.nonMeta = true;
+  _extendFormMetaApi(ret);
 
   return ret;
 }
-api.form.singleCheck=function(){
-  var ret = api.form.apply(this, arguments);
-  ret._form._single_check = true;
-  return ret;
+
+var _formMetaApiExtending = [];
+
+var _extendFormMetaApi = function(formMeta){
+  var len = _formMetaApiExtending.length;
+  for(var i=0;i<len;i++){
+    var apis = _formMetaApiExtending[i];
+    util.shallowCopy(apis, formMeta);
+  }
 }
+
+var _addMetaApiExtending = function(apis){
+  for(var p in apis){
+    if(!apis[p]["nonMeta"]){
+      apis[p]["nonMeta"] = true;
+    }
+  }
+  _formMetaApiExtending.push(apis);
+};
+
+// add default form meta api extending
+
+_addMetaApiExtending({
+  
+  withOption : function(){
+    this._form._option = api.optionBind.apply(Aj, arguments);
+    return this;
+  },
+  
+  asSingleCheck : function(){
+    this._form._single_check = true;
+    return this;
+  },
+  
+  transform : function(transform){
+    this._transform = transform;
+    return this;
+  },
+  
+  asInt : function(radix){
+    this._transform = transformers["int"](radix);
+    return this;
+  },
+  
+  asFloat : function(){
+    this._transform = transformers["float"]();
+    return this;
+  },
+  
+});
+
+api.form.addMetaApiExtending = _addMetaApiExtending;
 
 /*
 form.optionText=function(optionData, targetField, convertFns){

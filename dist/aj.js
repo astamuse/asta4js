@@ -1124,6 +1124,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	var _lib_observe = __webpack_require__(14);
 
 	var util = __webpack_require__(1);
+	var transformers = __webpack_require__(16);
 	var config = __webpack_require__(2);
 	var constant = __webpack_require__(8)
 	var Snippet = __webpack_require__(10)
@@ -1204,68 +1205,62 @@ return /******/ (function(modules) { // webpackBootstrap
 	  }
 	  ret._form._extra_change_events = extraChangeEvents;
 	  
-	  ret.withOption = function(){
-	    this._form._option = api.optionBind.apply(Aj, arguments);
-	    return this;
-	  }
-	  ret.asSingleCheck = function(){
-	    this._form._single_check = true;
-	    return this;
-	  }
-	  
-	  ret.transform = function(transform){
-	    this._transform = transform;
-	    return this;
-	  };
-	  
-	  ret.asInt = function(radix){
-	    var r = radix ? radix : 10;
-	    this._transform = {
-	      setValue: function(v){
-	        var nv = parseInt(v, r);
-	        if(isNaN(nv)){
-	          return v;
-	        }else{
-	          return nv;
-	        }
-	      },
-	      getValue: function(v){
-	        return (v).toString(r);
-	      }
-	    };
-	    return this;
-	  }
-	  
-	  ret.asFloat = function(){
-	    this._transform = {
-	      setValue: function(v){
-	        var nv = parseFloat(v);
-	        if(isNaN(nv)){
-	          return v;
-	        }else{
-	          return nv;
-	        }
-	      },
-	      getValue: function(v){
-	        return (v).toString();
-	      }
-	    };
-	    return this;
-	  }
-	  
-	  ret.withOption.nonMeta = true;
-	  ret.asSingleCheck.nonMeta = true;
-	  ret.transform.nonMeta = true;
-	  ret.asInt.nonMeta = true;
-	  ret.asFloat.nonMeta = true;
+	  _extendFormMetaApi(ret);
 
 	  return ret;
 	}
-	api.form.singleCheck=function(){
-	  var ret = api.form.apply(this, arguments);
-	  ret._form._single_check = true;
-	  return ret;
+
+	var _formMetaApiExtending = [];
+
+	var _extendFormMetaApi = function(formMeta){
+	  var len = _formMetaApiExtending.length;
+	  for(var i=0;i<len;i++){
+	    var apis = _formMetaApiExtending[i];
+	    util.shallowCopy(apis, formMeta);
+	  }
 	}
+
+	var _addMetaApiExtending = function(apis){
+	  for(var p in apis){
+	    if(!apis[p]["nonMeta"]){
+	      apis[p]["nonMeta"] = true;
+	    }
+	  }
+	  _formMetaApiExtending.push(apis);
+	};
+
+	// add default form meta api extending
+
+	_addMetaApiExtending({
+	  
+	  withOption : function(){
+	    this._form._option = api.optionBind.apply(Aj, arguments);
+	    return this;
+	  },
+	  
+	  asSingleCheck : function(){
+	    this._form._single_check = true;
+	    return this;
+	  },
+	  
+	  transform : function(transform){
+	    this._transform = transform;
+	    return this;
+	  },
+	  
+	  asInt : function(radix){
+	    this._transform = transformers["int"](radix);
+	    return this;
+	  },
+	  
+	  asFloat : function(){
+	    this._transform = transformers["float"]();
+	    return this;
+	  },
+	  
+	});
+
+	api.form.addMetaApiExtending = _addMetaApiExtending;
 
 	/*
 	form.optionText=function(optionData, targetField, convertFns){
@@ -1525,7 +1520,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	if (module && module.exports)
 	  module.exports = clone;
-	/* WEBPACK VAR INJECTION */}.call(exports, (function() { return this; }()), __webpack_require__(17).Buffer, __webpack_require__(18)(module)))
+	/* WEBPACK VAR INJECTION */}.call(exports, (function() { return this; }()), __webpack_require__(18).Buffer, __webpack_require__(19)(module)))
 
 /***/ },
 /* 10 */
@@ -2064,7 +2059,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	var config = __webpack_require__(2);
 	var normalizeMeta = __webpack_require__(11);
 
-	var ResourceMap = __webpack_require__(16);
+	var ResourceMap = __webpack_require__(17);
 
 	var BindContext=function(override, arrayIndexes){
 	  if(override){
@@ -2239,7 +2234,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	var util = __webpack_require__(1);
 	var config = __webpack_require__(2);
-	var ResourceMap = __webpack_require__(16);
+	var ResourceMap = __webpack_require__(17);
 
 	var ValueMonitor=function(scope, varRefRoot){
 	  this.scope = scope;
@@ -4099,7 +4094,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  
 	})(typeof global !== 'undefined' && global && typeof module !== 'undefined' && module ? global : this || window);
 
-	/* WEBPACK VAR INJECTION */}.call(exports, (function() { return this; }()), __webpack_require__(18)(module)))
+	/* WEBPACK VAR INJECTION */}.call(exports, (function() { return this; }()), __webpack_require__(19)(module)))
 
 /***/ },
 /* 15 */
@@ -4318,6 +4313,58 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	var util = __webpack_require__(1);
 
+	var _int = {
+	  setValue: function(v){
+	    var nv = parseInt(v, this._radix);
+	    if(isNaN(nv)){
+	      return v;
+	    }else{
+	      return nv;
+	    }
+	  },
+	  getValue: function(v){
+	    return (v).toString(this._radix);
+	  }
+	}
+
+	var _float = {
+	  setValue: function(v){
+	    var nv = parseFloat(v);
+	    if(isNaN(nv)){
+	      return v;
+	    }else{
+	      return nv;
+	    }
+	  },
+	  getValue: function(v){
+	    return (v).toString();
+	  }
+	}
+
+	module.exports={
+	  "int": function(radix){
+	    var ret = util.shallowCopy(_int);
+	    ret._radix = radix ? radix : 10;
+	    return ret;
+	  },
+	  "float": function(){
+	    return util.shallowCopy(_float);
+	  },
+	  "date": {
+	    
+	  }
+	}
+
+
+
+/***/ },
+/* 17 */
+/***/ function(module, exports, __webpack_require__) {
+
+	"use strict";
+
+	var util = __webpack_require__(1);
+
 	var discardNode=function(node){
 	  if(node){
 	    var discardable = node.discardable;
@@ -4435,7 +4482,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	module.exports=ResourceMap;
 
 /***/ },
-/* 17 */
+/* 18 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(Buffer) {/*!
@@ -4445,9 +4492,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * @license  MIT
 	 */
 
-	var base64 = __webpack_require__(21)
-	var ieee754 = __webpack_require__(19)
-	var isArray = __webpack_require__(20)
+	var base64 = __webpack_require__(22)
+	var ieee754 = __webpack_require__(20)
+	var isArray = __webpack_require__(21)
 
 	exports.Buffer = Buffer
 	exports.SlowBuffer = SlowBuffer
@@ -5770,10 +5817,10 @@ return /******/ (function(modules) { // webpackBootstrap
 	  }
 	}
 
-	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(17).Buffer))
+	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(18).Buffer))
 
 /***/ },
-/* 18 */
+/* 19 */
 /***/ function(module, exports, __webpack_require__) {
 
 	module.exports = function(module) {
@@ -5789,7 +5836,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ },
-/* 19 */
+/* 20 */
 /***/ function(module, exports, __webpack_require__) {
 
 	exports.read = function(buffer, offset, isLE, mLen, nBytes) {
@@ -5879,7 +5926,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ },
-/* 20 */
+/* 21 */
 /***/ function(module, exports, __webpack_require__) {
 
 	
@@ -5918,7 +5965,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ },
-/* 21 */
+/* 22 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var lookup = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
