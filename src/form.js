@@ -181,6 +181,74 @@ var checkboxOrRadioRegisterDomChange = function(meta,formDef, inputType, target,
   }
 }
 
+var fileRender = function(meta, formDef, inputType, target, newValue, oldValue, bindContext){
+  //do nothing since we cannot do anything on a file input
+}
+
+var _file_preload_format_convience = {
+  "arraybuffer": "ArrayBuffer",
+  "binarystring": "BinaryString",
+  "dataurl": "DataURL",
+  "text": "Text",
+};
+
+var FileReadCounter = function(size, callback){
+  this.counter = 0;
+  this.size = size;
+  this.callback = callback;
+}
+
+FileReadCounter.prototype.inc = function(){
+  this.counter++;
+  if(this.counter>= this.size){
+    this.callback.apply();
+  }
+}
+
+var fileRegisterDomChange = function(meta, formDef, inputType, target, changeHandler, bindContext){
+  var limit = formDef._file_preload_limit;
+  if(limit === undefined){
+    //default value is 10M
+    limit = 10 * 1000 * 1000;
+  }
+  var format = formDef._file_preload_format;
+  if(!format){
+    format = "DataURL"
+  }
+  format = _file_preload_format_convience[format.toLowerCase()];
+  if(!format){
+    format = "BinaryString";
+  }
+  var targetFileApi = "readAs" + format;
+  target.bind(combinedChangeEvents(formDef, inputType).join(" "), function () {
+    var files = new Array();
+    for(var i=0;i<this.files.length;i++){
+      files[i] = this.files[i];
+    }
+    if(limit > 0){
+      var counter = new FileReadCounter(files.length, function(){
+        var v = target.prop("multiple") ? files : files[0];
+        changeHandler(v, bindContext);
+      });
+      files.forEach(function(f){
+          if(f.size > limit){
+            counter.inc();
+          }else{
+            var reader = new FileReader();
+            reader.onload= function(e){
+              f.content = reader.result;
+              counter.inc();
+            };
+            reader[targetFileApi](f);
+          }
+      });
+    }else{
+      var v = target.prop("multiple") ? files : files[0];
+      changeHandler(v, bindContext);
+    }
+  });
+}
+
 var findTypedHandler=function(handlerMap, inputType){
   var fn = handlerMap[inputType];
   if(fn){
@@ -307,9 +375,11 @@ config.meta.typedFormHandler._render["__default__"] = defaultFormRender;
 config.meta.typedFormHandler._render["select"] = selectRender;
 config.meta.typedFormHandler._render["checkbox"] = checkboxOrRadioRender;
 config.meta.typedFormHandler._render["radio"] = checkboxOrRadioRender;
+config.meta.typedFormHandler._render["file"] = fileRender;
 
 config.meta.typedFormHandler._register_dom_change["__default__"] = defaultFormRegisterDomChange;
 config.meta.typedFormHandler._register_dom_change["select"] = selectRegisterDomChange;
 config.meta.typedFormHandler._register_dom_change["checkbox"] = checkboxOrRadioRegisterDomChange;
 config.meta.typedFormHandler._register_dom_change["radio"] = checkboxOrRadioRegisterDomChange;
+config.meta.typedFormHandler._register_dom_change["file"] = fileRegisterDomChange;
 

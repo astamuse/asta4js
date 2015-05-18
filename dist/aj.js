@@ -981,6 +981,74 @@ return /******/ (function(modules) { // webpackBootstrap
 	  }
 	}
 
+	var fileRender = function(meta, formDef, inputType, target, newValue, oldValue, bindContext){
+	  //do nothing since we cannot do anything on a file input
+	}
+
+	var _file_preload_format_convience = {
+	  "arraybuffer": "ArrayBuffer",
+	  "binarystring": "BinaryString",
+	  "dataurl": "DataURL",
+	  "text": "Text",
+	};
+
+	var FileReadCounter = function(size, callback){
+	  this.counter = 0;
+	  this.size = size;
+	  this.callback = callback;
+	}
+
+	FileReadCounter.prototype.inc = function(){
+	  this.counter++;
+	  if(this.counter>= this.size){
+	    this.callback.apply();
+	  }
+	}
+
+	var fileRegisterDomChange = function(meta, formDef, inputType, target, changeHandler, bindContext){
+	  var limit = formDef._file_preload_limit;
+	  if(limit === undefined){
+	    //default value is 10M
+	    limit = 10 * 1000 * 1000;
+	  }
+	  var format = formDef._file_preload_format;
+	  if(!format){
+	    format = "DataURL"
+	  }
+	  format = _file_preload_format_convience[format.toLowerCase()];
+	  if(!format){
+	    format = "BinaryString";
+	  }
+	  var targetFileApi = "readAs" + format;
+	  target.bind(combinedChangeEvents(formDef, inputType).join(" "), function () {
+	    var files = new Array();
+	    for(var i=0;i<this.files.length;i++){
+	      files[i] = this.files[i];
+	    }
+	    if(limit > 0){
+	      var counter = new FileReadCounter(files.length, function(){
+	        var v = target.prop("multiple") ? files : files[0];
+	        changeHandler(v, bindContext);
+	      });
+	      files.forEach(function(f){
+	          if(f.size > limit){
+	            counter.inc();
+	          }else{
+	            var reader = new FileReader();
+	            reader.onload= function(e){
+	              f.content = reader.result;
+	              counter.inc();
+	            };
+	            reader[targetFileApi](f);
+	          }
+	      });
+	    }else{
+	      var v = target.prop("multiple") ? files : files[0];
+	      changeHandler(v, bindContext);
+	    }
+	  });
+	}
+
 	var findTypedHandler=function(handlerMap, inputType){
 	  var fn = handlerMap[inputType];
 	  if(fn){
@@ -1107,11 +1175,13 @@ return /******/ (function(modules) { // webpackBootstrap
 	config.meta.typedFormHandler._render["select"] = selectRender;
 	config.meta.typedFormHandler._render["checkbox"] = checkboxOrRadioRender;
 	config.meta.typedFormHandler._render["radio"] = checkboxOrRadioRender;
+	config.meta.typedFormHandler._render["file"] = fileRender;
 
 	config.meta.typedFormHandler._register_dom_change["__default__"] = defaultFormRegisterDomChange;
 	config.meta.typedFormHandler._register_dom_change["select"] = selectRegisterDomChange;
 	config.meta.typedFormHandler._register_dom_change["checkbox"] = checkboxOrRadioRegisterDomChange;
 	config.meta.typedFormHandler._register_dom_change["radio"] = checkboxOrRadioRegisterDomChange;
+	config.meta.typedFormHandler._register_dom_change["file"] = fileRegisterDomChange;
 
 
 
@@ -1229,8 +1299,11 @@ return /******/ (function(modules) { // webpackBootstrap
 	  _formMetaApiExtending.push(apis);
 	};
 
-	// add default form meta api extending
 
+	// adjust to millisecond unit
+	var _default_tz_offset = (new Date()).getTimezoneOffset() * 60 * 1000;
+
+	// add default form meta api extending
 	_addMetaApiExtending({
 	  
 	  withOption : function(){
@@ -1257,6 +1330,49 @@ return /******/ (function(modules) { // webpackBootstrap
 	    this._transform = transformers["float"]();
 	    return this;
 	  },
+	  
+	  asDatetime : function(option){
+	    var op = option ? util.shallowCopy(option) : {};
+	    //the default form transformer will try to deal with html5 datetime-local input, so we need to customize the transform option
+	    if(op._parse_tz_offset === undefined){
+	      op._parse_tz_offset = _default_tz_offset;
+	    }
+	    if(op._stringy_tz_offset === undefined){
+	      op._stringy_tz_offset = _default_tz_offset;
+	    }
+	    this._transform = transformers["datetime"](op);
+	    return this;
+	  },
+	  /**
+	   * (limit)
+	   * (format)
+	   * (limit, format)
+	   * (format, limit)
+	   * ({
+	   *  _file_preload_limit:
+	   *  _file_preload_format:
+	   * }),
+	   * ({
+	   *  limit:
+	   *  format:
+	   * })
+	   */
+	  asFile: function(op1, op2){
+	    var limit;
+	    var format;
+	    if(op1 === undefined && op2 === undefined){
+	      return this;
+	    }else if(op2 === undefined){
+	      var type = typeof op1;
+	      if(type === "number"){
+	        limit = op1;
+	      }else if (type === "string"){
+	        format = op1;
+	      }
+	    }
+	    this._form._file_preload_limit = option._file_preload_limit;
+	    this._form._file_preload_format = option._file_preload_format;
+	  }
 	  
 	});
 
@@ -4323,7 +4439,11 @@ return /******/ (function(modules) { // webpackBootstrap
 	    }
 	  },
 	  getValue: function(v){
-	    return (v).toString(this._radix);
+	    if(v){
+	      return (v).toString(this._radix);
+	    }else{
+	      return v;
+	    }
 	  }
 	}
 
@@ -4337,7 +4457,73 @@ return /******/ (function(modules) { // webpackBootstrap
 	    }
 	  },
 	  getValue: function(v){
-	    return (v).toString();
+	    if(v){
+	      return (v).toString(this._radix);
+	    }else{
+	      return v;
+	    }
+	  }
+	}
+
+	var pad = function(number) {
+	  if (number < 10) {
+	    return '0' + number;
+	  }
+	  return number;
+	};
+
+	var toISOString = function(date, keepMs, keepZ) {
+	  var s = date.getUTCFullYear() +
+	    '-' + pad(date.getUTCMonth() + 1) +
+	    '-' + pad(date.getUTCDate()) +
+	    'T' + pad(date.getUTCHours()) +
+	    ':' + pad(date.getUTCMinutes()) +
+	    ':' + pad(date.getUTCSeconds());
+	  
+	  if(keepMs){
+	    s += '.' + (date.getUTCMilliseconds() / 1000).toFixed(3).slice(2, 5);
+	  }
+	  
+	  if(keepZ){
+	    s += 'Z';
+	  }
+	  
+	  return s;
+	};
+
+	var _datetime = {
+	  //default tz is UTC or the given parse value is with tz information
+	  _parse_tz_offset : 0,
+	  //default tz is UTC
+	  _stringy_tz_offset: 0,
+	  //default to remove the tail z in stringified iso string
+	  _stringy_as_local : true,
+	  //default to remove tail milliseconds value
+	  _stringy_keep_ms : false,
+	  setValue : function(v){
+	    var time = Date.parse(v);
+	    if(isNaN(time)){
+	      return v;
+	    }else{
+	      time = time + this._parse_tz_offset;
+	      return new Date(time);
+	    }
+	  },
+	  getValue : function(v){
+	    if(v && v.toISOString && v.getTime){//is a date
+	      if(this._stringy_as_local){
+	        var d = new Date(v.getTime());
+	        if(this._stringy_tz_offset !== 0){
+	          d.setTime(d.getTime() - this._stringy_tz_offset);
+	        }
+	        return toISOString(d, this._stringy_keep_ms, !this._stringy_as_local);
+	      }else{
+	        return v.toISOString();
+	      }
+	    }else{
+	      return v;
+	    }
+	    
 	  }
 	}
 
@@ -4350,7 +4536,13 @@ return /******/ (function(modules) { // webpackBootstrap
 	  "float": function(){
 	    return util.shallowCopy(_float);
 	  },
-	  "date": {
+	  "datetime": function(option){
+	    var ret = util.shallowCopy(_datetime);
+	    if(option){
+	      return util.shallowCopy(option, ret);
+	    }else{
+	      return ret;
+	    }
 	    
 	  }
 	}

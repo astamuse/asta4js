@@ -108,8 +108,11 @@ var _addMetaApiExtending = function(apis){
   _formMetaApiExtending.push(apis);
 };
 
-// add default form meta api extending
 
+// adjust to millisecond unit
+var _default_tz_offset = (new Date()).getTimezoneOffset() * 60 * 1000;
+
+// add default form meta api extending
 _addMetaApiExtending({
   
   withOption : function(){
@@ -136,6 +139,49 @@ _addMetaApiExtending({
     this._transform = transformers["float"]();
     return this;
   },
+  
+  asDatetime : function(option){
+    var op = option ? util.shallowCopy(option) : {};
+    //the default form transformer will try to deal with html5 datetime-local input, so we need to customize the transform option
+    if(op._parse_tz_offset === undefined){
+      op._parse_tz_offset = _default_tz_offset;
+    }
+    if(op._stringy_tz_offset === undefined){
+      op._stringy_tz_offset = _default_tz_offset;
+    }
+    this._transform = transformers["datetime"](op);
+    return this;
+  },
+  /**
+   * (limit)
+   * (format)
+   * (limit, format)
+   * (format, limit)
+   * ({
+   *  _file_preload_limit:
+   *  _file_preload_format:
+   * }),
+   * ({
+   *  limit:
+   *  format:
+   * })
+   */
+  asFile: function(op1, op2){
+    var limit;
+    var format;
+    if(op1 === undefined && op2 === undefined){
+      return this;
+    }else if(op2 === undefined){
+      var type = typeof op1;
+      if(type === "number"){
+        limit = op1;
+      }else if (type === "string"){
+        format = op1;
+      }
+    }
+    this._form._file_preload_limit = option._file_preload_limit;
+    this._form._file_preload_format = option._file_preload_format;
+  }
   
 });
 
