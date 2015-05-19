@@ -110,6 +110,19 @@ var defaultTransform = {
   getValue: defaultTransformFn,
 }
 
+var creatorDebugIntercept=function(debugId, meta, creator){
+  return function(bindContext){
+    var fn = creator.call(this, bindContext);
+    return function(){
+      console.log("debug info:", debugId, "\ncurrent meta:", meta, "\ncalling args:", arguments);
+      if(meta._item && bindContext._snippet && !meta._duplicator){
+        console.error("it seems that _duplicator is absent for current meta which is with _item define. current meta:", meta);
+      }
+      fn.apply(this, arguments);
+    };
+  }
+}
+
 var normalizeMeta = function(meta, metaId, propertyPath){
   
   if(propertyPath === undefined || propertyPath === null){
@@ -241,8 +254,11 @@ var normalizeMeta = function(meta, metaId, propertyPath){
         var m = newMeta[mr.key];
         if (m !== undefined && m !== null) {
           mr.fn(newMeta);
-          newMeta[mr.key] = null;
-          delete newMeta[mr.key];
+          if(!config.debug){
+            //remove unnecessary meta info to reduce memory usage
+            newMeta[mr.key] = null;
+            delete newMeta[mr.key];
+          }
         }
       });
       
@@ -386,6 +402,16 @@ var normalizeMeta = function(meta, metaId, propertyPath){
           return function(value, bindContext){
             vr.setValue(value);
           };
+        }
+      }
+      
+      //debugger
+      if(config.debug && newMeta._debug){
+        if(newMeta._change_handler_creator){
+          newMeta._change_handler_creator = creatorDebugIntercept(newMeta._debug, newMeta, newMeta._change_handler_creator);
+        }
+        if(newMeta._assign_change_handler_creator){
+          newMeta._assign_change_handler_creator = creatorDebugIntercept(newMeta._debug, newMeta, newMeta._assign_change_handler_creator);
         }
       }
       

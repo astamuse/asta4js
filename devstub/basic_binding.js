@@ -1,8 +1,6 @@
 $(function(){
 
   Aj.init(function($scope){
-    console.log($scope);
-    
     $scope.data = {
       sub: {
         rr: "rrr-haha"
@@ -44,23 +42,18 @@ $(function(){
                 }
               },
               //1 way
-              "#preview",
+              [
+                {
+                  _selector: "#preview",
+                  _debug: "preview info"
+                },
+                "#not-exists-element"
+              ]
             ],
             sub: {
               rr: ".x-recursive-value"
             }
           });
-    /*
-    $scope.observe($scope.data, {
-      values : {
-        _splice: function(){},
-        _value: function(){},
-        _item: {
-          _index: function(){},
-        }
-      }
-    });
-    */
     
   });
 

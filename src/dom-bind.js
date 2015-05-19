@@ -31,6 +31,9 @@ ComposedBindContext.prototype._discard=function(){
 
 var _duplicator = function(meta){
   var duplicator = meta._duplicator;
+  if(!meta._item){
+    console.error("There is no corresponding _item define for duplicator:", duplicator);
+  }
   var targetPath = meta._target_path;
   if(!meta._array_map && !meta._array_discard){
     meta._array_discard = function(){
@@ -78,6 +81,9 @@ var _duplicator = function(meta){
         //initialize the place holder and template
         var snippet = bindContext._snippet;
         var targets = snippet.find(duplicator);
+        if(targets.length === 0 && !meta._omit_target_not_found){
+          console.error("target is not found for duplicator:", duplicator, "current meta:", meta);
+        }
         for(var i=0;i<targets.length;i++){
           var elem = targets.get(i);
           var tagName = elem.tagName;
@@ -260,6 +266,9 @@ var _render = function (meta) {
     meta._change_handler_creator = function(bindContext){
       var snippet = bindContext._snippet;
       var target = snippet.find(selector);
+      if(target.length === 0 && !meta._omit_target_not_found){
+        console.error("could not find target of selector:", selector, meta);
+      }
       if(targetPath === "_index"){
         //we do not need to observe anything, just return a force render handler
         return function(){
@@ -287,6 +296,9 @@ var _register_dom_change = function (meta) {
     meta._register_assign = function(bindContext, changeHandler){
       var snippet = bindContext._snippet;
       var target = snippet.find(selector);
+      if(target.length === 0 && !meta._omit_target_not_found){
+          console.error("could not find target of selector:", selector, meta);
+      }
       return _register_dom_change(target, changeHandler, bindContext);
     }
   }

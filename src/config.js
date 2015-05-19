@@ -5,7 +5,7 @@ var _global = window ? window : {};
 
 module.exports = {
   $: _global.jQuery,
-  log : true,
+  debug : true,
   autoSyncAfterJqueryAjax: true,
   meta  : {
     nonObjectMetaConvertor : function(meta){},
@@ -21,6 +21,6 @@ module.exports = {
   },
   snippet: {
     resolveRoot: function(arg){}
-  }
+  },
 };
 

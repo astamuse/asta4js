@@ -18,11 +18,14 @@ $(function () {
           _item: {
             _value: {
               _selector: ":root",
+              _debug: "tfiles debug",
               _render: function(target, newValue, oldValue){
                 target.text(JSON.stringify(newValue));
               }
             }
-          }//_item
+          },//_item,
+          _debug: "tfiles array",
+          //_omit_target_not_found: true
         }
       ]
     });
