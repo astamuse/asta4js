@@ -40,7 +40,7 @@ $(function () {
         }
       ],
       tfiles: [
-        Aj.form(),
+        Aj.form().fileOption(1000),
         {
           _duplicator: "#tfiles-prev",
           _item: {

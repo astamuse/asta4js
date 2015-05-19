@@ -990,6 +990,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  "binarystring": "BinaryString",
 	  "dataurl": "DataURL",
 	  "text": "Text",
+	  "base64": "DataURL",
 	};
 
 	var FileReadCounter = function(size, callback){
@@ -1012,14 +1013,17 @@ return /******/ (function(modules) { // webpackBootstrap
 	    limit = 10 * 1000 * 1000;
 	  }
 	  var format = formDef._file_preload_format;
-	  if(!format){
-	    format = "DataURL"
+	  if(format){
+	    format = format.toLowerCase();
+	  }else{
+	    format = "base64"
 	  }
-	  format = _file_preload_format_convience[format.toLowerCase()];
-	  if(!format){
-	    format = "BinaryString";
+	  var targetFileApi = _file_preload_format_convience[format];
+	  if(!targetFileApi){
+	    format = "base64";
+	    targetFileApi = "DataURL";
 	  }
-	  var targetFileApi = "readAs" + format;
+	  targetFileApi = "readAs" + targetFileApi;
 	  target.bind(combinedChangeEvents(formDef, inputType).join(" "), function () {
 	    var files = new Array();
 	    for(var i=0;i<this.files.length;i++){
@@ -1036,7 +1040,12 @@ return /******/ (function(modules) { // webpackBootstrap
 	          }else{
 	            var reader = new FileReader();
 	            reader.onload= function(e){
-	              f.content = reader.result;
+	              var content = reader.result;
+	              if(format === "base64"){
+	                var index = content.indexOf("base64,");
+	                content = content.substr(index+7);
+	              }
+	              f.content = content;
 	              counter.inc();
 	            };
 	            reader[targetFileApi](f);
@@ -1357,21 +1366,47 @@ return /******/ (function(modules) { // webpackBootstrap
 	   *  format:
 	   * })
 	   */
-	  asFile: function(op1, op2){
+	  fileOption: function(op1, op2){
 	    var limit;
 	    var format;
-	    if(op1 === undefined && op2 === undefined){
-	      return this;
+	    if(op1 === undefined){//&& op2 === undefined
+	      //do nothing
 	    }else if(op2 === undefined){
 	      var type = typeof op1;
 	      if(type === "number"){
 	        limit = op1;
 	      }else if (type === "string"){
 	        format = op1;
+	      }else if (type == "object"){
+	        limit = op1["_file_preload_limit"];
+	        format = op1["_file_preload_format"];
+	        if(limit === undefined){
+	          limit = op1["limit"];
+	        }
+	        if(format === undefined){
+	          format = op1["format"];
+	        }
+	        if(limit === undefined && format === undefined){
+	          console.error("unrecognised option:", op1);
+	        }
+	      }
+	    }else{
+	      //op1 && op2
+	      var type1 = typeof op1;
+	      var type2 = typeof op2;
+	      if(type1 === "number" && type2 === "string"){
+	        limit = op1;
+	        format = op2;
+	      }else if(type1 === "string" && type2 === "number"){
+	        limit = op2;
+	        format = op1;
+	      }else{
+	        console.error("unrecognised option:", op1, op2);
 	      }
 	    }
-	    this._form._file_preload_limit = option._file_preload_limit;
-	    this._form._file_preload_format = option._file_preload_format;
+	    this._form._file_preload_limit = limit;
+	    this._form._file_preload_format = format;
+	    return this;
 	  }
 	  
 	});

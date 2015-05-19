@@ -1,6 +1,6 @@
 var assert = require('assert');
 
-describe('watch binding tests', function() {
+describe('value transform tests', function() {
     
     var url = 'http://localhost:9001/devstub/value_transform.html';
     
@@ -14,7 +14,7 @@ describe('watch binding tests', function() {
     
     it("transform test", function(done){
       var page = browser.url(url);
-      page.setValue("[name=value]", "xxx");
+      page.setValue("[name=tint]", "xxx");
       page.click("#prev");//trigger onChange
 
       page.getText("#prev", function(err, text){
@@ -27,7 +27,7 @@ describe('watch binding tests', function() {
         assert.strictEqual(text,'xxx1');
       });
       
-      page.setValue("[name=value]", "6");
+      page.setValue("[name=tint]", "6");
       page.click("#prev");//trigger onChange
 
       page.getText("#prev", function(err, text){

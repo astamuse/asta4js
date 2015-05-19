@@ -190,6 +190,7 @@ var _file_preload_format_convience = {
   "binarystring": "BinaryString",
   "dataurl": "DataURL",
   "text": "Text",
+  "base64": "DataURL",
 };
 
 var FileReadCounter = function(size, callback){
@@ -212,14 +213,17 @@ var fileRegisterDomChange = function(meta, formDef, inputType, target, changeHan
     limit = 10 * 1000 * 1000;
   }
   var format = formDef._file_preload_format;
-  if(!format){
-    format = "DataURL"
+  if(format){
+    format = format.toLowerCase();
+  }else{
+    format = "base64"
   }
-  format = _file_preload_format_convience[format.toLowerCase()];
-  if(!format){
-    format = "BinaryString";
+  var targetFileApi = _file_preload_format_convience[format];
+  if(!targetFileApi){
+    format = "base64";
+    targetFileApi = "DataURL";
   }
-  var targetFileApi = "readAs" + format;
+  targetFileApi = "readAs" + targetFileApi;
   target.bind(combinedChangeEvents(formDef, inputType).join(" "), function () {
     var files = new Array();
     for(var i=0;i<this.files.length;i++){
@@ -236,7 +240,12 @@ var fileRegisterDomChange = function(meta, formDef, inputType, target, changeHan
           }else{
             var reader = new FileReader();
             reader.onload= function(e){
-              f.content = reader.result;
+              var content = reader.result;
+              if(format === "base64"){
+                var index = content.indexOf("base64,");
+                content = content.substr(index+7);
+              }
+              f.content = content;
               counter.inc();
             };
             reader[targetFileApi](f);
