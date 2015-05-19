@@ -1,6 +1,10 @@
 "use strict";
 
+//to avoid unit test failed on lacking of global reference
+var _global = window ? window : {};
+
 module.exports = {
+  $: _global.jQuery,
   log : true,
   autoSyncAfterJqueryAjax: true,
   meta  : {
@@ -15,5 +19,8 @@ module.exports = {
   scope : {
     create: function(){}
   },
+  snippet: {
+    findRoot: function(selector){}
+  }
 };
 

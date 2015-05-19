@@ -8,6 +8,8 @@ var Aj={};
 //basic apis
 Aj.config = require('./config');
 
+var $ = Aj.config.$;
+
 Aj.util = shallow(util, {}, [
   "createUID",
   "regulateArray",
@@ -37,13 +39,11 @@ require("./form");
 shallow(require("./form-api"), Aj);
 
 if($){
-  $(function(){
-    if(Aj.config.autoSyncAfterJqueryAjax){
-      $( document ).ajaxComplete(function() {
-        Aj.sync();
-      });
-    }
-  });
+  if(Aj.config.autoSyncAfterJqueryAjax){
+    $( document ).ajaxComplete(function() {
+      Aj.sync();
+    });
+  }
 }
 
 module.exports = Aj;

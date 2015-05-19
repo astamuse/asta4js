@@ -68,6 +68,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	//basic apis
 	Aj.config = __webpack_require__(2);
 
+	var $ = Aj.config.$;
+
 	Aj.util = shallow(util, {}, [
 	  "createUID",
 	  "regulateArray",
@@ -97,13 +99,11 @@ return /******/ (function(modules) { // webpackBootstrap
 	shallow(__webpack_require__(7), Aj);
 
 	if($){
-	  $(function(){
-	    if(Aj.config.autoSyncAfterJqueryAjax){
-	      $( document ).ajaxComplete(function() {
-	        Aj.sync();
-	      });
-	    }
-	  });
+	  if(Aj.config.autoSyncAfterJqueryAjax){
+	    $( document ).ajaxComplete(function() {
+	      Aj.sync();
+	    });
+	  }
 	}
 
 	module.exports = Aj;
@@ -115,8 +115,10 @@ return /******/ (function(modules) { // webpackBootstrap
 	"use strict";
 
 	var constant = __webpack_require__(8)
+	var config = __webpack_require__(2);
 
 	var util = {};
+	var $ = config.$;
 
 	util.sync = function(){
 	  Platform.performMicrotaskCheckpoint();
@@ -161,7 +163,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	//TODO we should keep ref always
 	util.regulateArray = function (v, tryKeepRef) {
-	  if ($.isArray(v)) {
+	  if (Array.isArray(v)) {
 	    if(tryKeepRef){
 	      return v;
 	    }else{
@@ -175,6 +177,20 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 	util.clone = __webpack_require__(9);
+
+	util.isJQuery = function(obj){
+	  if(obj){
+	    if($){
+	      return obj instanceof $
+	          || obj.constructor == $
+	          || Boolean(obj.jquery);
+	    }else{
+	      return Boolean(obj.jquery);
+	    }
+	  }else{
+	    return false;
+	  }
+	}
 
 	/**
 	 * (from)
@@ -276,7 +292,11 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	"use strict";
 
+	//to avoid unit test failed on lacking of global reference
+	var _global = window ? window : {};
+
 	module.exports = {
+	  $: _global.jQuery,
 	  log : true,
 	  autoSyncAfterJqueryAjax: true,
 	  meta  : {
@@ -291,6 +311,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	  scope : {
 	    create: function(){}
 	  },
+	  snippet: {
+	    findRoot: function(selector){}
+	  }
 	};
 
 
@@ -336,10 +359,12 @@ return /******/ (function(modules) { // webpackBootstrap
 	  bindContext._bind(meta);
 	}
 
-
-	Scope.prototype.snippet = function(selector){
+	/**
+	 * root/selector
+	 */
+	Scope.prototype.snippet = function(arg){
 	  var scope = this;
-	  var snippet = new Snippet(selector);
+	  var snippet = new Snippet(arg);
 	  snippet.bind = function(varRef, meta){
 	    var context = createValueMonitorContext(scope, varRef);
 	    context = util.shallowCopy(createSnippetContext(snippet), context);
@@ -367,6 +392,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	var constant = __webpack_require__(8)
 	var Snippet = __webpack_require__(10);
 	var BindContext = __webpack_require__(12);
+
+	var $ = config.$;
 
 	var ComposedBindContext=function(contexts){
 	  this._contexts = contexts;
@@ -811,6 +838,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	var ValueMonitor = __webpack_require__(13)
 
 	var optionUtil = __webpack_require__(15)
+
+	var $ = config.$;
 
 	var getInputType=function(jq){
 	  var inputType;
@@ -1680,14 +1709,19 @@ return /******/ (function(modules) { // webpackBootstrap
 	"use strict";
 
 	var util = __webpack_require__(1);
+	var config = __webpack_require__(2);
 	var BindContext = __webpack_require__(12);
 	var ValueMonitor = __webpack_require__(13);
+
+	var $ = config.$;
 
 	var Snippet = function(arg){
 	  if (typeof arg === "string"){
 	    this._root = $(arg);//as selector
-	  }else{
+	  }else if(util.isJQuery(arg)){
 	    this._root = arg;
+	  }else{
+	    throw "JQuery object is expected for snippet root but found:" + JSON.stringify(arg);
 	  }
 	  if(this._root.length == 0){
 	    var err = new Error("Snippet was not found for given selector:" + this.root.selector);
@@ -1709,6 +1743,11 @@ return /******/ (function(modules) { // webpackBootstrap
 	    util.sync();
 	  });
 	  return this;
+	}
+
+
+	config.snippet.findRoot = function(selector){
+	  return $(selector);
 	}
 
 	module.exports = Snippet;
@@ -4259,6 +4298,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	var Snippet = __webpack_require__(10)
 	var normalizeMeta = __webpack_require__(11)
 
+	var $ = config.$;
 
 	var getOptionBindingHub=function(bindContext, identifier){
 	  var info = bindContext._getResource("optionBindingHub", identifier);

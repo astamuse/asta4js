@@ -12,6 +12,8 @@ var ValueMonitor = require("./value-monitor")
 
 var optionUtil = require("./form-option")
 
+var $ = config.$;
+
 var getInputType=function(jq){
   var inputType;
   var tagName = jq.prop("tagName");

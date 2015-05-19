@@ -1,8 +1,10 @@
 "use strict";
 
 var constant = require("./constant")
+var config = require('./config');
 
 var util = {};
+var $ = config.$;
 
 util.sync = function(){
   Platform.performMicrotaskCheckpoint();
@@ -47,7 +49,7 @@ util.createUID = function () {
 
 //TODO we should keep ref always
 util.regulateArray = function (v, tryKeepRef) {
-  if ($.isArray(v)) {
+  if (Array.isArray(v)) {
     if(tryKeepRef){
       return v;
     }else{
@@ -61,6 +63,20 @@ util.regulateArray = function (v, tryKeepRef) {
 };
 
 util.clone = require("../lib/clone");
+
+util.isJQuery = function(obj){
+  if(obj){
+    if($){
+      return obj instanceof $
+          || obj.constructor == $
+          || Boolean(obj.jquery);
+    }else{
+      return Boolean(obj.jquery);
+    }
+  }else{
+    return false;
+  }
+}
 
 /**
  * (from)

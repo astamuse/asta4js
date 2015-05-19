@@ -8,6 +8,8 @@ var constant = require("./constant")
 var Snippet = require("./snippet");
 var BindContext = require("./bind-context");
 
+var $ = config.$;
+
 var ComposedBindContext=function(contexts){
   this._contexts = contexts;
 }

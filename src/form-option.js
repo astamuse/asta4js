@@ -6,6 +6,7 @@ var constant = require("./constant")
 var Snippet = require("./snippet")
 var normalizeMeta = require("./meta")
 
+var $ = config.$;
 
 var getOptionBindingHub=function(bindContext, identifier){
   var info = bindContext._getResource("optionBindingHub", identifier);

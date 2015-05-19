@@ -45,7 +45,6 @@ module.exports = function (grunt) {
       options: {
         frameworks: ['jasmine', 'commonjs'],
         files: [
-          'https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"',
           'lib/**/*.js',
           'src/**/*.js',
           'test/spec/**/*.js'
