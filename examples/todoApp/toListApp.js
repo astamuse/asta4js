@@ -20,7 +20,7 @@ $(function () {
             ".x-todo-text"
           ],
           complete: [
-            Aj.form.singleCheck({name:"todo-complete"}, "click"), //response on click
+            Aj.form({name:"todo-complete"}, "click").asSingleCheck(), //response on click
             ".x-todo-item@>[class:done?]",
           ]
         },
@@ -76,7 +76,7 @@ $(function () {
       clearDisplay: "#clear-completed@>[style:display=]",
       completeCount: ".x-complete-count",
       unCompleteCount: ".x-uncomplete-count",
-      allCompleted: Aj.form.singleCheck("#toggle-all", "click")
+      allCompleted: Aj.form("#toggle-all", "click").asSingleCheck()
     });
     
 
