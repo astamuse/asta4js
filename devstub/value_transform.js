@@ -30,29 +30,6 @@ $(function () {
             }
           }
       ],
-      tfile: [
-        Aj.form(),
-        {
-          _selector: "#tfile-prev",
-          _render: function(target, newValue, oldValue){
-            target.text(JSON.stringify(newValue));
-          }
-        }
-      ],
-      tfiles: [
-        Aj.form().fileOption(1000),
-        {
-          _duplicator: "#tfiles-prev",
-          _item: {
-            _value: {
-              _selector: ":root",
-              _render: function(target, newValue, oldValue){
-                target.text(JSON.stringify(newValue));
-              }
-            }
-          }//_item
-        }
-      ]
     }).bind($scope.caledData, {
       div: "#div-caled",
       add: "#add-caled",

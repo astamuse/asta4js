@@ -84,7 +84,30 @@ $(function () {
 
     //must use on for dynamically generated array items
     $scope.snippet("#todoapp")
-      .on("dblclick", ".x-todo-item", function(){//double click to edit
+      .bind("#new-todo", "keypress",  function(e){
+        if(e.keyCode != 13){
+          return;
+        }
+        var todo = {
+          text: $scope.data.newTodo,
+          complete: false
+        }
+        var list = $scope.data.list;
+        if(!list){
+          list = [];
+          $scope.data.list = list;
+        }
+        list.push(todo);
+        
+        //due to 2w binding, we'd better change the value later
+        Aj.delay(function(){
+          $scope.data.newTodo = "";
+        });
+      }).bind("#toggle-all", "click", function(){//mark all complete/uncomplete
+        $scope.data.list.forEach(function(t){
+          t.complete = $scope.uiControlData.allCompleted;
+        });
+      }).on("dblclick", ".x-todo-item", function(){//double click to edit
         $(this).addClass("editing");
       }).on("blur", ".x-todo-item", function(){//blur to exit edit
         $(this).removeClass("editing");
@@ -97,55 +120,16 @@ $(function () {
       }).on("click", ".destroy", function(){ //click to destroy current item
         var index = parseInt($(this).attr("index"));
         $scope.data.list.splice(index, 1);
-      });
-    
-    //mark all complete/uncomplete
-    $("#toggle-all").click(function(){
-      $scope.data.list.forEach(function(t){
-        t.complete = $scope.uiControlData.allCompleted;
-      });
-      //this is necessary currently, but should can be ignored later
-      Aj.sync();
-    });
-
-    //clear all completed
-    $("#clear-completed").click(function(){
-      var list = $scope.data.list;
-      for(var i=list.length-1;i>=0;i--){
-        if(list[i].complete){
-          list.splice(i, 1);
+      }).bind("#clear-completed", "click", function(){//clear all completed
+        var list = $scope.data.list;
+        for(var i=list.length-1;i>=0;i--){
+          if(list[i].complete){
+            list.splice(i, 1);
+          }
         }
-      }
-      //this is necessary currently, but should can be ignored later
-      Aj.sync();
-    });
-    
-    //enter key to add new item
-    $("#new-todo").keypress(function(e){
-      if(e.keyCode != 13){
-        return;
-      }
-      var todo = {
-        text: $scope.data.newTodo,
-        complete: false
-      }
-      var list = $scope.data.list;
-      if(!list){
-        list = [];
-        $scope.data.list = list;
-      }
-      list.push(todo);
-      
-      //due to 2w binding, we'd better change the value later
-      Aj.delay(function(){
-        $scope.data.newTodo = "";
       });
-      
-      //this is necessary currently, but should can be ignored later
-      Aj.sync();
-      
-    });
-
+    
+    //data init
     $.ajax({
       type: "get",
       url: "test.json",

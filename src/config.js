@@ -20,7 +20,7 @@ module.exports = {
     create: function(){}
   },
   snippet: {
-    findRoot: function(selector){}
+    resolveRoot: function(arg){}
   }
 };
 

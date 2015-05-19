@@ -69,19 +69,13 @@ $(function () {
           }
         }
       ]
-    });
-
-    $("#confirm-value").click(function () {
+    }).bind("#confirm-value", "click", function () {
       $("#confirm-value-pre").text(JSON.stringify($scope.data));
-    });
-
-    $("#set-value").click(function () {
+    }).bind("#set-value", "click", function () {
       var v = $("#data-input").val();
       $scope.data = JSON.parse(v);
       Aj.sync();
-    });
-    
-    $("#set-option").click(function () {
+    }).bind("#set-option", "click", function () {
       var v = $("#option-input").val();
       $scope.dataOption = JSON.parse(v);
       Aj.sync();

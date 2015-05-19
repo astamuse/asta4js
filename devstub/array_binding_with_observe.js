@@ -103,9 +103,7 @@ $(function () {
       if (currentIndex < $scope.data.list.length - 1) {
         Aj.util.arraySwap($scope.data.list, currentIndex, currentIndex + 1);
       }
-    });
-
-    $("#set-list-value").click(function () {
+    }).bind("#set-list-value", "click", function () {
       var v = $("#list-data-input").val();
       var list = v.split("\n");
       $scope.data.list = list;

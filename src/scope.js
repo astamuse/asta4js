@@ -35,18 +35,17 @@ Scope.prototype.observe = function(varRef, meta){
   bindContext._bind(meta);
 }
 
+var snippetBindMeta = Snippet.prototype.bindMeta;
+
 /**
  * root/selector
  */
 Scope.prototype.snippet = function(arg){
   var scope = this;
   var snippet = new Snippet(arg);
-  snippet.bind = function(varRef, meta){
+  snippet.bindMeta = function(varRef, meta){
     var context = createValueMonitorContext(scope, varRef);
-    context = util.shallowCopy(createSnippetContext(snippet), context);
-    var bindContext = new BindContext(context);
-    bindContext._bind(meta);
-    return this;
+    return snippetBindMeta.call(this, meta, context);
   };
   return snippet;
 }
