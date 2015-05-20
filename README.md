@@ -24,6 +24,25 @@ Then we can bind the two DOM elements with the javascript model as following:
   });
 ```
 
-## guide
+See more details at [Asta4js wiki](https://github.com/astamuse/asta4js/wiki)
 
-See [Asta4js wiki](https://github.com/astamuse/asta4js/wiki)
+## status and road map
+
+Currently, Asta4js is still in alpha developing, which means it still lacks of some important functionalities, but it can be considered as stable for existing functions because we are using it in our service developing.
+
+Todo things:
+
+* build
+    * it seems that karma is not a good option for common unit test purpose.
+    * CI support(better with sauce)
+    * source format and jshint
+* binding
+    * add test for multiple select
+    * add support for option group of select
+    * Aj.form should allow meta override
+* docs
+    * complete the basic user guide and reference(in progress)
+* virtual component(web component support)
+    * **Not yet started.**
+
+Any issue report or contribution/PR is appreciated.
