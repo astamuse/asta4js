@@ -2,18 +2,23 @@
  * Shared build function
  */
 
-module.exports = function (grunt, cb) {
-  
-  //console.log("here", process.cwd())
-  
-  //console.log("aaa", __dirname)
+var getLicense = function(){
+  var fs = require('fs');
+  var license = fs.readFileSync("./LICENSE", 'utf-8');
+  var lines = license.split("\n").map(function(line){
+    return " * " + line;
+  }).join("\n");
+  lines = "/*\n" + lines + "\n */\n";
+  return lines;
+}
 
-  var webpack = require('webpack')
-  var banner =
-    '/**\n' +
-    ' * Asta4js ' +
-    ' * Released under the XXX License.\n' +
-    ' */\n'
+module.exports = function (grunt, cb) {
+  var license = getLicense();
+  
+  var webpack = require('webpack');
+  var banner = license
+               + "\n"
+               + "\n";
 
   webpack({
     bail: true,

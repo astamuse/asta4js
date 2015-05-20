@@ -62,6 +62,11 @@ module.exports = function (grunt) {
           reporters: ['progress']
         }
       },
+      debug: {
+        browsers: ['Chrome'],
+        reporters: ['progress'],
+        singleRun: false
+      },
       coverage: {
         options: {
           browsers: ['PhantomJS'],
@@ -194,6 +199,7 @@ module.exports = function (grunt) {
   })
   
 
+  grunt.registerTask('unit-debug', ['karma:debug'])
   grunt.registerTask('unit', ['karma:browsers'])
   grunt.registerTask('cover', ['karma:coverage'])
   //grunt.registerTask('casperx', ['casper:test'])

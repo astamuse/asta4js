@@ -1,6 +1,27 @@
-/**
- * Asta4js  * Released under the XXX License.
+/*
+ * The MIT License (MIT) - http://www.opensource.org/licenses/mit-license.php
+ * 
+ * Copyright (c) 2015 astamuse company, ltd. and contributors.
+ * 
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of 
+ * this software and associated documentation files (the �gSoftware�h), to deal in the 
+ * Software without restriction, including without limitation the rights to use, 
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the 
+ * Software, and to permit persons to whom the Software is furnished to do so, 
+ * subject to the following conditions:
+ * 
+ * The above copyright notice and this permission notice shall be included in all 
+ * copies or substantial portions of the Software.
+ * 
+ * THE SOFTWARE IS PROVIDED �gAS IS�h, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS 
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR 
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER 
+ * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, OUT OF OR IN CONNECTION WITH THE 
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
+
+
 
 (function webpackUniversalModuleDefinition(root, factory) {
 	if(typeof exports === 'object' && typeof module === 'object')
@@ -328,8 +349,8 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	var util = __webpack_require__(1);
 	var config = __webpack_require__(2);
-	var Snippet = __webpack_require__(11);
-	var rewriteObserverMeta = __webpack_require__(15);
+	var Snippet = __webpack_require__(10);
+	var rewriteObserverMeta = __webpack_require__(11);
 
 	var BindContext = __webpack_require__(12);
 	var ValueMonitor = __webpack_require__(13);
@@ -386,12 +407,12 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	"use strict";
 
-	var _lib_observe = __webpack_require__(10);
+	var _lib_observe = __webpack_require__(14);
 
 	var util = __webpack_require__(1);
 	var config = __webpack_require__(2);
 	var constant = __webpack_require__(8)
-	var Snippet = __webpack_require__(11);
+	var Snippet = __webpack_require__(10);
 	var BindContext = __webpack_require__(12);
 
 	var $ = config.$;
@@ -729,7 +750,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	"use strict";
 
-	var _lib_observe = __webpack_require__(10);
+	var _lib_observe = __webpack_require__(14);
 
 	var util = __webpack_require__(1);
 	var config = __webpack_require__(2);
@@ -840,17 +861,17 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	"use strict";
 
-	var _lib_observe = __webpack_require__(10);
+	var _lib_observe = __webpack_require__(14);
 
 	var util = __webpack_require__(1);
 	var config = __webpack_require__(2);
 	var constant = __webpack_require__(8)
-	var Snippet = __webpack_require__(11)
+	var Snippet = __webpack_require__(10)
 
 	var BindContext = __webpack_require__(12)
 	var ValueMonitor = __webpack_require__(13)
 
-	var optionUtil = __webpack_require__(14)
+	var optionUtil = __webpack_require__(15)
 
 	var $ = config.$;
 
@@ -1242,13 +1263,13 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	"use strict";
 
-	var _lib_observe = __webpack_require__(10);
+	var _lib_observe = __webpack_require__(14);
 
 	var util = __webpack_require__(1);
 	var transformers = __webpack_require__(16);
 	var config = __webpack_require__(2);
 	var constant = __webpack_require__(8)
-	var Snippet = __webpack_require__(11)
+	var Snippet = __webpack_require__(10)
 
 	var api={};
 
@@ -1549,9 +1570,28 @@ return /******/ (function(modules) { // webpackBootstrap
 /* 9 */
 /***/ function(module, exports, __webpack_require__) {
 
-	/* WEBPACK VAR INJECTION */(function(global, Buffer, module) {'use strict';
+	/* WEBPACK VAR INJECTION */(function(Buffer) {/**
+	 * Copyright © 2011-2015 Paul Vorbach <paul@vorba.ch>
 
-	var clone = (function(global) {
+	 * Permission is hereby granted, free of charge, to any person obtaining a copy of
+	 * this software and associated documentation files (the “Software”), to deal in
+	 * the Software without restriction, including without limitation the rights to
+	 * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+	 * the Software, and to permit persons to whom the Software is furnished to do so,
+	 * subject to the following conditions:
+	 * 
+	 * The above copyright notice and this permission notice shall be included in all
+	 * copies or substantial portions of the Software.
+	 * 
+	 * THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+	 * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+	 * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+	 * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+	 * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, OUT OF OR IN CONNECTION WITH THE
+	 * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+	 */
+	var clone = (function() {
+	'use strict';
 
 	/**
 	 * Clones (copies) an Object using deep copying.
@@ -1571,7 +1611,6 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * @param `prototype` - sets the prototype to be used when cloning an object.
 	 *    (optional - defaults to parent prototype).
 	*/
-
 	function clone(parent, circular, depth, prototype) {
 	  var filter;
 	  if (typeof circular === 'object') {
@@ -1608,12 +1647,12 @@ return /******/ (function(modules) { // webpackBootstrap
 	      return parent;
 	    }
 
-	    if (isArray(parent)) {
+	    if (clone.__isArray(parent)) {
 	      child = [];
-	    } else if (isRegExp(parent)) {
-	      child = new RegExp(parent.source, getRegExpFlags(parent));
+	    } else if (clone.__isRegExp(parent)) {
+	      child = new RegExp(parent.source, __getRegExpFlags(parent));
 	      if (parent.lastIndex) child.lastIndex = parent.lastIndex;
-	    } else if (isDate(parent)) {
+	    } else if (clone.__isDate(parent)) {
 	      child = new Date(parent.getTime());
 	    } else if (useBuffer && Buffer.isBuffer(parent)) {
 	      child = new Buffer(parent.length);
@@ -1645,7 +1684,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	      if (proto) {
 	        attrs = Object.getOwnPropertyDescriptor(proto, i);
 	      }
-	      
+
 	      if (attrs && attrs.set == null) {
 	        continue;
 	      }
@@ -1665,7 +1704,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * USE WITH CAUTION! This may not behave as you wish if you do not know how this
 	 * works.
 	 */
-	clone.clonePrototype = function(parent) {
+	clone.clonePrototype = function clonePrototype(parent) {
 	  if (parent === null)
 	    return null;
 
@@ -1674,49 +1713,989 @@ return /******/ (function(modules) { // webpackBootstrap
 	  return new c();
 	};
 
-	function getRegExpFlags(re) {
-	  var flags = '';
-	  re.global && (flags += 'g');
-	  re.ignoreCase && (flags += 'i');
-	  re.multiline && (flags += 'm');
-	  return flags;
-	}
+	// private utility functions
 
-	function objectToString(o) {
+	function __objToStr(o) {
 	  return Object.prototype.toString.call(o);
-	}
+	};
+	clone.__objToStr = __objToStr;
 
-	function isDate(o) {
-	  return typeof o === 'object' && objectToString(o) === '[object Date]';
-	}
+	function __isDate(o) {
+	  return typeof o === 'object' && __objToStr(o) === '[object Date]';
+	};
+	clone.__isDate = __isDate;
 
-	function isArray(o) {
-	  return typeof o === 'object' && objectToString(o) === '[object Array]';
-	}
+	function __isArray(o) {
+	  return typeof o === 'object' && __objToStr(o) === '[object Array]';
+	};
+	clone.__isArray = __isArray;
 
-	function isRegExp(o) {
-	  return typeof o === 'object' && objectToString(o) === '[object RegExp]';
-	}
+	function __isRegExp(o) {
+	  return typeof o === 'object' && __objToStr(o) === '[object RegExp]';
+	};
+	clone.__isRegExp = __isRegExp;
 
-	if (global.TESTING) {
-	  clone.getRegExpFlags = getRegExpFlags;
-	  clone.objectToString = objectToString;
-	  clone.isDate   = isDate;
-	  clone.isArray  = isArray;
-	  clone.isRegExp = isRegExp;
-	}
+	function __getRegExpFlags(re) {
+	  var flags = '';
+	  if (re.global) flags += 'g';
+	  if (re.ignoreCase) flags += 'i';
+	  if (re.multiline) flags += 'm';
+	  return flags;
+	};
+	clone.__getRegExpFlags = __getRegExpFlags;
 
 	return clone;
+	})();
 
-	})( typeof(global) === 'object' ? global :
-	    typeof(window) === 'object' ? window : this);
-
-	if (module && module.exports)
+	if (typeof module === 'object' && module.exports) {
 	  module.exports = clone;
-	/* WEBPACK VAR INJECTION */}.call(exports, (function() { return this; }()), __webpack_require__(18).Buffer, __webpack_require__(19)(module)))
+	}
+
+	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(18).Buffer))
 
 /***/ },
 /* 10 */
+/***/ function(module, exports, __webpack_require__) {
+
+	"use strict";
+
+	var util = __webpack_require__(1);
+	var config = __webpack_require__(2);
+	var BindContext = __webpack_require__(12);
+	var ValueMonitor = __webpack_require__(13);
+
+	var $ = config.$;
+
+	var Snippet = function(arg){
+	  this._root = config.snippet.resolveRoot(arg);
+	  if(this._root.length == 0){
+	    var err = new Error("Snippet was not found for given selector:" + this.root.selector);
+	    console.error(err);
+	  }
+	}
+
+	Snippet.prototype._discard = function(){
+	  this._root.remove();
+	}
+
+	Snippet.prototype.find = function(selector){
+	  return util.findWithRoot(this._root, selector);
+	}
+
+	Snippet.prototype.bind = function(){
+	  if(typeof arguments[0] === "string"){
+	    return this.bindEvent.apply(this, arguments);
+	  }{
+	    return this.bindMeta.apply(this, arguments);
+	  }
+	}
+
+	Snippet.prototype.bindMeta = function(meta, context){
+	  var ctx = context ? util.shallowCopy(context) : {};
+	  ctx._snippet = this;
+	  var bindContext = new BindContext(ctx);
+	  bindContext._bind(meta);
+	  return this;
+	}
+
+	var _convertArgumentsWithSyncOnFunctions = function(){
+	  var newArgs = new Array();
+	  for(var i=0;i<arguments.length;i++){
+	    newArgs[i] = (function(arg){
+	      if(typeof arg === "function"){
+	        return function(){
+	          var ret = arg.apply(this, arguments);
+	          util.sync();
+	          return ret;
+	        }
+	      }else{
+	        return arg;
+	      }
+	    })(arguments[i]);
+	  }
+	  return newArgs;
+	}
+
+	Snippet.prototype.bindEvent = function(){
+	  var newArgs = _convertArgumentsWithSyncOnFunctions.apply(null, arguments);
+	  
+	  var selector = newArgs[0];
+	  newArgs.shift();
+	  
+	  var target = this.find(selector);
+	  if(target.length == 0){
+	    console.error("could not find target to bind event for:", selector);
+	    return this;
+	  }else{
+	    target.bind.apply(target, newArgs);
+	    return this;
+	  }
+	}
+
+	Snippet.prototype.on = function () {
+	  var newArgs = _convertArgumentsWithSyncOnFunctions.apply(null, arguments);
+	  this._root.on.apply(this._root, newArgs);
+	  return this;
+	}
+
+	config.snippet.resolveRoot = function(arg){
+	  var root;
+	  if (typeof arg === "string"){
+	    root = $(arg);//as selector
+	  }else if(util.isJQuery(arg)){
+	    root = arg;
+	  }else{
+	    throw "JQuery object is expected for snippet root but found:" + JSON.stringify(arg);
+	  }
+	  return root;
+	}
+
+	module.exports = Snippet;
+
+/***/ },
+/* 11 */
+/***/ function(module, exports, __webpack_require__) {
+
+	"use strict";
+
+	var _lib_observe = __webpack_require__(14);
+
+	var util=__webpack_require__(1);
+	var config=__webpack_require__(2);
+	var constant = __webpack_require__(8)
+
+	var __reverseMetaKeys = ["_meta_type", "_meta_id", "_meta_trace_id", "_meta_desc", "_value", "_prop", "_splice", "_target_path"];
+
+	var __ordered_metaRewritter = null;
+
+	var getOrderedMetaRewritter = function(){
+	  if(__ordered_metaRewritter){
+	    return __ordered_metaRewritter;
+	  }
+	  
+	  var array = new Array();
+	  for (var k in config.meta.rewritterMap) {
+	    var def = config.meta.rewritterMap[k];
+	    var _priority = null;
+	    var _fn = null;
+	    var _key = null;
+	    var defType = typeof def;
+	    if (defType === "object") {
+	      _priority = def.priority;
+	      _fn = def.fn;
+	      _key = def.key;
+	    } else if(defType === "function"){
+	      _fn = def;
+	    } else{
+	      throw "Object or function expected but got:" + defType
+	            + "\n"
+	            + JSON.stringify(def);
+	    }
+	    
+	    if(!_priority){
+	      _priority = 100;
+	    }
+	    if(!_fn){
+	      throw "fn of meta rewritter cannot be empty";
+	    }
+	    if(!_key){
+	      _key = k;
+	    }
+	    
+	    array.push({
+	      key : _key,
+	      fn : _fn,
+	      priority : _priority
+	    });
+	  } //end k loop
+	  //order the array
+	  array.sort(function (a, b) {
+	    if (a.priority === b.priority) {
+	      return a.key.localeCompare(b.key);
+	    } else {
+	      return a.priority - b.priority;
+	    }
+	  });
+	  __ordered_metaRewritter = array;
+	  return __ordered_metaRewritter;
+	};
+
+	//rewrite all the definition
+	var createAndRetrieveSubMetaRef = function(meta, subType){
+	  var ref;
+	  var sub = meta[subType];
+	  if(Array.isArray(sub)){
+	    ref = {};
+	    sub.push(ref);
+	  }else if (sub){
+	    var t = typeof sub;
+	    if(t === "object"){
+	       meta[subType] = [];
+	       meta[subType].push(sub);
+	      ref = sub;
+	    }else {
+	      meta[subType] = [];
+	      meta[subType].push(sub);
+	      ref = {};
+	      meta[subType].push(ref);
+	    }
+	  }else{
+	    ref = {};
+	    meta[subType] = [];
+	    meta[subType].push(ref);
+	  }
+	  return ref;
+	};
+
+	var initBindingHookArray = function(meta, hookName){
+	  if(meta[hookName]){
+	    if(Array.isArray(meta[hookName])){
+	      meta[hookName] = [].concat(meta[hookName]);
+	    }else{
+	      throw hookName + " must be array but we got:" + JSON.stringify(meta);
+	    }
+	  }else{
+	    meta[hookName] = [];
+	  }
+	}
+
+	var defaultTransformFn = function(v){
+	  return v;
+	}
+
+	var defaultTransform = {
+	  setValue: defaultTransformFn,
+	  getValue: defaultTransformFn,
+	}
+
+	var creatorDebugIntercept=function(debugId, meta, creator){
+	  return function(bindContext){
+	    var fn = creator.call(this, bindContext);
+	    return function(){
+	      console.log("debug info:", debugId, "\ncurrent meta:", meta, "\ncalling args:", arguments);
+	      if(meta._item && bindContext._snippet && !meta._duplicator){
+	        console.error("it seems that _duplicator is absent for current meta which is with _item define. current meta:", meta);
+	      }
+	      fn.apply(this, arguments);
+	    };
+	  }
+	}
+
+	var normalizeMeta = function(meta, metaId, propertyPath){
+	  
+	  if(propertyPath === undefined || propertyPath === null){
+	    propertyPath = "";
+	  }
+	  
+	  if(Array.isArray(meta)){
+	    return meta.map(function(m){
+	      return normalizeMeta(m, metaId, propertyPath);
+	    });
+	  }
+	  
+	  
+	  var newMeta = util.clone(meta);
+	  
+	   //convert function to standard meta format
+	  if(typeof newMeta !== "object"){
+	    newMeta = config.meta.nonObjectMetaConvertor(newMeta);
+	  }
+
+	  if(newMeta._meta_type){
+	    //do nothing
+	  }else{
+	    newMeta._meta_type = "_root";
+	  }
+	  if(!newMeta._meta_id){
+	    if(metaId){
+	      newMeta._meta_id = metaId;
+	    }else{
+	      newMeta._meta_id = util.createUID();
+	    }
+	  }
+	  
+	  newMeta._meta_trace_id = util.createUID();
+
+	  switch(newMeta._meta_type){
+	    case "_root":
+	      var subMetas = ["_value", "_prop", "_splice"];
+	      var subRefs = {
+	        _value  : createAndRetrieveSubMetaRef(newMeta, "_value"),
+	        _prop   : createAndRetrieveSubMetaRef(newMeta, "_prop"),
+	        _splice : createAndRetrieveSubMetaRef(newMeta, "_splice"),
+	      };
+	      for(var k in newMeta){
+	        if(__reverseMetaKeys.indexOf(k) >= 0){
+	          continue;
+	        }
+	        var moveTarget = config.meta.fieldClassifier(k);
+	        
+	        if(!Array.isArray(moveTarget)){
+	          moveTarget = [moveTarget];
+	        }
+	        for(var i=0;i<moveTarget.length;i++){
+	          var targetRef = subRefs[moveTarget[i]];
+	          if(targetRef){
+	            if(i > 0){
+	              targetRef[k] = util.clone(newMeta[k]);
+	            }else{
+	              targetRef[k] = newMeta[k];
+	            }
+	          }else{
+	            throw "fieldClassifier can only return '_value' or '_prop' or '_splice' rather than '" + moveTarget[i] + "'";
+	          }
+	        }
+	        newMeta[k] = null;
+	        delete newMeta[k];
+	      }
+	      for(var subIdx in subMetas){
+	        var subMetak = subMetas[subIdx];
+	        var subMeta = newMeta[subMetak];
+	        //make sure meta type is right
+	        for(var i in subMeta){//must be array due to the createAndRetrieveSubMetaRef
+	          var sm = subMeta[i];
+	          var t = typeof sm;
+	          if(t === "object"){
+	            sm._meta_type = subMetak;
+	          }else {
+	            subMeta[i] = config.meta.nonObjectMetaConvertor(subMeta[i]);
+	            subMeta[i]._meta_type = subMetak;
+	          }
+	          subMeta[i]._target_path = propertyPath;
+	        }
+	        newMeta[subMetak] = normalizeMeta(subMeta, newMeta._meta_id, propertyPath);
+	      }
+	    break;
+	    case "_splice":
+	    case "_value":
+	      //now we will call the registered meta rewritter to rewrite the meta
+	      
+	      if(newMeta._meta_type === "_value"){
+	        //array binding
+	        var itemMeta = newMeta._item;
+	        if(itemMeta){
+	          newMeta._item = normalizeMeta(itemMeta, newMeta._meta_id, "");
+	        }
+	        //transform
+	        if(newMeta._transform){
+	          var regulateTransform;
+	          var type = typeof newMeta._transform;
+	          if(type === "object"){
+	            regulateTransform = util.shallowCopy(newMeta._transform, {});
+	            if(!regulateTransform.setValue){
+	              regulateTransform.setValue = defaultTransformFn;
+	            }
+	            if(!regulateTransform.getValue){
+	              regulateTransform.getValue = defaultTransformFn;
+	            }
+	          }else if(type === "function"){//treat function as getValue for most common case
+	            regulateTransform = {
+	              setValue: defaultTransformFn,
+	              getValue: newMeta._transform,
+	            };
+	          }else{
+	            throw "unsupported _transform define:" + JSON.stringify(newMeta._transform);
+	          }
+	          newMeta._transform = regulateTransform;
+	        }else{
+	          newMeta._transform = defaultTransform;
+	        }
+	        
+	      }
+	      
+	      //binding hooks
+	      initBindingHookArray(newMeta, "_pre_binding");
+	      initBindingHookArray(newMeta, "_post_binding");
+
+	      //rewrite meta
+	      getOrderedMetaRewritter().forEach(function (mr) {
+	        var m = newMeta[mr.key];
+	        if (m !== undefined && m !== null) {
+	          mr.fn(newMeta);
+	          if(!config.debug){
+	            //remove unnecessary meta info to reduce memory usage
+	            newMeta[mr.key] = null;
+	            delete newMeta[mr.key];
+	          }
+	        }
+	      });
+	      
+	      if(newMeta._change_handler_creator || newMeta._item){
+	        if(!newMeta._register_on_change){
+	          var targetPath = newMeta._target_path;
+	          newMeta._register_on_change = function (bindContext, changeHandler) {
+	            bindContext._valueMonitor.pathObserve(newMeta._meta_trace_id, targetPath, function(newValue, oldValue){
+	              changeHandler(newValue, oldValue, bindContext);
+	            }, newMeta._transform);
+	            var vr = bindContext._valueMonitor.getValueRef(targetPath, newMeta._transform);
+	            return function(){
+	              changeHandler(vr.getValue(), undefined, bindContext);
+	            };
+	          };
+	          if(newMeta._item){
+	            var changeHandlerCreator = newMeta._change_handler_creator;
+	            var itemMeta = newMeta._item;
+	            var arrayMap = newMeta._array_map;
+	            var arrayDiscard = newMeta._array_discard;
+	            /*
+	            if(!arrayMap){
+	              throw "_array_map and _array_discard is necessary for _item mapping but we got:" + JSON.stringify(newMeta);
+	            }
+	            */
+	            var arrayChildContextCreator = newMeta._array_child_context_creator;
+	            if(!arrayChildContextCreator){
+	              arrayChildContextCreator = function(parentContext, contextOverride, index){
+	                var childContext = parentContext._createChildContext(this._item._meta_trace_id, index, contextOverride);
+	                return childContext;
+	              };
+	              //may not be necessary, but...
+	              newMeta._array_child_context_creator = arrayChildContextCreator;
+	            }
+	            newMeta._change_handler_creator = function(bindContext){
+	              var existingChangeFn = changeHandlerCreator ? changeHandlerCreator.call(this, bindContext) : undefined;
+	              //we have to discard the mapped array before current context is discarded.
+	              if(arrayDiscard){
+	                bindContext._addDiscardHook(function(){
+	                  arrayDiscard.apply(newMeta);
+	                });
+	              }
+	              return function(newValue, oldValue, bindContext){
+	                if(existingChangeFn){
+	                  existingChangeFn.call(this, arguments);
+	                }
+	                
+	                //register spice at first
+	                if(newValue){
+	                  bindContext._valueMonitor.arrayObserve(newMeta._meta_trace_id, newValue, function(splices){
+	                    
+	                     //retrieve mapped array for item monitor
+	                    var mappedArray = arrayMap ? arrayMap.call(newMeta, newValue, newValue, bindContext) : newValue;
+	                    if(!mappedArray && newValue){
+	                      throw "Did you forget to return the mapped array from _array_map of: " + JSON.stringify(newMeta);
+	                    }
+	                    var addedCount = 0;
+	                    var removedCount = 0;
+
+	                    splices.forEach(function (s) {
+	                      removedCount += s.removed.length;
+	                      addedCount += s.addedCount;
+	                    });
+
+	                    var diff = addedCount - removedCount;
+	                    var newLength = newValue.length;
+	                    if(diff > 0){
+	                      var childContext;
+	                      var newRootMonitorPath;
+	                      for (var i = diff; i >0; i--) {
+	                        newRootMonitorPath = targetPath + "[" + (newLength - i) +"]";
+	                        newMonitor = bindContext._valueMonitor.createSubMonitor(newRootMonitorPath);
+	                        var childContext = {
+	                          _valueMonitor: newMonitor,
+	                          _mappedItem: mappedArray[i] //must be not null
+	                        };
+	                        childContext = arrayChildContextCreator.call(newMeta, bindContext, childContext, newLength - i);
+	                        childContext._bind(itemMeta);
+	                      }
+	                    }else{
+	                      diff = 0 - diff;
+	                      for(var i=0;i<diff;i++){
+	                        bindContext._removeChildContext(itemMeta._meta_trace_id, newLength + i);
+	                      }
+	                    }
+	                  });
+	                }else if(oldValue){//which means we need to remove previous registered array observer
+	                  bindContext._valueMonitor.removeArrayObserve(newMeta._meta_trace_id);
+	                }
+	                
+	                //retrieve mapped array for item monitor
+	                var mappedArray = arrayMap ? arrayMap.call(newMeta, newValue, oldValue, bindContext): newValue;
+	                if(!mappedArray && newValue){
+	                  throw "Did you forget to return the mapped array from _array_map of: " + JSON.stringify(newMeta);
+	                }
+	                
+	                //bind item context
+	                var regularOld = util.regulateArray(oldValue);
+	                var regularNew = util.regulateArray(newValue);
+	                var childContext;
+	                var newRootMonitorPath;
+	                var newMonitor;
+	                //add new child context binding
+	                for(var i=regularOld.length;i<regularNew.length;i++){
+	                  newRootMonitorPath = targetPath + "[" + i +"]";
+	                  newMonitor = bindContext._valueMonitor.createSubMonitor(newRootMonitorPath);
+	                  var childContext = {
+	                    _valueMonitor: newMonitor,
+	                    _mappedItem: mappedArray[i] //must be not null
+	                  };
+	                  childContext = arrayChildContextCreator.call(newMeta, bindContext, childContext, i);
+	                  childContext._bind(itemMeta);
+	                }
+	                for(var i=regularNew.length;i<regularOld.length;i++){
+	                  bindContext._removeChildContext(itemMeta._meta_trace_id, i);
+	                }
+	              };//returned change handler
+	            };
+	          }//_item
+	          
+	          if(newMeta._meta_type == "_splice"){
+	            var spliceChangeHandlerCreator = newMeta._change_handler_creator;
+	            newMeta._change_handler_creator = function(bindContext){
+	              var spliceFn = spliceChangeHandlerCreator.call(this, bindContext);
+	              return function(newValue, oldValue, bindContext){
+	                if(newValue){
+	                  bindContext._valueMonitor.arrayObserve(newMeta._meta_trace_id, newValue, spliceFn);
+	                }else if(oldValue){//which means we need to remove previous registered array observer
+	                  bindContext._valueMonitor.removeArrayObserve(newMeta._meta_trace_id);
+	                }
+	              }
+	            }
+	          }//_splice
+	        }
+	      }
+	      //set default assign even we do not need it
+	      if(!newMeta._assign_change_handler_creator){
+	        var targetPath = newMeta._target_path;
+	        newMeta._assign_change_handler_creator = function(bindContext){
+	          var vr = bindContext._valueMonitor.getValueRef(targetPath, newMeta._transform)
+	          return function(value, bindContext){
+	            vr.setValue(value);
+	          };
+	        }
+	      }
+	      
+	      //debugger
+	      if(config.debug && newMeta._debug){
+	        if(newMeta._change_handler_creator){
+	          newMeta._change_handler_creator = creatorDebugIntercept(newMeta._debug, newMeta, newMeta._change_handler_creator);
+	        }
+	        if(newMeta._assign_change_handler_creator){
+	          newMeta._assign_change_handler_creator = creatorDebugIntercept(newMeta._debug, newMeta, newMeta._assign_change_handler_creator);
+	        }
+	      }
+	      
+	    break;
+	    case "_prop":
+	      for(var p in newMeta){
+	        if(__reverseMetaKeys.indexOf(p) >= 0){
+	          continue;
+	        }
+	        var ppm = newMeta[p];
+	        if(ppm.nonMeta){
+	          continue;
+	        }
+	        if(p === "_index" || p === "_indexes"){
+	          newMeta[p] = normalizeMeta(ppm, newMeta._meta_id, p);
+	        }else{
+	          var recursivePath;
+	          if(propertyPath){
+	            recursivePath = propertyPath + "." + p;
+	          }else{
+	            recursivePath = p;
+	          }
+	          newMeta[p] = normalizeMeta(ppm, newMeta._meta_id, recursivePath);
+	        }
+	      }
+	    break;
+	    default :
+	      throw "impossible meta type:" + newMeta._meta_type;
+	  }
+	  return newMeta;
+	};
+
+	var _on_change = function(meta){
+	  var changeFn = meta._on_change;
+	  //if _on_change is specified, the _change_handler_creator will be forced to handle _on_change
+	  meta._change_handler_creator = function(bindContext){
+	    return changeFn;
+	  }
+	};
+
+	var _assign = function(meta){
+	  var changeFn = meta._assign;
+	  var propertyPath = meta._target_path;
+	  //if _assign is specified, the _assign_change_handler_creator will be forced to handle _assign
+	  meta._assign_change_handler_creator = function(bindContext){
+	    return function(value, bindContext){
+	      changeFn(value, bindContext);
+	    };
+	  }
+	};
+
+	//default config
+	config.meta.nonObjectMetaConvertor = function(meta){
+	  var type = typeof meta;
+	  if(type === "string"){
+	    return {
+	      _selector: meta
+	    }
+	  }else if (type === "function"){
+	    return {
+	      _on_change : meta
+	    }
+	  }else{
+	    throw "Not supported meta data type:" + type
+	          + "\n"
+	          + JSON.stringify(meta);
+	  }
+	};
+
+	config.meta.fieldClassifier = function (fieldName, metaId) {
+	  if (fieldName === "_index"){
+	    return "_prop";
+	  } else if (fieldName === "_indexes") {
+	    return "_prop";
+	  } else if (fieldName === "_splice"){
+	    return "_splice";
+	  } else if (fieldName.indexOf("_") === 0) {
+	    return "_value";
+	  } else {
+	    return "_prop";
+	  }
+	};
+
+	config.meta.rewritterMap["_on_change"] = {
+	  priority : constant.metaRewritterPriority["_on_change"],
+	  fn : _on_change
+	};
+
+	config.meta.rewritterMap["_assign"] = {
+	  priority : constant.metaRewritterPriority["_assign"],
+	  fn : _assign
+	};
+
+	module.exports = normalizeMeta
+
+/***/ },
+/* 12 */
+/***/ function(module, exports, __webpack_require__) {
+
+	"use strict";
+
+	var util = __webpack_require__(1);
+	var config = __webpack_require__(2);
+	var normalizeMeta = __webpack_require__(11);
+
+	var ResourceMap = __webpack_require__(17);
+
+	var BindContext=function(override, arrayIndexes){
+	  if(override){
+	    util.shallowCopy(override, this);
+	  }
+
+	  this._arrayIndexes = arrayIndexes;
+	  this._resourceMap = new ResourceMap();
+	  //we declared an independent map for child context due to performance reason
+	  this._childContextMap = new ResourceMap();
+	  
+	  this._discardHook = [];
+	  
+	  this._forceSyncFromObserveTargetMap={};
+	  this._forceSyncToObserveTargetMap={};  
+
+	}
+
+	BindContext.prototype._getArrayIndexes=function(){
+	  return this._arrayIndexes;
+	}
+
+	BindContext.prototype._getArrayIndex=function(){
+	  return this._arrayIndexes[this._arrayIndexes.length-1];
+	}
+
+	BindContext.prototype._addResource=function(category, identifier, discardable){
+	  this._resourceMap.add(category, identifier, discardable);
+	}
+
+	BindContext.prototype._removeResource=function(category, identifier){
+	  this._resourceMap.remove(category, identifier);
+	}
+
+	BindContext.prototype._getResource=function(category, identifier){
+	  return this._resourceMap.get(category, identifier);
+	}
+
+	BindContext.prototype._createChildContext=function(identifier, index, override){
+	  var indexes = this._arrayIndexes ? util.clone(this._arrayIndexes) : [];
+	  indexes.push(index);
+	  var ov = util.shallowCopy(this);
+	  util.shallowCopy(override, ov);
+	  var context = new BindContext(ov, indexes);
+	  this._childContextMap.add(index, identifier, context);
+	  context._parentContext = this;
+	  return context;
+	}
+
+	BindContext.prototype._removeChildContext=function(identifier, index){
+	  this._childContextMap.remove(index, identifier);
+	}
+
+	var forceSyncWithObserveTarget=function(targetMap, metaTraceId){
+	  var keys;
+	  if(metaTraceId){
+	    var force = targetMap[metaTraceId];
+	    if(force){
+	      force.apply();
+	    }
+	  }else{
+	    for(var k in targetMap){
+	      targetMap[k].apply();
+	    }
+	  }
+	}
+
+	BindContext.prototype._forceSyncFromObserveTarget=function(metaTraceId){
+	  forceSyncWithObserveTarget(this._forceSyncFromObserveTargetMap, metaTraceId);
+	}
+
+	BindContext.prototype._forceSyncToObserveTarget=function(metaTraceId){
+	  forceSyncWithObserveTarget(this._forceSyncToObserveTargetMap, metaTraceId);
+	}
+
+	BindContext.prototype._bindMetaActions=function(meta){
+	  if(meta._pre_binding){
+	    for(var k=0;k<meta._pre_binding.length;k++){
+	      meta._pre_binding[k].call(meta, this);
+	    }
+	  }
+	  if(meta._register_on_change){
+	    var changeHandler = meta._change_handler_creator.call(meta, this);
+	    var force = meta._register_on_change.call(meta, this, function(){
+	      changeHandler.apply(meta, arguments);
+	    });
+	    this._forceSyncFromObserveTargetMap[meta._meta_trace_id] = force;
+	    force.apply();
+	  }
+	  if(meta._register_assign){
+	    var assignChangeHandler = meta._assign_change_handler_creator.call(meta, this);
+	    var force = meta._register_assign.call(meta, this, function(){
+	      assignChangeHandler.apply(meta, arguments);
+	      util.sync();
+	    });
+	    this._forceSyncToObserveTargetMap[meta._meta_trace_id] = force;
+	  }
+	  if(meta._post_binding){
+	    for(var k=0;k<meta._post_binding.length;k++){
+	      meta._post_binding[k].call(meta, this);
+	    }
+	  }
+	}
+
+	BindContext.prototype._bind=function(meta){  
+	  if(Array.isArray(meta)){
+	    for(var i=0;i<meta.length;i++){
+	      this._bind(meta[i]);
+	    }
+	    return;
+	  }
+	  
+	  if(!meta._meta_trace_id){
+	    meta = normalizeMeta(meta);
+	  }
+
+	  var nonRecursive = ["_value", "_splice"];
+	  for(var i in nonRecursive){
+	    var sub = meta[nonRecursive[i]];
+	    if(!sub){
+	      continue;
+	    }
+	    for(var j=0;j<sub.length;j++){
+	      var sm = sub[j];
+	      this._bindMetaActions(sm);
+	    };
+	  }
+	  
+	  var propSub = meta._prop;
+	  if(!propSub){
+	    return;
+	  }
+	  
+	  for(var i=0;i<propSub.length;i++){
+	    var ps = propSub[i];
+	    for(var p in ps){
+	      var pm = ps[p];
+	      if(typeof pm === "object"){
+	        this._bind(pm);
+	      }
+	    }
+	  }
+
+	};
+
+	BindContext.prototype._addDiscardHook=function(fn){
+	  this._discardHook.push(fn);
+	};
+
+	BindContext.prototype._discard=function(){
+	  var p;
+	  for(var k in this){
+	    p = this[k];
+	    if(p && p.discard){
+	      p.discard();
+	    }
+	  }
+	  for(var i=0;i<this._discardHook.length;i++){
+	    this._discardHook[i].apply();
+	  }
+	};
+
+	module.exports=BindContext;
+
+/***/ },
+/* 13 */
+/***/ function(module, exports, __webpack_require__) {
+
+	"use strict";
+
+	var _ = __webpack_require__(14);
+
+	var util = __webpack_require__(1);
+	var config = __webpack_require__(2);
+	var ResourceMap = __webpack_require__(17);
+
+	var ValueMonitor=function(scope, varRefRoot){
+	  this.scope = scope;
+	  this.varRefRoot = varRefRoot;
+	  this.observerMap = new ResourceMap();;
+	}
+
+	var convertObservePath=function(rootPath, subPath){
+	  var observePath;
+	  if(rootPath){
+	    observePath = subPath ? rootPath + "." + subPath : rootPath;
+	  }else{
+	    observePath = subPath;
+	  }
+	  if(!observePath){
+	      throw "The scope root cannot be observed";
+	  }
+	  return observePath;
+	}
+
+	ValueMonitor.prototype.createSubMonitor=function(subPath){
+	  var observePath = convertObservePath(this.varRefRoot, subPath);
+	  return new ValueMonitor(this.scope, observePath);
+	};
+
+	ValueMonitor.prototype.pathObserve=function(identifier, subPath, changeFn, transform){
+	  var observePath = convertObservePath(this.varRefRoot, subPath);
+	  var observer = new _.PathObserver(this.scope, observePath);
+	  if(transform){
+	    observer.open(function(newValue, oldValue){
+	      changeFn(
+	        transform.getValue(newValue),
+	        transform.getValue(oldValue)
+	      );
+	    });
+	  }else{
+	    observer.open(changeFn);
+	  }
+	  this.observerMap.add(observePath, identifier, observer);
+	}
+
+	function setValueWithSpawn(ref, path, value){
+	  var dotIndex = path.indexOf(".");
+	  if(dotIndex < 0){
+	    ref[path] = value;
+	  }else{
+	    var firstSeg = path.substring(0, dotIndex);
+	    var leftSeg = path.substring(dotIndex+1);
+	    if(!ref[firstSeg]){
+	      ref[firstSeg] = {};
+	    }
+	    setValueWithSpawn(ref[firstSeg], leftSeg, value);
+	  }
+	}
+
+	ValueMonitor.prototype.getValueRef=function(subPath, transform){
+	  var observePath = convertObservePath(this.varRefRoot, subPath);
+	  var path = _.Path.get(observePath);
+	  var scope = this.scope;
+	  return {
+	    setValue : function(v, spawnUnreachablePath){
+	      var tv = transform ? transform.setValue(v) : v;
+	      var success = path.setValueFrom(scope, tv);
+	      if(!success){//unreachable path
+	          var spawn = spawnUnreachablePath;
+	          if(spawn === undefined){
+	            spawn = true; //default to generate all necessary sub path
+	          }
+	          if(spawn){
+	            setValueWithSpawn(scope, observePath, tv);
+	          }
+	      }
+	    },
+	    getValue : function(){
+	      var v = path.getValueFrom(scope);
+	      return transform ? transform.getValue(v) : v;
+	    },
+	  };
+	}
+
+	ValueMonitor.prototype.arrayObserve=function(identifier, targetArray, changeFn){
+	  var observer = new _.ArrayObserver(targetArray);
+	  observer.open(changeFn);
+	  this.observerMap.add(identifier, identifier, observer);
+	}
+	ValueMonitor.prototype.removeArrayObserve=function(identifier){
+	  this.observerMap.remove(identifier, identifier);
+	}
+
+	ValueMonitor.prototype.compoundObserve=function(identifier, pathes, changeFn){
+	  var observer = new _.CompoundObserver();
+	  var p;
+	  for(var i=0;i<pathes.length;i++){
+	    p = pathes[i];
+	    if(p.indexOf("@:") == 0){//absolute path from scope root
+	      p = p.substr(2);
+	    }else{//relative path from current monitor ref path
+	      p = convertObservePath(this.varRefRoot, p);
+	    }
+	    observer.addPath(this.scope, p);
+	  }
+	  observer.open(changeFn);
+	  this.observerMap.add(identifier, identifier, observer);
+	}
+
+	ValueMonitor.prototype.getCompoundValueRef=function(pathes){
+	  var ps = [];
+	  var p;
+	  for(var i=0;i<pathes.length;i++){
+	    p = pathes[i];
+	    if(p.indexOf("@:") == 0){//absolute path from scope root
+	      p = p.substr(2);
+	    }else{//relative path from current monitor ref path
+	      p = convertObservePath(this.varRefRoot, p);
+	    }
+	    ps[i] = _.Path.get(p);
+	  }
+	  var scope = this.scope;
+	  return {
+	    setValues : function(values){
+	      if(values.length != ps.length){
+	        throw "length not equal for compound value set";
+	      }
+	      for(var i=0;i<values.length;i++){
+	        ps[i].setValueFrom(scope, values[i]);
+	      }
+	    },
+	    getValues : function(){
+	      var values = [];
+	      for(var i=0;i<ps.length;i++){
+	        values[i] = ps[i].getValueFrom(scope);
+	      }
+	      return values;
+	    },
+	  };
+	}
+
+	ValueMonitor.prototype.discard=function(){
+	  this.observerMap.discard();
+	}
+
+	module.exports=ValueMonitor;
+
+/***/ },
+/* 14 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(global, module) {/*
@@ -3434,435 +4413,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	/* WEBPACK VAR INJECTION */}.call(exports, (function() { return this; }()), __webpack_require__(19)(module)))
 
 /***/ },
-/* 11 */
-/***/ function(module, exports, __webpack_require__) {
-
-	"use strict";
-
-	var util = __webpack_require__(1);
-	var config = __webpack_require__(2);
-	var BindContext = __webpack_require__(12);
-	var ValueMonitor = __webpack_require__(13);
-
-	var $ = config.$;
-
-	var Snippet = function(arg){
-	  this._root = config.snippet.resolveRoot(arg);
-	  if(this._root.length == 0){
-	    var err = new Error("Snippet was not found for given selector:" + this.root.selector);
-	    console.error(err);
-	  }
-	}
-
-	Snippet.prototype._discard = function(){
-	  this._root.remove();
-	}
-
-	Snippet.prototype.find = function(selector){
-	  return util.findWithRoot(this._root, selector);
-	}
-
-	Snippet.prototype.bind = function(){
-	  if(typeof arguments[0] === "string"){
-	    return this.bindEvent.apply(this, arguments);
-	  }{
-	    return this.bindMeta.apply(this, arguments);
-	  }
-	}
-
-	Snippet.prototype.bindMeta = function(meta, context){
-	  var ctx = context ? util.shallowCopy(context) : {};
-	  ctx._snippet = this;
-	  var bindContext = new BindContext(ctx);
-	  bindContext._bind(meta);
-	  return this;
-	}
-
-	var _convertArgumentsWithSyncOnFunctions = function(){
-	  var newArgs = new Array();
-	  for(var i=0;i<arguments.length;i++){
-	    newArgs[i] = (function(arg){
-	      if(typeof arg === "function"){
-	        return function(){
-	          var ret = arg.apply(this, arguments);
-	          util.sync();
-	          return ret;
-	        }
-	      }else{
-	        return arg;
-	      }
-	    })(arguments[i]);
-	  }
-	  return newArgs;
-	}
-
-	Snippet.prototype.bindEvent = function(){
-	  var newArgs = _convertArgumentsWithSyncOnFunctions.apply(null, arguments);
-	  
-	  var selector = newArgs[0];
-	  newArgs.shift();
-	  
-	  var target = this.find(selector);
-	  if(target.length == 0){
-	    console.error("could not find target to bind event for:", selector);
-	    return this;
-	  }else{
-	    target.bind.apply(target, newArgs);
-	    return this;
-	  }
-	}
-
-	Snippet.prototype.on = function () {
-	  var newArgs = _convertArgumentsWithSyncOnFunctions.apply(null, arguments);
-	  this._root.on.apply(this._root, newArgs);
-	  return this;
-	}
-
-	config.snippet.resolveRoot = function(arg){
-	  var root;
-	  if (typeof arg === "string"){
-	    root = $(arg);//as selector
-	  }else if(util.isJQuery(arg)){
-	    root = arg;
-	  }else{
-	    throw "JQuery object is expected for snippet root but found:" + JSON.stringify(arg);
-	  }
-	  return root;
-	}
-
-	module.exports = Snippet;
-
-/***/ },
-/* 12 */
-/***/ function(module, exports, __webpack_require__) {
-
-	"use strict";
-
-	var util = __webpack_require__(1);
-	var config = __webpack_require__(2);
-	var normalizeMeta = __webpack_require__(15);
-
-	var ResourceMap = __webpack_require__(17);
-
-	var BindContext=function(override, arrayIndexes){
-	  if(override){
-	    util.shallowCopy(override, this);
-	  }
-
-	  this._arrayIndexes = arrayIndexes;
-	  this._resourceMap = new ResourceMap();
-	  //we declared an independent map for child context due to performance reason
-	  this._childContextMap = new ResourceMap();
-	  
-	  this._discardHook = [];
-	  
-	  this._forceSyncFromObserveTargetMap={};
-	  this._forceSyncToObserveTargetMap={};  
-
-	}
-
-	BindContext.prototype._getArrayIndexes=function(){
-	  return this._arrayIndexes;
-	}
-
-	BindContext.prototype._getArrayIndex=function(){
-	  return this._arrayIndexes[this._arrayIndexes.length-1];
-	}
-
-	BindContext.prototype._addResource=function(category, identifier, discardable){
-	  this._resourceMap.add(category, identifier, discardable);
-	}
-
-	BindContext.prototype._removeResource=function(category, identifier){
-	  this._resourceMap.remove(category, identifier);
-	}
-
-	BindContext.prototype._getResource=function(category, identifier){
-	  return this._resourceMap.get(category, identifier);
-	}
-
-	BindContext.prototype._createChildContext=function(identifier, index, override){
-	  var indexes = this._arrayIndexes ? util.clone(this._arrayIndexes) : [];
-	  indexes.push(index);
-	  var ov = util.shallowCopy(this);
-	  util.shallowCopy(override, ov);
-	  var context = new BindContext(ov, indexes);
-	  this._childContextMap.add(index, identifier, context);
-	  context._parentContext = this;
-	  return context;
-	}
-
-	BindContext.prototype._removeChildContext=function(identifier, index){
-	  this._childContextMap.remove(index, identifier);
-	}
-
-	var forceSyncWithObserveTarget=function(targetMap, metaTraceId){
-	  var keys;
-	  if(metaTraceId){
-	    var force = targetMap[metaTraceId];
-	    if(force){
-	      force.apply();
-	    }
-	  }else{
-	    for(var k in targetMap){
-	      targetMap[k].apply();
-	    }
-	  }
-	}
-
-	BindContext.prototype._forceSyncFromObserveTarget=function(metaTraceId){
-	  forceSyncWithObserveTarget(this._forceSyncFromObserveTargetMap, metaTraceId);
-	}
-
-	BindContext.prototype._forceSyncToObserveTarget=function(metaTraceId){
-	  forceSyncWithObserveTarget(this._forceSyncToObserveTargetMap, metaTraceId);
-	}
-
-	BindContext.prototype._bindMetaActions=function(meta){
-	  if(meta._pre_binding){
-	    for(var k=0;k<meta._pre_binding.length;k++){
-	      meta._pre_binding[k].call(meta, this);
-	    }
-	  }
-	  if(meta._register_on_change){
-	    var changeHandler = meta._change_handler_creator.call(meta, this);
-	    var force = meta._register_on_change.call(meta, this, function(){
-	      changeHandler.apply(meta, arguments);
-	    });
-	    this._forceSyncFromObserveTargetMap[meta._meta_trace_id] = force;
-	    force.apply();
-	  }
-	  if(meta._register_assign){
-	    var assignChangeHandler = meta._assign_change_handler_creator.call(meta, this);
-	    var force = meta._register_assign.call(meta, this, function(){
-	      assignChangeHandler.apply(meta, arguments);
-	      util.sync();
-	    });
-	    this._forceSyncToObserveTargetMap[meta._meta_trace_id] = force;
-	  }
-	  if(meta._post_binding){
-	    for(var k=0;k<meta._post_binding.length;k++){
-	      meta._post_binding[k].call(meta, this);
-	    }
-	  }
-	}
-
-	BindContext.prototype._bind=function(meta){  
-	  if(Array.isArray(meta)){
-	    for(var i=0;i<meta.length;i++){
-	      this._bind(meta[i]);
-	    }
-	    return;
-	  }
-	  
-	  if(!meta._meta_trace_id){
-	    meta = normalizeMeta(meta);
-	  }
-
-	  var nonRecursive = ["_value", "_splice"];
-	  for(var i in nonRecursive){
-	    var sub = meta[nonRecursive[i]];
-	    if(!sub){
-	      continue;
-	    }
-	    for(var j=0;j<sub.length;j++){
-	      var sm = sub[j];
-	      this._bindMetaActions(sm);
-	    };
-	  }
-	  
-	  var propSub = meta._prop;
-	  if(!propSub){
-	    return;
-	  }
-	  
-	  for(var i=0;i<propSub.length;i++){
-	    var ps = propSub[i];
-	    for(var p in ps){
-	      var pm = ps[p];
-	      if(typeof pm === "object"){
-	        this._bind(pm);
-	      }
-	    }
-	  }
-
-	};
-
-	BindContext.prototype._addDiscardHook=function(fn){
-	  this._discardHook.push(fn);
-	};
-
-	BindContext.prototype._discard=function(){
-	  var p;
-	  for(var k in this){
-	    p = this[k];
-	    if(p && p.discard){
-	      p.discard();
-	    }
-	  }
-	  for(var i=0;i<this._discardHook.length;i++){
-	    this._discardHook[i].apply();
-	  }
-	};
-
-	module.exports=BindContext;
-
-/***/ },
-/* 13 */
-/***/ function(module, exports, __webpack_require__) {
-
-	"use strict";
-
-	var _ = __webpack_require__(10);
-
-	var util = __webpack_require__(1);
-	var config = __webpack_require__(2);
-	var ResourceMap = __webpack_require__(17);
-
-	var ValueMonitor=function(scope, varRefRoot){
-	  this.scope = scope;
-	  this.varRefRoot = varRefRoot;
-	  this.observerMap = new ResourceMap();;
-	}
-
-	var convertObservePath=function(rootPath, subPath){
-	  var observePath;
-	  if(rootPath){
-	    observePath = subPath ? rootPath + "." + subPath : rootPath;
-	  }else{
-	    observePath = subPath;
-	  }
-	  if(!observePath){
-	      throw "The scope root cannot be observed";
-	  }
-	  return observePath;
-	}
-
-	ValueMonitor.prototype.createSubMonitor=function(subPath){
-	  var observePath = convertObservePath(this.varRefRoot, subPath);
-	  return new ValueMonitor(this.scope, observePath);
-	};
-
-	ValueMonitor.prototype.pathObserve=function(identifier, subPath, changeFn, transform){
-	  var observePath = convertObservePath(this.varRefRoot, subPath);
-	  var observer = new _.PathObserver(this.scope, observePath);
-	  if(transform){
-	    observer.open(function(newValue, oldValue){
-	      changeFn(
-	        transform.getValue(newValue),
-	        transform.getValue(oldValue)
-	      );
-	    });
-	  }else{
-	    observer.open(changeFn);
-	  }
-	  this.observerMap.add(observePath, identifier, observer);
-	}
-
-	function setValueWithSpawn(ref, path, value){
-	  var dotIndex = path.indexOf(".");
-	  if(dotIndex < 0){
-	    ref[path] = value;
-	  }else{
-	    var firstSeg = path.substring(0, dotIndex);
-	    var leftSeg = path.substring(dotIndex+1);
-	    if(!ref[firstSeg]){
-	      ref[firstSeg] = {};
-	    }
-	    setValueWithSpawn(ref[firstSeg], leftSeg, value);
-	  }
-	}
-
-	ValueMonitor.prototype.getValueRef=function(subPath, transform){
-	  var observePath = convertObservePath(this.varRefRoot, subPath);
-	  var path = _.Path.get(observePath);
-	  var scope = this.scope;
-	  return {
-	    setValue : function(v, spawnUnreachablePath){
-	      var tv = transform ? transform.setValue(v) : v;
-	      var success = path.setValueFrom(scope, tv);
-	      if(!success){//unreachable path
-	          var spawn = spawnUnreachablePath;
-	          if(spawn === undefined){
-	            spawn = true; //default to generate all necessary sub path
-	          }
-	          if(spawn){
-	            setValueWithSpawn(scope, observePath, tv);
-	          }
-	      }
-	    },
-	    getValue : function(){
-	      var v = path.getValueFrom(scope);
-	      return transform ? transform.getValue(v) : v;
-	    },
-	  };
-	}
-
-	ValueMonitor.prototype.arrayObserve=function(identifier, targetArray, changeFn){
-	  var observer = new _.ArrayObserver(targetArray);
-	  observer.open(changeFn);
-	  this.observerMap.add(identifier, identifier, observer);
-	}
-	ValueMonitor.prototype.removeArrayObserve=function(identifier){
-	  this.observerMap.remove(identifier, identifier);
-	}
-
-	ValueMonitor.prototype.compoundObserve=function(identifier, pathes, changeFn){
-	  var observer = new _.CompoundObserver();
-	  var p;
-	  for(var i=0;i<pathes.length;i++){
-	    p = pathes[i];
-	    if(p.indexOf("@:") == 0){//absolute path from scope root
-	      p = p.substr(2);
-	    }else{//relative path from current monitor ref path
-	      p = convertObservePath(this.varRefRoot, p);
-	    }
-	    observer.addPath(this.scope, p);
-	  }
-	  observer.open(changeFn);
-	  this.observerMap.add(identifier, identifier, observer);
-	}
-
-	ValueMonitor.prototype.getCompoundValueRef=function(pathes){
-	  var ps = [];
-	  var p;
-	  for(var i=0;i<pathes.length;i++){
-	    p = pathes[i];
-	    if(p.indexOf("@:") == 0){//absolute path from scope root
-	      p = p.substr(2);
-	    }else{//relative path from current monitor ref path
-	      p = convertObservePath(this.varRefRoot, p);
-	    }
-	    ps[i] = _.Path.get(p);
-	  }
-	  var scope = this.scope;
-	  return {
-	    setValues : function(values){
-	      if(values.length != ps.length){
-	        throw "length not equal for compound value set";
-	      }
-	      for(var i=0;i<values.length;i++){
-	        ps[i].setValueFrom(scope, values[i]);
-	      }
-	    },
-	    getValues : function(){
-	      var values = [];
-	      for(var i=0;i<ps.length;i++){
-	        values[i] = ps[i].getValueFrom(scope);
-	      }
-	      return values;
-	    },
-	  };
-	}
-
-	ValueMonitor.prototype.discard=function(){
-	  this.observerMap.discard();
-	}
-
-	module.exports=ValueMonitor;
-
-/***/ },
-/* 14 */
+/* 15 */
 /***/ function(module, exports, __webpack_require__) {
 
 	"use strict";
@@ -3870,8 +4421,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	var util = __webpack_require__(1);
 	var config = __webpack_require__(2);
 	var constant = __webpack_require__(8)
-	var Snippet = __webpack_require__(11)
-	var normalizeMeta = __webpack_require__(15)
+	var Snippet = __webpack_require__(10)
+	var normalizeMeta = __webpack_require__(11)
 
 	var $ = config.$;
 
@@ -4070,519 +4621,6 @@ return /******/ (function(modules) { // webpackBootstrap
 	}
 
 
-
-/***/ },
-/* 15 */
-/***/ function(module, exports, __webpack_require__) {
-
-	"use strict";
-
-	var _lib_observe = __webpack_require__(10);
-
-	var util=__webpack_require__(1);
-	var config=__webpack_require__(2);
-	var constant = __webpack_require__(8)
-
-	var __reverseMetaKeys = ["_meta_type", "_meta_id", "_meta_trace_id", "_meta_desc", "_value", "_prop", "_splice", "_target_path"];
-
-	var __ordered_metaRewritter = null;
-
-	var getOrderedMetaRewritter = function(){
-	  if(__ordered_metaRewritter){
-	    return __ordered_metaRewritter;
-	  }
-	  
-	  var array = new Array();
-	  for (var k in config.meta.rewritterMap) {
-	    var def = config.meta.rewritterMap[k];
-	    var _priority = null;
-	    var _fn = null;
-	    var _key = null;
-	    var defType = typeof def;
-	    if (defType === "object") {
-	      _priority = def.priority;
-	      _fn = def.fn;
-	      _key = def.key;
-	    } else if(defType === "function"){
-	      _fn = def;
-	    } else{
-	      throw "Object or function expected but got:" + defType
-	            + "\n"
-	            + JSON.stringify(def);
-	    }
-	    
-	    if(!_priority){
-	      _priority = 100;
-	    }
-	    if(!_fn){
-	      throw "fn of meta rewritter cannot be empty";
-	    }
-	    if(!_key){
-	      _key = k;
-	    }
-	    
-	    array.push({
-	      key : _key,
-	      fn : _fn,
-	      priority : _priority
-	    });
-	  } //end k loop
-	  //order the array
-	  array.sort(function (a, b) {
-	    if (a.priority === b.priority) {
-	      return a.key.localeCompare(b.key);
-	    } else {
-	      return a.priority - b.priority;
-	    }
-	  });
-	  __ordered_metaRewritter = array;
-	  return __ordered_metaRewritter;
-	};
-
-	//rewrite all the definition
-	var createAndRetrieveSubMetaRef = function(meta, subType){
-	  var ref;
-	  var sub = meta[subType];
-	  if(Array.isArray(sub)){
-	    ref = {};
-	    sub.push(ref);
-	  }else if (sub){
-	    var t = typeof sub;
-	    if(t === "object"){
-	       meta[subType] = [];
-	       meta[subType].push(sub);
-	      ref = sub;
-	    }else {
-	      meta[subType] = [];
-	      meta[subType].push(sub);
-	      ref = {};
-	      meta[subType].push(ref);
-	    }
-	  }else{
-	    ref = {};
-	    meta[subType] = [];
-	    meta[subType].push(ref);
-	  }
-	  return ref;
-	};
-
-	var initBindingHookArray = function(meta, hookName){
-	  if(meta[hookName]){
-	    if(Array.isArray(meta[hookName])){
-	      meta[hookName] = [].concat(meta[hookName]);
-	    }else{
-	      throw hookName + " must be array but we got:" + JSON.stringify(meta);
-	    }
-	  }else{
-	    meta[hookName] = [];
-	  }
-	}
-
-	var defaultTransformFn = function(v){
-	  return v;
-	}
-
-	var defaultTransform = {
-	  setValue: defaultTransformFn,
-	  getValue: defaultTransformFn,
-	}
-
-	var creatorDebugIntercept=function(debugId, meta, creator){
-	  return function(bindContext){
-	    var fn = creator.call(this, bindContext);
-	    return function(){
-	      console.log("debug info:", debugId, "\ncurrent meta:", meta, "\ncalling args:", arguments);
-	      if(meta._item && bindContext._snippet && !meta._duplicator){
-	        console.error("it seems that _duplicator is absent for current meta which is with _item define. current meta:", meta);
-	      }
-	      fn.apply(this, arguments);
-	    };
-	  }
-	}
-
-	var normalizeMeta = function(meta, metaId, propertyPath){
-	  
-	  if(propertyPath === undefined || propertyPath === null){
-	    propertyPath = "";
-	  }
-	  
-	  if(Array.isArray(meta)){
-	    return meta.map(function(m){
-	      return normalizeMeta(m, metaId, propertyPath);
-	    });
-	  }
-	  
-	  
-	  var newMeta = util.clone(meta);
-	  
-	   //convert function to standard meta format
-	  if(typeof newMeta !== "object"){
-	    newMeta = config.meta.nonObjectMetaConvertor(newMeta);
-	  }
-
-	  if(newMeta._meta_type){
-	    //do nothing
-	  }else{
-	    newMeta._meta_type = "_root";
-	  }
-	  if(!newMeta._meta_id){
-	    if(metaId){
-	      newMeta._meta_id = metaId;
-	    }else{
-	      newMeta._meta_id = util.createUID();
-	    }
-	  }
-	  
-	  newMeta._meta_trace_id = util.createUID();
-
-	  switch(newMeta._meta_type){
-	    case "_root":
-	      var subMetas = ["_value", "_prop", "_splice"];
-	      var subRefs = {
-	        _value  : createAndRetrieveSubMetaRef(newMeta, "_value"),
-	        _prop   : createAndRetrieveSubMetaRef(newMeta, "_prop"),
-	        _splice : createAndRetrieveSubMetaRef(newMeta, "_splice"),
-	      };
-	      for(var k in newMeta){
-	        if(__reverseMetaKeys.indexOf(k) >= 0){
-	          continue;
-	        }
-	        var moveTarget = config.meta.fieldClassifier(k);
-	        
-	        if(!Array.isArray(moveTarget)){
-	          moveTarget = [moveTarget];
-	        }
-	        for(var i=0;i<moveTarget.length;i++){
-	          var targetRef = subRefs[moveTarget[i]];
-	          if(targetRef){
-	            if(i > 0){
-	              targetRef[k] = util.clone(newMeta[k]);
-	            }else{
-	              targetRef[k] = newMeta[k];
-	            }
-	          }else{
-	            throw "fieldClassifier can only return '_value' or '_prop' or '_splice' rather than '" + moveTarget[i] + "'";
-	          }
-	        }
-	        newMeta[k] = null;
-	        delete newMeta[k];
-	      }
-	      for(var subIdx in subMetas){
-	        var subMetak = subMetas[subIdx];
-	        var subMeta = newMeta[subMetak];
-	        //make sure meta type is right
-	        for(var i in subMeta){//must be array due to the createAndRetrieveSubMetaRef
-	          var sm = subMeta[i];
-	          var t = typeof sm;
-	          if(t === "object"){
-	            sm._meta_type = subMetak;
-	          }else {
-	            subMeta[i] = config.meta.nonObjectMetaConvertor(subMeta[i]);
-	            subMeta[i]._meta_type = subMetak;
-	          }
-	          subMeta[i]._target_path = propertyPath;
-	        }
-	        newMeta[subMetak] = normalizeMeta(subMeta, newMeta._meta_id, propertyPath);
-	      }
-	    break;
-	    case "_splice":
-	    case "_value":
-	      //now we will call the registered meta rewritter to rewrite the meta
-	      
-	      if(newMeta._meta_type === "_value"){
-	        //array binding
-	        var itemMeta = newMeta._item;
-	        if(itemMeta){
-	          newMeta._item = normalizeMeta(itemMeta, newMeta._meta_id, "");
-	        }
-	        //transform
-	        if(newMeta._transform){
-	          var regulateTransform;
-	          var type = typeof newMeta._transform;
-	          if(type === "object"){
-	            regulateTransform = util.shallowCopy(newMeta._transform, {});
-	            if(!regulateTransform.setValue){
-	              regulateTransform.setValue = defaultTransformFn;
-	            }
-	            if(!regulateTransform.getValue){
-	              regulateTransform.getValue = defaultTransformFn;
-	            }
-	          }else if(type === "function"){//treat function as getValue for most common case
-	            regulateTransform = {
-	              setValue: defaultTransformFn,
-	              getValue: newMeta._transform,
-	            };
-	          }else{
-	            throw "unsupported _transform define:" + JSON.stringify(newMeta._transform);
-	          }
-	          newMeta._transform = regulateTransform;
-	        }else{
-	          newMeta._transform = defaultTransform;
-	        }
-	        
-	      }
-	      
-	      //binding hooks
-	      initBindingHookArray(newMeta, "_pre_binding");
-	      initBindingHookArray(newMeta, "_post_binding");
-
-	      //rewrite meta
-	      getOrderedMetaRewritter().forEach(function (mr) {
-	        var m = newMeta[mr.key];
-	        if (m !== undefined && m !== null) {
-	          mr.fn(newMeta);
-	          if(!config.debug){
-	            //remove unnecessary meta info to reduce memory usage
-	            newMeta[mr.key] = null;
-	            delete newMeta[mr.key];
-	          }
-	        }
-	      });
-	      
-	      if(newMeta._change_handler_creator || newMeta._item){
-	        if(!newMeta._register_on_change){
-	          var targetPath = newMeta._target_path;
-	          newMeta._register_on_change = function (bindContext, changeHandler) {
-	            bindContext._valueMonitor.pathObserve(newMeta._meta_trace_id, targetPath, function(newValue, oldValue){
-	              changeHandler(newValue, oldValue, bindContext);
-	            }, newMeta._transform);
-	            var vr = bindContext._valueMonitor.getValueRef(targetPath, newMeta._transform);
-	            return function(){
-	              changeHandler(vr.getValue(), undefined, bindContext);
-	            };
-	          };
-	          if(newMeta._item){
-	            var changeHandlerCreator = newMeta._change_handler_creator;
-	            var itemMeta = newMeta._item;
-	            var arrayMap = newMeta._array_map;
-	            var arrayDiscard = newMeta._array_discard;
-	            /*
-	            if(!arrayMap){
-	              throw "_array_map and _array_discard is necessary for _item mapping but we got:" + JSON.stringify(newMeta);
-	            }
-	            */
-	            var arrayChildContextCreator = newMeta._array_child_context_creator;
-	            if(!arrayChildContextCreator){
-	              arrayChildContextCreator = function(parentContext, contextOverride, index){
-	                var childContext = parentContext._createChildContext(this._item._meta_trace_id, index, contextOverride);
-	                return childContext;
-	              };
-	              //may not be necessary, but...
-	              newMeta._array_child_context_creator = arrayChildContextCreator;
-	            }
-	            newMeta._change_handler_creator = function(bindContext){
-	              var existingChangeFn = changeHandlerCreator ? changeHandlerCreator.call(this, bindContext) : undefined;
-	              //we have to discard the mapped array before current context is discarded.
-	              if(arrayDiscard){
-	                bindContext._addDiscardHook(function(){
-	                  arrayDiscard.apply(newMeta);
-	                });
-	              }
-	              return function(newValue, oldValue, bindContext){
-	                if(existingChangeFn){
-	                  existingChangeFn.call(this, arguments);
-	                }
-	                
-	                //register spice at first
-	                if(newValue){
-	                  bindContext._valueMonitor.arrayObserve(newMeta._meta_trace_id, newValue, function(splices){
-	                    
-	                     //retrieve mapped array for item monitor
-	                    var mappedArray = arrayMap ? arrayMap.call(newMeta, newValue, newValue, bindContext) : newValue;
-	                    if(!mappedArray && newValue){
-	                      throw "Did you forget to return the mapped array from _array_map of: " + JSON.stringify(newMeta);
-	                    }
-	                    var addedCount = 0;
-	                    var removedCount = 0;
-
-	                    splices.forEach(function (s) {
-	                      removedCount += s.removed.length;
-	                      addedCount += s.addedCount;
-	                    });
-
-	                    var diff = addedCount - removedCount;
-	                    var newLength = newValue.length;
-	                    if(diff > 0){
-	                      var childContext;
-	                      var newRootMonitorPath;
-	                      for (var i = diff; i >0; i--) {
-	                        newRootMonitorPath = targetPath + "[" + (newLength - i) +"]";
-	                        newMonitor = bindContext._valueMonitor.createSubMonitor(newRootMonitorPath);
-	                        var childContext = {
-	                          _valueMonitor: newMonitor,
-	                          _mappedItem: mappedArray[i] //must be not null
-	                        };
-	                        childContext = arrayChildContextCreator.call(newMeta, bindContext, childContext, newLength - i);
-	                        childContext._bind(itemMeta);
-	                      }
-	                    }else{
-	                      diff = 0 - diff;
-	                      for(var i=0;i<diff;i++){
-	                        bindContext._removeChildContext(itemMeta._meta_trace_id, newLength + i);
-	                      }
-	                    }
-	                  });
-	                }else if(oldValue){//which means we need to remove previous registered array observer
-	                  bindContext._valueMonitor.removeArrayObserve(newMeta._meta_trace_id);
-	                }
-	                
-	                //retrieve mapped array for item monitor
-	                var mappedArray = arrayMap ? arrayMap.call(newMeta, newValue, oldValue, bindContext): newValue;
-	                if(!mappedArray && newValue){
-	                  throw "Did you forget to return the mapped array from _array_map of: " + JSON.stringify(newMeta);
-	                }
-	                
-	                //bind item context
-	                var regularOld = util.regulateArray(oldValue);
-	                var regularNew = util.regulateArray(newValue);
-	                var childContext;
-	                var newRootMonitorPath;
-	                var newMonitor;
-	                //add new child context binding
-	                for(var i=regularOld.length;i<regularNew.length;i++){
-	                  newRootMonitorPath = targetPath + "[" + i +"]";
-	                  newMonitor = bindContext._valueMonitor.createSubMonitor(newRootMonitorPath);
-	                  var childContext = {
-	                    _valueMonitor: newMonitor,
-	                    _mappedItem: mappedArray[i] //must be not null
-	                  };
-	                  childContext = arrayChildContextCreator.call(newMeta, bindContext, childContext, i);
-	                  childContext._bind(itemMeta);
-	                }
-	                for(var i=regularNew.length;i<regularOld.length;i++){
-	                  bindContext._removeChildContext(itemMeta._meta_trace_id, i);
-	                }
-	              };//returned change handler
-	            };
-	          }//_item
-	          
-	          if(newMeta._meta_type == "_splice"){
-	            var spliceChangeHandlerCreator = newMeta._change_handler_creator;
-	            newMeta._change_handler_creator = function(bindContext){
-	              var spliceFn = spliceChangeHandlerCreator.call(this, bindContext);
-	              return function(newValue, oldValue, bindContext){
-	                if(newValue){
-	                  bindContext._valueMonitor.arrayObserve(newMeta._meta_trace_id, newValue, spliceFn);
-	                }else if(oldValue){//which means we need to remove previous registered array observer
-	                  bindContext._valueMonitor.removeArrayObserve(newMeta._meta_trace_id);
-	                }
-	              }
-	            }
-	          }//_splice
-	        }
-	      }
-	      //set default assign even we do not need it
-	      if(!newMeta._assign_change_handler_creator){
-	        var targetPath = newMeta._target_path;
-	        newMeta._assign_change_handler_creator = function(bindContext){
-	          var vr = bindContext._valueMonitor.getValueRef(targetPath, newMeta._transform)
-	          return function(value, bindContext){
-	            vr.setValue(value);
-	          };
-	        }
-	      }
-	      
-	      //debugger
-	      if(config.debug && newMeta._debug){
-	        if(newMeta._change_handler_creator){
-	          newMeta._change_handler_creator = creatorDebugIntercept(newMeta._debug, newMeta, newMeta._change_handler_creator);
-	        }
-	        if(newMeta._assign_change_handler_creator){
-	          newMeta._assign_change_handler_creator = creatorDebugIntercept(newMeta._debug, newMeta, newMeta._assign_change_handler_creator);
-	        }
-	      }
-	      
-	    break;
-	    case "_prop":
-	      for(var p in newMeta){
-	        if(__reverseMetaKeys.indexOf(p) >= 0){
-	          continue;
-	        }
-	        var ppm = newMeta[p];
-	        if(ppm.nonMeta){
-	          continue;
-	        }
-	        if(p === "_index" || p === "_indexes"){
-	          newMeta[p] = normalizeMeta(ppm, newMeta._meta_id, p);
-	        }else{
-	          var recursivePath;
-	          if(propertyPath){
-	            recursivePath = propertyPath + "." + p;
-	          }else{
-	            recursivePath = p;
-	          }
-	          newMeta[p] = normalizeMeta(ppm, newMeta._meta_id, recursivePath);
-	        }
-	      }
-	    break;
-	    default :
-	      throw "impossible meta type:" + newMeta._meta_type;
-	  }
-	  return newMeta;
-	};
-
-	var _on_change = function(meta){
-	  var changeFn = meta._on_change;
-	  //if _on_change is specified, the _change_handler_creator will be forced to handle _on_change
-	  meta._change_handler_creator = function(bindContext){
-	    return changeFn;
-	  }
-	};
-
-	var _assign = function(meta){
-	  var changeFn = meta._assign;
-	  var propertyPath = meta._target_path;
-	  //if _assign is specified, the _assign_change_handler_creator will be forced to handle _assign
-	  meta._assign_change_handler_creator = function(bindContext){
-	    return function(value, bindContext){
-	      changeFn(value, bindContext);
-	    };
-	  }
-	};
-
-	//default config
-	config.meta.nonObjectMetaConvertor = function(meta){
-	  var type = typeof meta;
-	  if(type === "string"){
-	    return {
-	      _selector: meta
-	    }
-	  }else if (type === "function"){
-	    return {
-	      _on_change : meta
-	    }
-	  }else{
-	    throw "Not supported meta data type:" + type
-	          + "\n"
-	          + JSON.stringify(meta);
-	  }
-	};
-
-	config.meta.fieldClassifier = function (fieldName, metaId) {
-	  if (fieldName === "_index"){
-	    return "_prop";
-	  } else if (fieldName === "_indexes") {
-	    return "_prop";
-	  } else if (fieldName === "_splice"){
-	    return "_splice";
-	  } else if (fieldName.indexOf("_") === 0) {
-	    return "_value";
-	  } else {
-	    return "_prop";
-	  }
-	};
-
-	config.meta.rewritterMap["_on_change"] = {
-	  priority : constant.metaRewritterPriority["_on_change"],
-	  fn : _on_change
-	};
-
-	config.meta.rewritterMap["_assign"] = {
-	  priority : constant.metaRewritterPriority["_assign"],
-	  fn : _assign
-	};
-
-	module.exports = normalizeMeta
 
 /***/ },
 /* 16 */

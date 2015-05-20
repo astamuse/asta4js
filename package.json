@@ -2,7 +2,7 @@
   "name": "asta4j",
   "version": "0.0.1-alpha",
   "author": "e.ryu",
-  "license": "",
+  "license": "MIT",
   "description": "",
   "keywords": [
     "mvvm",
