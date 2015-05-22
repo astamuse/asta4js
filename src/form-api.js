@@ -40,7 +40,7 @@ api.optionBind = function (_varRef, _meta, _meta2) {
 }, //end optionBind
 
 /**
- * [target]: string->name or selector. object->{_name: ""} or {_selector: ""}
+ * [target]: string->name or selector. object->{name: ""} or {selector: ""}
  * [event1]: string->default change event array->extra change events
  * [event2]: array->extra change events
  */
@@ -69,7 +69,7 @@ api.form = function(target, event1, event2){
       defaultChangeEvent = event1;
       extraChangeEvents = event2;
     }else if (Array.isArray(event1)){
-      extraChangeEvents = event2;
+      extraChangeEvents = event1;
     }
   }else{
     //the client may call me as ({}, null, ["xxx"]), so the event1 is null but event2 exists
@@ -115,13 +115,13 @@ var _default_tz_offset = (new Date()).getTimezoneOffset() * 60 * 1000;
 // add default form meta api extending
 _addMetaApiExtending({
   
-  withOption : function(){
-    this._form._option = api.optionBind.apply(Aj, arguments);
+  asSingleCheck : function(){
+    this._form._single_check = true;
     return this;
   },
   
-  asSingleCheck : function(){
-    this._form._single_check = true;
+  withOption : function(){
+    this._form._option = api.optionBind.apply(Aj, arguments);
     return this;
   },
   
@@ -206,6 +206,10 @@ _addMetaApiExtending({
     }
     this._form._file_preload_limit = limit;
     this._form._file_preload_format = format;
+    return this;
+  },
+  override: function(obj){
+    util.override(obj, this);
     return this;
   }
   

@@ -81,7 +81,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	"use strict";
 
-	var util = __webpack_require__(1);
+	var util = __webpack_require__(11);
 	var shallow = util.shallowCopy;
 
 	var Aj={};
@@ -137,177 +137,98 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	"use strict";
 
-	var constant = __webpack_require__(8)
+	var util = __webpack_require__(11);
 	var config = __webpack_require__(2);
+	var BindContext = __webpack_require__(12);
+	var ValueMonitor = __webpack_require__(13);
 
-	var util = {};
 	var $ = config.$;
 
-	util.sync = function(){
-	  Platform.performMicrotaskCheckpoint();
-	};
-
-	util.determineRefPath = function (scope, varRef, searchKey) {
-	  var deleteSearchKey;
-	  if(searchKey){
-	    deleteSearchKey = false;
-	  }else{
-	    deleteSearchKey = true;
-	    searchKey = constant.impossibleSearchKey;
-	    varRef[searchKey] = 1;
-	  }
-
-	  var refPath = null;
-	  for (var p in scope) {
-	    var ref = scope[p];
-	    if (ref[searchKey]) {
-	      refPath = p;
-	      break;
-	    }
-	  }
-	  
-	  if(deleteSearchKey){
-	    delete varRef[searchKey];
-	  }
-
-	  return refPath;
-	};
-
-	var __uidTimestamp = Date.now();
-	var __uidSeq = 0;
-	util.createUID = function () {
-	  if(__uidSeq >= 1000000){
-	    __uidTimestamp = Date.now();
-	    __uidSeq = 0;
-	  }
-	  __uidSeq++;
-	  return "aj-" + __uidSeq + "-"+ __uidTimestamp;
-	};
-
-	//TODO we should keep ref always
-	util.regulateArray = function (v, tryKeepRef) {
-	  if (Array.isArray(v)) {
-	    if(tryKeepRef){
-	      return v;
-	    }else{
-	      return [].concat(v);
-	    }
-	  } else if (v === null || v === undefined) {
-	    return new Array();
-	  } else {
-	    return [v];
-	  }
-	};
-
-	util.clone = __webpack_require__(9);
-
-	util.isJQuery = function(obj){
-	  if(obj){
-	    if($){
-	      return obj instanceof $
-	          || obj.constructor == $
-	          || Boolean(obj.jquery);
-	    }else{
-	      return Boolean(obj.jquery);
-	    }
-	  }else{
-	    return false;
+	var Snippet = function(arg){
+	  this._root = config.snippet.resolveRoot(arg);
+	  if(this._root.length == 0){
+	    var err = new Error("Snippet was not found for given selector:" + this.root.selector);
+	    console.error(err);
 	  }
 	}
 
-	/**
-	 * (from)
-	 * (from, [propList])
-	 * (from, to)
-	 * (from, to, [propList])
-	 */
-	util.shallowCopy = function(arg1, arg2, arg3){
-	  var from = arg1;
-	  var to;
-	  var props;
-	  if(Array.isArray(arg2)){
-	    to = {};
-	    props = arg2;
-	  }else{
-	    to = arg2;
-	    props = arg3;
-	  }
-	  if(!to){
-	    to = {};
-	  }
-	  if(props){
-	    var p;
-	    for(var i=0;i<props.length;i++){
-	      p = props[i];
-	      to[p] = from[p];
-	    }
-	  }else{
-	    for(var p in from){
-	      to[p] = from[p];
-	    }
-	  }
-	  
-	  return to;
-	};
+	Snippet.prototype._discard = function(){
+	  this._root.remove();
+	}
 
-	util.arraySwap = function (array, index1, index2) {
-	      var tmp = array[index1];
-	      array[index1] = array[index2];
-	      array[index2] = tmp;
-	};
+	Snippet.prototype.find = function(selector){
+	  return util.findWithRoot(this._root, selector);
+	}
 
-	util.arrayLengthAdjust = function (targetArray, hopeLength, initialNewFn, discardCutFn) {
-	  var existingLength = targetArray.length;
-	  if(initialNewFn){
-	    var newItem;
-	    for(var i=existingLength;i<hopeLength;i++){
-	      newItem = initialNewFn(i);
-	      targetArray[i] = newItem;
-	    }
-	  }else{
-	    for(var i=existingLength;i<hopeLength;i++){
-	      targetArray[i] = undefined;
-	    }
+	Snippet.prototype.bind = function(){
+	  if(typeof arguments[0] === "string"){
+	    return this.bindEvent.apply(this, arguments);
+	  }{
+	    return this.bindMeta.apply(this, arguments);
 	  }
-	  var removeCount = existingLength - hopeLength;
-	  if(removeCount > 0){
-	    if(discardCutFn){
-	      for(var i=hopeLength;i<existingLength;i++){
-	        discardCutFn(targetArray[i], i);
-	      }
-	    }
-	    targetArray.splice(hopeLength, removeCount);
-	  }
-	};
-	    
-	util.findWithRoot = function(rootElem, selector){
-	      if(selector === ":root"){
-	        return rootElem;
-	      }
-	      var result = rootElem.find(selector);
-	      if(result.length === 0){
-	        if(rootElem.is(selector)){
-	          return rootElem;
+	}
+
+	Snippet.prototype.bindMeta = function(meta, context){
+	  var ctx = context ? util.shallowCopy(context) : {};
+	  ctx._snippet = this;
+	  var bindContext = new BindContext(ctx);
+	  bindContext._bind(meta);
+	  return this;
+	}
+
+	var _convertArgumentsWithSyncOnFunctions = function(){
+	  var newArgs = new Array();
+	  for(var i=0;i<arguments.length;i++){
+	    newArgs[i] = (function(arg){
+	      if(typeof arg === "function"){
+	        return function(){
+	          var ret = arg.apply(this, arguments);
+	          util.sync();
+	          return ret;
 	        }
+	      }else{
+	        return arg;
 	      }
-	      return result;
-	};
+	    })(arguments[i]);
+	  }
+	  return newArgs;
+	}
 
-	util.delay=function(callback, timeout, delayMoreCycles){
-	  if(delayMoreCycles && delayMoreCycles > 0){
-	    setTimeout(function(){
-	      util.delay(callback, timeout, delayMoreCycles-1);
-	    }, 0);
-	    return;
+	Snippet.prototype.bindEvent = function(){
+	  var newArgs = _convertArgumentsWithSyncOnFunctions.apply(null, arguments);
+	  
+	  var selector = newArgs[0];
+	  newArgs.shift();
+	  
+	  var target = this.find(selector);
+	  if(target.length == 0){
+	    console.error("could not find target to bind event for:", selector);
+	    return this;
 	  }else{
-	    setTimeout(function(){
-	      callback.apply();
-	      util.sync();
-	    }, timeout ? timeout : 0);
+	    target.bind.apply(target, newArgs);
+	    return this;
 	  }
 	}
 
-	module.exports = util;
+	Snippet.prototype.on = function () {
+	  var newArgs = _convertArgumentsWithSyncOnFunctions.apply(null, arguments);
+	  this._root.on.apply(this._root, newArgs);
+	  return this;
+	}
+
+	config.snippet.resolveRoot = function(arg){
+	  var root;
+	  if (typeof arg === "string"){
+	    root = $(arg);//as selector
+	  }else if(util.isJQuery(arg)){
+	    root = arg;
+	  }else{
+	    throw "JQuery object is expected for snippet root but found:" + JSON.stringify(arg);
+	  }
+	  return root;
+	}
+
+	module.exports = Snippet;
 
 /***/ },
 /* 2 */
@@ -347,10 +268,10 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	"use strict";
 
-	var util = __webpack_require__(1);
+	var util = __webpack_require__(11);
 	var config = __webpack_require__(2);
-	var Snippet = __webpack_require__(10);
-	var rewriteObserverMeta = __webpack_require__(11);
+	var Snippet = __webpack_require__(1);
+	var rewriteObserverMeta = __webpack_require__(10);
 
 	var BindContext = __webpack_require__(12);
 	var ValueMonitor = __webpack_require__(13);
@@ -409,10 +330,10 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	var _lib_observe = __webpack_require__(14);
 
-	var util = __webpack_require__(1);
+	var util = __webpack_require__(11);
 	var config = __webpack_require__(2);
 	var constant = __webpack_require__(8)
-	var Snippet = __webpack_require__(10);
+	var Snippet = __webpack_require__(1);
 	var BindContext = __webpack_require__(12);
 
 	var $ = config.$;
@@ -752,7 +673,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	var _lib_observe = __webpack_require__(14);
 
-	var util = __webpack_require__(1);
+	var util = __webpack_require__(11);
 	var config = __webpack_require__(2);
 	var constant = __webpack_require__(8)
 	var ValueMonitor = __webpack_require__(13)
@@ -863,15 +784,15 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	var _lib_observe = __webpack_require__(14);
 
-	var util = __webpack_require__(1);
+	var util = __webpack_require__(11);
 	var config = __webpack_require__(2);
 	var constant = __webpack_require__(8)
-	var Snippet = __webpack_require__(10)
+	var Snippet = __webpack_require__(1)
 
 	var BindContext = __webpack_require__(12)
 	var ValueMonitor = __webpack_require__(13)
 
-	var optionUtil = __webpack_require__(15)
+	var optionUtil = __webpack_require__(16)
 
 	var $ = config.$;
 
@@ -1265,11 +1186,11 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	var _lib_observe = __webpack_require__(14);
 
-	var util = __webpack_require__(1);
-	var transformers = __webpack_require__(16);
+	var util = __webpack_require__(11);
+	var transformers = __webpack_require__(15);
 	var config = __webpack_require__(2);
 	var constant = __webpack_require__(8)
-	var Snippet = __webpack_require__(10)
+	var Snippet = __webpack_require__(1)
 
 	var api={};
 
@@ -1303,7 +1224,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	}, //end optionBind
 
 	/**
-	 * [target]: string->name or selector. object->{_name: ""} or {_selector: ""}
+	 * [target]: string->name or selector. object->{name: ""} or {selector: ""}
 	 * [event1]: string->default change event array->extra change events
 	 * [event2]: array->extra change events
 	 */
@@ -1332,7 +1253,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	      defaultChangeEvent = event1;
 	      extraChangeEvents = event2;
 	    }else if (Array.isArray(event1)){
-	      extraChangeEvents = event2;
+	      extraChangeEvents = event1;
 	    }
 	  }else{
 	    //the client may call me as ({}, null, ["xxx"]), so the event1 is null but event2 exists
@@ -1378,13 +1299,13 @@ return /******/ (function(modules) { // webpackBootstrap
 	// add default form meta api extending
 	_addMetaApiExtending({
 	  
-	  withOption : function(){
-	    this._form._option = api.optionBind.apply(Aj, arguments);
+	  asSingleCheck : function(){
+	    this._form._single_check = true;
 	    return this;
 	  },
 	  
-	  asSingleCheck : function(){
-	    this._form._single_check = true;
+	  withOption : function(){
+	    this._form._option = api.optionBind.apply(Aj, arguments);
 	    return this;
 	  },
 	  
@@ -1469,6 +1390,10 @@ return /******/ (function(modules) { // webpackBootstrap
 	    }
 	    this._form._file_preload_limit = limit;
 	    this._form._file_preload_format = format;
+	    return this;
+	  },
+	  override: function(obj){
+	    util.override(obj, this);
 	    return this;
 	  }
 	  
@@ -1759,108 +1684,9 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	"use strict";
 
-	var util = __webpack_require__(1);
-	var config = __webpack_require__(2);
-	var BindContext = __webpack_require__(12);
-	var ValueMonitor = __webpack_require__(13);
-
-	var $ = config.$;
-
-	var Snippet = function(arg){
-	  this._root = config.snippet.resolveRoot(arg);
-	  if(this._root.length == 0){
-	    var err = new Error("Snippet was not found for given selector:" + this.root.selector);
-	    console.error(err);
-	  }
-	}
-
-	Snippet.prototype._discard = function(){
-	  this._root.remove();
-	}
-
-	Snippet.prototype.find = function(selector){
-	  return util.findWithRoot(this._root, selector);
-	}
-
-	Snippet.prototype.bind = function(){
-	  if(typeof arguments[0] === "string"){
-	    return this.bindEvent.apply(this, arguments);
-	  }{
-	    return this.bindMeta.apply(this, arguments);
-	  }
-	}
-
-	Snippet.prototype.bindMeta = function(meta, context){
-	  var ctx = context ? util.shallowCopy(context) : {};
-	  ctx._snippet = this;
-	  var bindContext = new BindContext(ctx);
-	  bindContext._bind(meta);
-	  return this;
-	}
-
-	var _convertArgumentsWithSyncOnFunctions = function(){
-	  var newArgs = new Array();
-	  for(var i=0;i<arguments.length;i++){
-	    newArgs[i] = (function(arg){
-	      if(typeof arg === "function"){
-	        return function(){
-	          var ret = arg.apply(this, arguments);
-	          util.sync();
-	          return ret;
-	        }
-	      }else{
-	        return arg;
-	      }
-	    })(arguments[i]);
-	  }
-	  return newArgs;
-	}
-
-	Snippet.prototype.bindEvent = function(){
-	  var newArgs = _convertArgumentsWithSyncOnFunctions.apply(null, arguments);
-	  
-	  var selector = newArgs[0];
-	  newArgs.shift();
-	  
-	  var target = this.find(selector);
-	  if(target.length == 0){
-	    console.error("could not find target to bind event for:", selector);
-	    return this;
-	  }else{
-	    target.bind.apply(target, newArgs);
-	    return this;
-	  }
-	}
-
-	Snippet.prototype.on = function () {
-	  var newArgs = _convertArgumentsWithSyncOnFunctions.apply(null, arguments);
-	  this._root.on.apply(this._root, newArgs);
-	  return this;
-	}
-
-	config.snippet.resolveRoot = function(arg){
-	  var root;
-	  if (typeof arg === "string"){
-	    root = $(arg);//as selector
-	  }else if(util.isJQuery(arg)){
-	    root = arg;
-	  }else{
-	    throw "JQuery object is expected for snippet root but found:" + JSON.stringify(arg);
-	  }
-	  return root;
-	}
-
-	module.exports = Snippet;
-
-/***/ },
-/* 11 */
-/***/ function(module, exports, __webpack_require__) {
-
-	"use strict";
-
 	var _lib_observe = __webpack_require__(14);
 
-	var util=__webpack_require__(1);
+	var util=__webpack_require__(11);
 	var config=__webpack_require__(2);
 	var constant = __webpack_require__(8)
 
@@ -2366,14 +2192,231 @@ return /******/ (function(modules) { // webpackBootstrap
 	module.exports = normalizeMeta
 
 /***/ },
+/* 11 */
+/***/ function(module, exports, __webpack_require__) {
+
+	"use strict";
+
+	var constant = __webpack_require__(8)
+	var config = __webpack_require__(2);
+
+	var util = {};
+	var $ = config.$;
+
+	util.sync = function(){
+	  Platform.performMicrotaskCheckpoint();
+	};
+
+	util.determineRefPath = function (scope, varRef, searchKey) {
+	  var deleteSearchKey;
+	  if(searchKey){
+	    deleteSearchKey = false;
+	  }else{
+	    deleteSearchKey = true;
+	    searchKey = constant.impossibleSearchKey;
+	    varRef[searchKey] = 1;
+	  }
+
+	  var refPath = null;
+	  for (var p in scope) {
+	    var ref = scope[p];
+	    if (ref[searchKey]) {
+	      refPath = p;
+	      break;
+	    }
+	  }
+	  
+	  if(deleteSearchKey){
+	    delete varRef[searchKey];
+	  }
+
+	  return refPath;
+	};
+
+	var __uidTimestamp = Date.now();
+	var __uidSeq = 0;
+	util.createUID = function () {
+	  if(__uidSeq >= 1000000){
+	    __uidTimestamp = Date.now();
+	    __uidSeq = 0;
+	  }
+	  __uidSeq++;
+	  return "aj-" + __uidSeq + "-"+ __uidTimestamp;
+	};
+
+	//TODO we should keep ref always
+	util.regulateArray = function (v, tryKeepRef) {
+	  if (Array.isArray(v)) {
+	    if(tryKeepRef){
+	      return v;
+	    }else{
+	      return [].concat(v);
+	    }
+	  } else if (v === null || v === undefined) {
+	    return new Array();
+	  } else {
+	    return [v];
+	  }
+	};
+
+	util.clone = __webpack_require__(9);
+
+	util.isJQuery = function(obj){
+	  if(obj){
+	    if($){
+	      return obj instanceof $
+	          || obj.constructor == $
+	          || Boolean(obj.jquery);
+	    }else{
+	      return Boolean(obj.jquery);
+	    }
+	  }else{
+	    return false;
+	  }
+	}
+
+	/**
+	 * (from)
+	 * (from, [propList])
+	 * (from, to)
+	 * (from, to, [propList])
+	 */
+	util.shallowCopy = function(arg1, arg2, arg3){
+	  var from = arg1;
+	  var to;
+	  var props;
+	  if(Array.isArray(arg2)){
+	    to = {};
+	    props = arg2;
+	  }else{
+	    to = arg2;
+	    props = arg3;
+	  }
+	  if(!to){
+	    to = {};
+	  }
+	  if(props){
+	    var p;
+	    for(var i=0;i<props.length;i++){
+	      p = props[i];
+	      to[p] = from[p];
+	    }
+	  }else{
+	    for(var p in from){
+	      to[p] = from[p];
+	    }
+	  }
+	  
+	  return to;
+	};
+
+	util.override = function(from, to){
+	  var ret = to;
+	  if(from === undefined || from === null){
+	    //do nothing
+	  }else if (to === undefined || to === null){
+	    ret = util.clone(from);
+	  }else if(Array.isArray(from) && Array.isArray(to)){
+	    Array.prototype.push.apply(to, from);
+	  }else if (util.isPlainObject(from) && util.isPlainObject(to)){
+	    for(var p in from){
+	      to[p] = util.override(from[p], to[p]);
+	    }
+	  }else{
+	    throw "cannot override different type data from \n"
+	          + JSON.stringify(from) + "\n"
+	          + " to \n"
+	          + JSON.stringify(to) + "\n";
+	  }
+	  return ret;
+	}
+
+	/*
+	 * copied from jquery
+	 */
+	util.isPlainObject = function(obj){
+	    if ( !obj || obj.toString() !== "[object Object]" || obj.nodeType || obj.setInterval ) {
+	        return false;
+	    }
+	     
+	    if ( obj.constructor && !obj.hasOwnProperty("constructor") && !obj.constructor.prototype.hasOwnProperty("isPrototypeOf") ) {
+	        return false;
+	    }
+	     
+	    var key;
+	    for ( key in obj ) {}
+	 
+	    return key === undefined || obj.hasOwnProperty(key);
+	}
+
+	util.arraySwap = function (array, index1, index2) {
+	      var tmp = array[index1];
+	      array[index1] = array[index2];
+	      array[index2] = tmp;
+	};
+
+	util.arrayLengthAdjust = function (targetArray, hopeLength, initialNewFn, discardCutFn) {
+	  var existingLength = targetArray.length;
+	  if(initialNewFn){
+	    var newItem;
+	    for(var i=existingLength;i<hopeLength;i++){
+	      newItem = initialNewFn(i);
+	      targetArray[i] = newItem;
+	    }
+	  }else{
+	    for(var i=existingLength;i<hopeLength;i++){
+	      targetArray[i] = undefined;
+	    }
+	  }
+	  var removeCount = existingLength - hopeLength;
+	  if(removeCount > 0){
+	    if(discardCutFn){
+	      for(var i=hopeLength;i<existingLength;i++){
+	        discardCutFn(targetArray[i], i);
+	      }
+	    }
+	    targetArray.splice(hopeLength, removeCount);
+	  }
+	};
+	    
+	util.findWithRoot = function(rootElem, selector){
+	      if(selector === ":root"){
+	        return rootElem;
+	      }
+	      var result = rootElem.find(selector);
+	      if(result.length === 0){
+	        if(rootElem.is(selector)){
+	          return rootElem;
+	        }
+	      }
+	      return result;
+	};
+
+	util.delay=function(callback, timeout, delayMoreCycles){
+	  if(delayMoreCycles && delayMoreCycles > 0){
+	    setTimeout(function(){
+	      util.delay(callback, timeout, delayMoreCycles-1);
+	    }, 0);
+	    return;
+	  }else{
+	    setTimeout(function(){
+	      callback.apply();
+	      util.sync();
+	    }, timeout ? timeout : 0);
+	  }
+	}
+
+	module.exports = util;
+
+/***/ },
 /* 12 */
 /***/ function(module, exports, __webpack_require__) {
 
 	"use strict";
 
-	var util = __webpack_require__(1);
+	var util = __webpack_require__(11);
 	var config = __webpack_require__(2);
-	var normalizeMeta = __webpack_require__(11);
+	var normalizeMeta = __webpack_require__(10);
 
 	var ResourceMap = __webpack_require__(17);
 
@@ -2548,7 +2591,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	var _ = __webpack_require__(14);
 
-	var util = __webpack_require__(1);
+	var util = __webpack_require__(11);
 	var config = __webpack_require__(2);
 	var ResourceMap = __webpack_require__(17);
 
@@ -4418,11 +4461,139 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	"use strict";
 
-	var util = __webpack_require__(1);
+	var util = __webpack_require__(11);
+
+	var _int = {
+	  setValue: function(v){
+	    var nv = parseInt(v, this._radix);
+	    if(isNaN(nv)){
+	      return v;
+	    }else{
+	      return nv;
+	    }
+	  },
+	  getValue: function(v){
+	    if(v){
+	      return (v).toString(this._radix);
+	    }else{
+	      return v;
+	    }
+	  }
+	}
+
+	var _float = {
+	  setValue: function(v){
+	    var nv = parseFloat(v);
+	    if(isNaN(nv)){
+	      return v;
+	    }else{
+	      return nv;
+	    }
+	  },
+	  getValue: function(v){
+	    if(v){
+	      return (v).toString(this._radix);
+	    }else{
+	      return v;
+	    }
+	  }
+	}
+
+	var pad = function(number) {
+	  if (number < 10) {
+	    return '0' + number;
+	  }
+	  return number;
+	};
+
+	var toISOString = function(date, keepMs, keepZ) {
+	  var s = date.getUTCFullYear() +
+	    '-' + pad(date.getUTCMonth() + 1) +
+	    '-' + pad(date.getUTCDate()) +
+	    'T' + pad(date.getUTCHours()) +
+	    ':' + pad(date.getUTCMinutes()) +
+	    ':' + pad(date.getUTCSeconds());
+	  
+	  if(keepMs){
+	    s += '.' + (date.getUTCMilliseconds() / 1000).toFixed(3).slice(2, 5);
+	  }
+	  
+	  if(keepZ){
+	    s += 'Z';
+	  }
+	  
+	  return s;
+	};
+
+	var _datetime = {
+	  //default tz is UTC or the given parse value is with tz information
+	  _parse_tz_offset : 0,
+	  //default tz is UTC
+	  _stringy_tz_offset: 0,
+	  //default to remove the tail z in stringified iso string
+	  _stringy_as_local : true,
+	  //default to remove tail milliseconds value
+	  _stringy_keep_ms : false,
+	  setValue : function(v){
+	    var time = Date.parse(v);
+	    if(isNaN(time)){
+	      return v;
+	    }else{
+	      time = time + this._parse_tz_offset;
+	      return new Date(time);
+	    }
+	  },
+	  getValue : function(v){
+	    if(v && v.toISOString && v.getTime){//is a date
+	      if(this._stringy_as_local){
+	        var d = new Date(v.getTime());
+	        if(this._stringy_tz_offset !== 0){
+	          d.setTime(d.getTime() - this._stringy_tz_offset);
+	        }
+	        return toISOString(d, this._stringy_keep_ms, !this._stringy_as_local);
+	      }else{
+	        return v.toISOString();
+	      }
+	    }else{
+	      return v;
+	    }
+	    
+	  }
+	}
+
+	module.exports={
+	  "int": function(radix){
+	    var ret = util.shallowCopy(_int);
+	    ret._radix = radix ? radix : 10;
+	    return ret;
+	  },
+	  "float": function(){
+	    return util.shallowCopy(_float);
+	  },
+	  "datetime": function(option){
+	    var ret = util.shallowCopy(_datetime);
+	    if(option){
+	      return util.shallowCopy(option, ret);
+	    }else{
+	      return ret;
+	    }
+	    
+	  }
+	}
+
+
+
+/***/ },
+/* 16 */
+/***/ function(module, exports, __webpack_require__) {
+
+	"use strict";
+
+	var util = __webpack_require__(11);
 	var config = __webpack_require__(2);
 	var constant = __webpack_require__(8)
-	var Snippet = __webpack_require__(10)
-	var normalizeMeta = __webpack_require__(11)
+	var Snippet = __webpack_require__(1)
+	var normalizeMeta = __webpack_require__(10)
 
 	var $ = config.$;
 
@@ -4623,140 +4794,12 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ },
-/* 16 */
-/***/ function(module, exports, __webpack_require__) {
-
-	"use strict";
-
-	var util = __webpack_require__(1);
-
-	var _int = {
-	  setValue: function(v){
-	    var nv = parseInt(v, this._radix);
-	    if(isNaN(nv)){
-	      return v;
-	    }else{
-	      return nv;
-	    }
-	  },
-	  getValue: function(v){
-	    if(v){
-	      return (v).toString(this._radix);
-	    }else{
-	      return v;
-	    }
-	  }
-	}
-
-	var _float = {
-	  setValue: function(v){
-	    var nv = parseFloat(v);
-	    if(isNaN(nv)){
-	      return v;
-	    }else{
-	      return nv;
-	    }
-	  },
-	  getValue: function(v){
-	    if(v){
-	      return (v).toString(this._radix);
-	    }else{
-	      return v;
-	    }
-	  }
-	}
-
-	var pad = function(number) {
-	  if (number < 10) {
-	    return '0' + number;
-	  }
-	  return number;
-	};
-
-	var toISOString = function(date, keepMs, keepZ) {
-	  var s = date.getUTCFullYear() +
-	    '-' + pad(date.getUTCMonth() + 1) +
-	    '-' + pad(date.getUTCDate()) +
-	    'T' + pad(date.getUTCHours()) +
-	    ':' + pad(date.getUTCMinutes()) +
-	    ':' + pad(date.getUTCSeconds());
-	  
-	  if(keepMs){
-	    s += '.' + (date.getUTCMilliseconds() / 1000).toFixed(3).slice(2, 5);
-	  }
-	  
-	  if(keepZ){
-	    s += 'Z';
-	  }
-	  
-	  return s;
-	};
-
-	var _datetime = {
-	  //default tz is UTC or the given parse value is with tz information
-	  _parse_tz_offset : 0,
-	  //default tz is UTC
-	  _stringy_tz_offset: 0,
-	  //default to remove the tail z in stringified iso string
-	  _stringy_as_local : true,
-	  //default to remove tail milliseconds value
-	  _stringy_keep_ms : false,
-	  setValue : function(v){
-	    var time = Date.parse(v);
-	    if(isNaN(time)){
-	      return v;
-	    }else{
-	      time = time + this._parse_tz_offset;
-	      return new Date(time);
-	    }
-	  },
-	  getValue : function(v){
-	    if(v && v.toISOString && v.getTime){//is a date
-	      if(this._stringy_as_local){
-	        var d = new Date(v.getTime());
-	        if(this._stringy_tz_offset !== 0){
-	          d.setTime(d.getTime() - this._stringy_tz_offset);
-	        }
-	        return toISOString(d, this._stringy_keep_ms, !this._stringy_as_local);
-	      }else{
-	        return v.toISOString();
-	      }
-	    }else{
-	      return v;
-	    }
-	    
-	  }
-	}
-
-	module.exports={
-	  "int": function(radix){
-	    var ret = util.shallowCopy(_int);
-	    ret._radix = radix ? radix : 10;
-	    return ret;
-	  },
-	  "float": function(){
-	    return util.shallowCopy(_float);
-	  },
-	  "datetime": function(option){
-	    var ret = util.shallowCopy(_datetime);
-	    if(option){
-	      return util.shallowCopy(option, ret);
-	    }else{
-	      return ret;
-	    }
-	    
-	  }
-	}
-
-
-
-/***/ },
 /* 17 */
 /***/ function(module, exports, __webpack_require__) {
 
 	"use strict";
 
-	var util = __webpack_require__(1);
+	var util = __webpack_require__(11);
 
 	var discardNode=function(node){
 	  if(node){
@@ -4944,68 +4987,149 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * By augmenting the instances, we can avoid modifying the `Uint8Array`
 	 * prototype.
 	 */
-	function Buffer (subject, encoding) {
-	  var self = this
-	  if (!(self instanceof Buffer)) return new Buffer(subject, encoding)
+	function Buffer (arg) {
+	  if (!(this instanceof Buffer)) {
+	    // Avoid going through an ArgumentsAdaptorTrampoline in the common case.
+	    if (arguments.length > 1) return new Buffer(arg, arguments[1])
+	    return new Buffer(arg)
+	  }
 
-	  var type = typeof subject
-	  var length
+	  this.length = 0
+	  this.parent = undefined
 
-	  if (type === 'number') {
-	    length = +subject
-	  } else if (type === 'string') {
-	    length = Buffer.byteLength(subject, encoding)
-	  } else if (type === 'object' && subject !== null) {
-	    // assume object is array-like
-	    if (subject.type === 'Buffer' && isArray(subject.data)) subject = subject.data
-	    length = +subject.length
-	  } else {
+	  // Common case.
+	  if (typeof arg === 'number') {
+	    return fromNumber(this, arg)
+	  }
+
+	  // Slightly less common case.
+	  if (typeof arg === 'string') {
+	    return fromString(this, arg, arguments.length > 1 ? arguments[1] : 'utf8')
+	  }
+
+	  // Unusual.
+	  return fromObject(this, arg)
+	}
+
+	function fromNumber (that, length) {
+	  that = allocate(that, length < 0 ? 0 : checked(length) | 0)
+	  if (!Buffer.TYPED_ARRAY_SUPPORT) {
+	    for (var i = 0; i < length; i++) {
+	      that[i] = 0
+	    }
+	  }
+	  return that
+	}
+
+	function fromString (that, string, encoding) {
+	  if (typeof encoding !== 'string' || encoding === '') encoding = 'utf8'
+
+	  // Assumption: byteLength() return value is always < kMaxLength.
+	  var length = byteLength(string, encoding) | 0
+	  that = allocate(that, length)
+
+	  that.write(string, encoding)
+	  return that
+	}
+
+	function fromObject (that, object) {
+	  if (Buffer.isBuffer(object)) return fromBuffer(that, object)
+
+	  if (isArray(object)) return fromArray(that, object)
+
+	  if (object == null) {
 	    throw new TypeError('must start with number, buffer, array or string')
 	  }
 
-	  if (length > kMaxLength) {
-	    throw new RangeError('Attempt to allocate Buffer larger than maximum size: 0x' +
-	      kMaxLength.toString(16) + ' bytes')
+	  if (typeof ArrayBuffer !== 'undefined' && object.buffer instanceof ArrayBuffer) {
+	    return fromTypedArray(that, object)
 	  }
 
-	  if (length < 0) length = 0
-	  else length >>>= 0 // coerce to uint32
+	  if (object.length) return fromArrayLike(that, object)
 
+	  return fromJsonObject(that, object)
+	}
+
+	function fromBuffer (that, buffer) {
+	  var length = checked(buffer.length) | 0
+	  that = allocate(that, length)
+	  buffer.copy(that, 0, 0, length)
+	  return that
+	}
+
+	function fromArray (that, array) {
+	  var length = checked(array.length) | 0
+	  that = allocate(that, length)
+	  for (var i = 0; i < length; i += 1) {
+	    that[i] = array[i] & 255
+	  }
+	  return that
+	}
+
+	// Duplicate of fromArray() to keep fromArray() monomorphic.
+	function fromTypedArray (that, array) {
+	  var length = checked(array.length) | 0
+	  that = allocate(that, length)
+	  // Truncating the elements is probably not what people expect from typed
+	  // arrays with BYTES_PER_ELEMENT > 1 but it's compatible with the behavior
+	  // of the old Buffer constructor.
+	  for (var i = 0; i < length; i += 1) {
+	    that[i] = array[i] & 255
+	  }
+	  return that
+	}
+
+	function fromArrayLike (that, array) {
+	  var length = checked(array.length) | 0
+	  that = allocate(that, length)
+	  for (var i = 0; i < length; i += 1) {
+	    that[i] = array[i] & 255
+	  }
+	  return that
+	}
+
+	// Deserialize { type: 'Buffer', data: [1,2,3,...] } into a Buffer object.
+	// Returns a zero-length buffer for inputs that don't conform to the spec.
+	function fromJsonObject (that, object) {
+	  var array
+	  var length = 0
+
+	  if (object.type === 'Buffer' && isArray(object.data)) {
+	    array = object.data
+	    length = checked(array.length) | 0
+	  }
+	  that = allocate(that, length)
+
+	  for (var i = 0; i < length; i += 1) {
+	    that[i] = array[i] & 255
+	  }
+	  return that
+	}
+
+	function allocate (that, length) {
 	  if (Buffer.TYPED_ARRAY_SUPPORT) {
-	    // Preferred: Return an augmented `Uint8Array` instance for best performance
-	    self = Buffer._augment(new Uint8Array(length)) // eslint-disable-line consistent-this
+	    // Return an augmented `Uint8Array` instance, for best performance
+	    that = Buffer._augment(new Uint8Array(length))
 	  } else {
-	    // Fallback: Return THIS instance of Buffer (created by `new`)
-	    self.length = length
-	    self._isBuffer = true
+	    // Fallback: Return an object instance of the Buffer class
+	    that.length = length
+	    that._isBuffer = true
 	  }
 
-	  var i
-	  if (Buffer.TYPED_ARRAY_SUPPORT && typeof subject.byteLength === 'number') {
-	    // Speed optimization -- use set if we're copying from a typed array
-	    self._set(subject)
-	  } else if (isArrayish(subject)) {
-	    // Treat array-ish objects as a byte array
-	    if (Buffer.isBuffer(subject)) {
-	      for (i = 0; i < length; i++) {
-	        self[i] = subject.readUInt8(i)
-	      }
-	    } else {
-	      for (i = 0; i < length; i++) {
-	        self[i] = ((subject[i] % 256) + 256) % 256
-	      }
-	    }
-	  } else if (type === 'string') {
-	    self.write(subject, 0, encoding)
-	  } else if (type === 'number' && !Buffer.TYPED_ARRAY_SUPPORT) {
-	    for (i = 0; i < length; i++) {
-	      self[i] = 0
-	    }
+	  var fromPool = length !== 0 && length <= Buffer.poolSize >>> 1
+	  if (fromPool) that.parent = rootParent
+
+	  return that
+	}
+
+	function checked (length) {
+	  // Note: cannot use `length < kMaxLength` here because that fails when
+	  // length is NaN (which is otherwise coerced to zero.)
+	  if (length >= kMaxLength) {
+	    throw new RangeError('Attempt to allocate Buffer larger than maximum ' +
+	                         'size: 0x' + kMaxLength.toString(16) + ' bytes')
 	  }
-
-	  if (length > 0 && length <= Buffer.poolSize) self.parent = rootParent
-
-	  return self
+	  return length | 0
 	}
 
 	function SlowBuffer (subject, encoding) {
@@ -5029,11 +5153,20 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	  var x = a.length
 	  var y = b.length
-	  for (var i = 0, len = Math.min(x, y); i < len && a[i] === b[i]; i++) {}
+
+	  var i = 0
+	  var len = Math.min(x, y)
+	  while (i < len) {
+	    if (a[i] !== b[i]) break
+
+	    ++i
+	  }
+
 	  if (i !== len) {
 	    x = a[i]
 	    y = b[i]
 	  }
+
 	  if (x < y) return -1
 	  if (y < x) return 1
 	  return 0
@@ -5058,7 +5191,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  }
 	}
 
-	Buffer.concat = function concat (list, totalLength) {
+	Buffer.concat = function concat (list, length) {
 	  if (!isArray(list)) throw new TypeError('list argument must be an Array of Buffers.')
 
 	  if (list.length === 0) {
@@ -5068,14 +5201,14 @@ return /******/ (function(modules) { // webpackBootstrap
 	  }
 
 	  var i
-	  if (totalLength === undefined) {
-	    totalLength = 0
+	  if (length === undefined) {
+	    length = 0
 	    for (i = 0; i < list.length; i++) {
-	      totalLength += list[i].length
+	      length += list[i].length
 	    }
 	  }
 
-	  var buf = new Buffer(totalLength)
+	  var buf = new Buffer(length)
 	  var pos = 0
 	  for (i = 0; i < list.length; i++) {
 	    var item = list[i]
@@ -5085,36 +5218,33 @@ return /******/ (function(modules) { // webpackBootstrap
 	  return buf
 	}
 
-	Buffer.byteLength = function byteLength (str, encoding) {
-	  var ret
-	  str = str + ''
+	function byteLength (string, encoding) {
+	  if (typeof string !== 'string') string = String(string)
+
+	  if (string.length === 0) return 0
+
 	  switch (encoding || 'utf8') {
 	    case 'ascii':
 	    case 'binary':
 	    case 'raw':
-	      ret = str.length
-	      break
+	      return string.length
 	    case 'ucs2':
 	    case 'ucs-2':
 	    case 'utf16le':
 	    case 'utf-16le':
-	      ret = str.length * 2
-	      break
+	      return string.length * 2
 	    case 'hex':
-	      ret = str.length >>> 1
-	      break
+	      return string.length >>> 1
 	    case 'utf8':
 	    case 'utf-8':
-	      ret = utf8ToBytes(str).length
-	      break
+	      return utf8ToBytes(string).length
 	    case 'base64':
-	      ret = base64ToBytes(str).length
-	      break
+	      return base64ToBytes(string).length
 	    default:
-	      ret = str.length
+	      return string.length
 	  }
-	  return ret
 	}
+	Buffer.byteLength = byteLength
 
 	// pre-set for values that may exist in the future
 	Buffer.prototype.length = undefined
@@ -5124,8 +5254,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	Buffer.prototype.toString = function toString (encoding, start, end) {
 	  var loweredCase = false
 
-	  start = start >>> 0
-	  end = end === undefined || end === Infinity ? this.length : end >>> 0
+	  start = start | 0
+	  end = end === undefined || end === Infinity ? this.length : end | 0
 
 	  if (!encoding) encoding = 'utf8'
 	  if (start < 0) start = 0
@@ -5267,13 +5397,11 @@ return /******/ (function(modules) { // webpackBootstrap
 	}
 
 	function utf8Write (buf, string, offset, length) {
-	  var charsWritten = blitBuffer(utf8ToBytes(string, buf.length - offset), buf, offset, length)
-	  return charsWritten
+	  return blitBuffer(utf8ToBytes(string, buf.length - offset), buf, offset, length)
 	}
 
 	function asciiWrite (buf, string, offset, length) {
-	  var charsWritten = blitBuffer(asciiToBytes(string), buf, offset, length)
-	  return charsWritten
+	  return blitBuffer(asciiToBytes(string), buf, offset, length)
 	}
 
 	function binaryWrite (buf, string, offset, length) {
@@ -5281,75 +5409,83 @@ return /******/ (function(modules) { // webpackBootstrap
 	}
 
 	function base64Write (buf, string, offset, length) {
-	  var charsWritten = blitBuffer(base64ToBytes(string), buf, offset, length)
-	  return charsWritten
+	  return blitBuffer(base64ToBytes(string), buf, offset, length)
 	}
 
-	function utf16leWrite (buf, string, offset, length) {
-	  var charsWritten = blitBuffer(utf16leToBytes(string, buf.length - offset), buf, offset, length)
-	  return charsWritten
+	function ucs2Write (buf, string, offset, length) {
+	  return blitBuffer(utf16leToBytes(string, buf.length - offset), buf, offset, length)
 	}
 
 	Buffer.prototype.write = function write (string, offset, length, encoding) {
-	  // Support both (string, offset, length, encoding)
-	  // and the legacy (string, encoding, offset, length)
-	  if (isFinite(offset)) {
-	    if (!isFinite(length)) {
+	  // Buffer#write(string)
+	  if (offset === undefined) {
+	    encoding = 'utf8'
+	    length = this.length
+	    offset = 0
+	  // Buffer#write(string, encoding)
+	  } else if (length === undefined && typeof offset === 'string') {
+	    encoding = offset
+	    length = this.length
+	    offset = 0
+	  // Buffer#write(string, offset[, length][, encoding])
+	  } else if (isFinite(offset)) {
+	    offset = offset | 0
+	    if (isFinite(length)) {
+	      length = length | 0
+	      if (encoding === undefined) encoding = 'utf8'
+	    } else {
 	      encoding = length
 	      length = undefined
 	    }
-	  } else {  // legacy
+	  // legacy write(string, encoding, offset, length) - remove in v0.13
+	  } else {
 	    var swap = encoding
 	    encoding = offset
-	    offset = length
+	    offset = length | 0
 	    length = swap
 	  }
 
-	  offset = Number(offset) || 0
+	  var remaining = this.length - offset
+	  if (length === undefined || length > remaining) length = remaining
 
-	  if (length < 0 || offset < 0 || offset > this.length) {
+	  if ((string.length > 0 && (length < 0 || offset < 0)) || offset > this.length) {
 	    throw new RangeError('attempt to write outside buffer bounds')
 	  }
 
-	  var remaining = this.length - offset
-	  if (!length) {
-	    length = remaining
-	  } else {
-	    length = Number(length)
-	    if (length > remaining) {
-	      length = remaining
+	  if (!encoding) encoding = 'utf8'
+
+	  var loweredCase = false
+	  for (;;) {
+	    switch (encoding) {
+	      case 'hex':
+	        return hexWrite(this, string, offset, length)
+
+	      case 'utf8':
+	      case 'utf-8':
+	        return utf8Write(this, string, offset, length)
+
+	      case 'ascii':
+	        return asciiWrite(this, string, offset, length)
+
+	      case 'binary':
+	        return binaryWrite(this, string, offset, length)
+
+	      case 'base64':
+	        // Warning: maxLength not taken into account in base64Write
+	        return base64Write(this, string, offset, length)
+
+	      case 'ucs2':
+	      case 'ucs-2':
+	      case 'utf16le':
+	      case 'utf-16le':
+	        return ucs2Write(this, string, offset, length)
+
+	      default:
+	        if (loweredCase) throw new TypeError('Unknown encoding: ' + encoding)
+	        encoding = ('' + encoding).toLowerCase()
+	        loweredCase = true
 	    }
 	  }
-	  encoding = String(encoding || 'utf8').toLowerCase()
-
-	  var ret
-	  switch (encoding) {
-	    case 'hex':
-	      ret = hexWrite(this, string, offset, length)
-	      break
-	    case 'utf8':
-	    case 'utf-8':
-	      ret = utf8Write(this, string, offset, length)
-	      break
-	    case 'ascii':
-	      ret = asciiWrite(this, string, offset, length)
-	      break
-	    case 'binary':
-	      ret = binaryWrite(this, string, offset, length)
-	      break
-	    case 'base64':
-	      ret = base64Write(this, string, offset, length)
-	      break
-	    case 'ucs2':
-	    case 'ucs-2':
-	    case 'utf16le':
-	    case 'utf-16le':
-	      ret = utf16leWrite(this, string, offset, length)
-	      break
-	    default:
-	      throw new TypeError('Unknown encoding: ' + encoding)
-	  }
-	  return ret
 	}
 
 	Buffer.prototype.toJSON = function toJSON () {
@@ -5472,8 +5608,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	}
 
 	Buffer.prototype.readUIntLE = function readUIntLE (offset, byteLength, noAssert) {
-	  offset = offset >>> 0
-	  byteLength = byteLength >>> 0
+	  offset = offset | 0
+	  byteLength = byteLength | 0
 	  if (!noAssert) checkOffset(offset, byteLength, this.length)
 
 	  var val = this[offset]
@@ -5487,8 +5623,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	}
 
 	Buffer.prototype.readUIntBE = function readUIntBE (offset, byteLength, noAssert) {
-	  offset = offset >>> 0
-	  byteLength = byteLength >>> 0
+	  offset = offset | 0
+	  byteLength = byteLength | 0
 	  if (!noAssert) {
 	    checkOffset(offset, byteLength, this.length)
 	  }
@@ -5536,8 +5672,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	}
 
 	Buffer.prototype.readIntLE = function readIntLE (offset, byteLength, noAssert) {
-	  offset = offset >>> 0
-	  byteLength = byteLength >>> 0
+	  offset = offset | 0
+	  byteLength = byteLength | 0
 	  if (!noAssert) checkOffset(offset, byteLength, this.length)
 
 	  var val = this[offset]
@@ -5554,8 +5690,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	}
 
 	Buffer.prototype.readIntBE = function readIntBE (offset, byteLength, noAssert) {
-	  offset = offset >>> 0
-	  byteLength = byteLength >>> 0
+	  offset = offset | 0
+	  byteLength = byteLength | 0
 	  if (!noAssert) checkOffset(offset, byteLength, this.length)
 
 	  var i = byteLength
@@ -5635,15 +5771,15 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	Buffer.prototype.writeUIntLE = function writeUIntLE (value, offset, byteLength, noAssert) {
 	  value = +value
-	  offset = offset >>> 0
-	  byteLength = byteLength >>> 0
+	  offset = offset | 0
+	  byteLength = byteLength | 0
 	  if (!noAssert) checkInt(this, value, offset, byteLength, Math.pow(2, 8 * byteLength), 0)
 
 	  var mul = 1
 	  var i = 0
 	  this[offset] = value & 0xFF
 	  while (++i < byteLength && (mul *= 0x100)) {
-	    this[offset + i] = (value / mul) >>> 0 & 0xFF
+	    this[offset + i] = (value / mul) & 0xFF
 	  }
 
 	  return offset + byteLength
@@ -5651,15 +5787,15 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	Buffer.prototype.writeUIntBE = function writeUIntBE (value, offset, byteLength, noAssert) {
 	  value = +value
-	  offset = offset >>> 0
-	  byteLength = byteLength >>> 0
+	  offset = offset | 0
+	  byteLength = byteLength | 0
 	  if (!noAssert) checkInt(this, value, offset, byteLength, Math.pow(2, 8 * byteLength), 0)
 
 	  var i = byteLength - 1
 	  var mul = 1
 	  this[offset + i] = value & 0xFF
 	  while (--i >= 0 && (mul *= 0x100)) {
-	    this[offset + i] = (value / mul) >>> 0 & 0xFF
+	    this[offset + i] = (value / mul) & 0xFF
 	  }
 
 	  return offset + byteLength
@@ -5667,7 +5803,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	Buffer.prototype.writeUInt8 = function writeUInt8 (value, offset, noAssert) {
 	  value = +value
-	  offset = offset >>> 0
+	  offset = offset | 0
 	  if (!noAssert) checkInt(this, value, offset, 1, 0xff, 0)
 	  if (!Buffer.TYPED_ARRAY_SUPPORT) value = Math.floor(value)
 	  this[offset] = value
@@ -5684,7 +5820,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	Buffer.prototype.writeUInt16LE = function writeUInt16LE (value, offset, noAssert) {
 	  value = +value
-	  offset = offset >>> 0
+	  offset = offset | 0
 	  if (!noAssert) checkInt(this, value, offset, 2, 0xffff, 0)
 	  if (Buffer.TYPED_ARRAY_SUPPORT) {
 	    this[offset] = value
@@ -5697,7 +5833,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	Buffer.prototype.writeUInt16BE = function writeUInt16BE (value, offset, noAssert) {
 	  value = +value
-	  offset = offset >>> 0
+	  offset = offset | 0
 	  if (!noAssert) checkInt(this, value, offset, 2, 0xffff, 0)
 	  if (Buffer.TYPED_ARRAY_SUPPORT) {
 	    this[offset] = (value >>> 8)
@@ -5717,7 +5853,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	Buffer.prototype.writeUInt32LE = function writeUInt32LE (value, offset, noAssert) {
 	  value = +value
-	  offset = offset >>> 0
+	  offset = offset | 0
 	  if (!noAssert) checkInt(this, value, offset, 4, 0xffffffff, 0)
 	  if (Buffer.TYPED_ARRAY_SUPPORT) {
 	    this[offset + 3] = (value >>> 24)
@@ -5732,7 +5868,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	Buffer.prototype.writeUInt32BE = function writeUInt32BE (value, offset, noAssert) {
 	  value = +value
-	  offset = offset >>> 0
+	  offset = offset | 0
 	  if (!noAssert) checkInt(this, value, offset, 4, 0xffffffff, 0)
 	  if (Buffer.TYPED_ARRAY_SUPPORT) {
 	    this[offset] = (value >>> 24)
@@ -5747,13 +5883,11 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	Buffer.prototype.writeIntLE = function writeIntLE (value, offset, byteLength, noAssert) {
 	  value = +value
-	  offset = offset >>> 0
+	  offset = offset | 0
 	  if (!noAssert) {
-	    checkInt(
-	      this, value, offset, byteLength,
-	      Math.pow(2, 8 * byteLength - 1) - 1,
-	      -Math.pow(2, 8 * byteLength - 1)
-	    )
+	    var limit = Math.pow(2, 8 * byteLength - 1)
+
+	    checkInt(this, value, offset, byteLength, limit - 1, -limit)
 	  }
 
 	  var i = 0
@@ -5769,13 +5903,11 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	Buffer.prototype.writeIntBE = function writeIntBE (value, offset, byteLength, noAssert) {
 	  value = +value
-	  offset = offset >>> 0
+	  offset = offset | 0
 	  if (!noAssert) {
-	    checkInt(
-	      this, value, offset, byteLength,
-	      Math.pow(2, 8 * byteLength - 1) - 1,
-	      -Math.pow(2, 8 * byteLength - 1)
-	    )
+	    var limit = Math.pow(2, 8 * byteLength - 1)
+
+	    checkInt(this, value, offset, byteLength, limit - 1, -limit)
 	  }
 
 	  var i = byteLength - 1
@@ -5791,7 +5923,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	Buffer.prototype.writeInt8 = function writeInt8 (value, offset, noAssert) {
 	  value = +value
-	  offset = offset >>> 0
+	  offset = offset | 0
 	  if (!noAssert) checkInt(this, value, offset, 1, 0x7f, -0x80)
 	  if (!Buffer.TYPED_ARRAY_SUPPORT) value = Math.floor(value)
 	  if (value < 0) value = 0xff + value + 1
@@ -5801,7 +5933,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	Buffer.prototype.writeInt16LE = function writeInt16LE (value, offset, noAssert) {
 	  value = +value
-	  offset = offset >>> 0
+	  offset = offset | 0
 	  if (!noAssert) checkInt(this, value, offset, 2, 0x7fff, -0x8000)
 	  if (Buffer.TYPED_ARRAY_SUPPORT) {
 	    this[offset] = value
@@ -5814,7 +5946,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	Buffer.prototype.writeInt16BE = function writeInt16BE (value, offset, noAssert) {
 	  value = +value
-	  offset = offset >>> 0
+	  offset = offset | 0
 	  if (!noAssert) checkInt(this, value, offset, 2, 0x7fff, -0x8000)
 	  if (Buffer.TYPED_ARRAY_SUPPORT) {
 	    this[offset] = (value >>> 8)
@@ -5827,7 +5959,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	Buffer.prototype.writeInt32LE = function writeInt32LE (value, offset, noAssert) {
 	  value = +value
-	  offset = offset >>> 0
+	  offset = offset | 0
 	  if (!noAssert) checkInt(this, value, offset, 4, 0x7fffffff, -0x80000000)
 	  if (Buffer.TYPED_ARRAY_SUPPORT) {
 	    this[offset] = value
@@ -5842,7 +5974,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	Buffer.prototype.writeInt32BE = function writeInt32BE (value, offset, noAssert) {
 	  value = +value
-	  offset = offset >>> 0
+	  offset = offset | 0
 	  if (!noAssert) checkInt(this, value, offset, 4, 0x7fffffff, -0x80000000)
 	  if (value < 0) value = 0xffffffff + value + 1
 	  if (Buffer.TYPED_ARRAY_SUPPORT) {
@@ -5895,11 +6027,11 @@ return /******/ (function(modules) { // webpackBootstrap
 	}
 
 	// copy(targetBuffer, targetStart=0, sourceStart=0, sourceEnd=buffer.length)
-	Buffer.prototype.copy = function copy (target, target_start, start, end) {
+	Buffer.prototype.copy = function copy (target, targetStart, start, end) {
 	  if (!start) start = 0
 	  if (!end && end !== 0) end = this.length
-	  if (target_start >= target.length) target_start = target.length
-	  if (!target_start) target_start = 0
+	  if (targetStart >= target.length) targetStart = target.length
+	  if (!targetStart) targetStart = 0
 	  if (end > 0 && end < start) end = start
 
 	  // Copy 0 bytes; we're done
@@ -5907,7 +6039,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  if (target.length === 0 || this.length === 0) return 0
 
 	  // Fatal error conditions
-	  if (target_start < 0) {
+	  if (targetStart < 0) {
 	    throw new RangeError('targetStart out of bounds')
 	  }
 	  if (start < 0 || start >= this.length) throw new RangeError('sourceStart out of bounds')
@@ -5915,18 +6047,18 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	  // Are we oob?
 	  if (end > this.length) end = this.length
-	  if (target.length - target_start < end - start) {
-	    end = target.length - target_start + start
+	  if (target.length - targetStart < end - start) {
+	    end = target.length - targetStart + start
 	  }
 
 	  var len = end - start
 
 	  if (len < 1000 || !Buffer.TYPED_ARRAY_SUPPORT) {
 	    for (var i = 0; i < len; i++) {
-	      target[i + target_start] = this[i + start]
+	      target[i + targetStart] = this[i + start]
 	    }
 	  } else {
-	    target._set(this.subarray(start, start + len), target_start)
+	    target._set(this.subarray(start, start + len), targetStart)
 	  }
 
 	  return len
@@ -6071,12 +6203,6 @@ return /******/ (function(modules) { // webpackBootstrap
 	function stringtrim (str) {
 	  if (str.trim) return str.trim()
 	  return str.replace(/^\s+|\s+$/g, '')
-	}
-
-	function isArrayish (subject) {
-	  return isArray(subject) || Buffer.isBuffer(subject) ||
-	      subject && typeof subject === 'object' &&
-	      typeof subject.length === 'number'
 	}
 
 	function toHex (n) {
@@ -6232,7 +6358,7 @@ return /******/ (function(modules) { // webpackBootstrap
 /* 20 */
 /***/ function(module, exports, __webpack_require__) {
 
-	exports.read = function(buffer, offset, isLE, mLen, nBytes) {
+	exports.read = function (buffer, offset, isLE, mLen, nBytes) {
 	  var e, m,
 	      eLen = nBytes * 8 - mLen - 1,
 	      eMax = (1 << eLen) - 1,
@@ -6240,32 +6366,32 @@ return /******/ (function(modules) { // webpackBootstrap
 	      nBits = -7,
 	      i = isLE ? (nBytes - 1) : 0,
 	      d = isLE ? -1 : 1,
-	      s = buffer[offset + i];
+	      s = buffer[offset + i]
 
-	  i += d;
+	  i += d
 
-	  e = s & ((1 << (-nBits)) - 1);
-	  s >>= (-nBits);
-	  nBits += eLen;
-	  for (; nBits > 0; e = e * 256 + buffer[offset + i], i += d, nBits -= 8);
+	  e = s & ((1 << (-nBits)) - 1)
+	  s >>= (-nBits)
+	  nBits += eLen
+	  for (; nBits > 0; e = e * 256 + buffer[offset + i], i += d, nBits -= 8) {}
 
-	  m = e & ((1 << (-nBits)) - 1);
-	  e >>= (-nBits);
-	  nBits += mLen;
-	  for (; nBits > 0; m = m * 256 + buffer[offset + i], i += d, nBits -= 8);
+	  m = e & ((1 << (-nBits)) - 1)
+	  e >>= (-nBits)
+	  nBits += mLen
+	  for (; nBits > 0; m = m * 256 + buffer[offset + i], i += d, nBits -= 8) {}
 
 	  if (e === 0) {
-	    e = 1 - eBias;
+	    e = 1 - eBias
 	  } else if (e === eMax) {
-	    return m ? NaN : ((s ? -1 : 1) * Infinity);
+	    return m ? NaN : ((s ? -1 : 1) * Infinity)
 	  } else {
-	    m = m + Math.pow(2, mLen);
-	    e = e - eBias;
+	    m = m + Math.pow(2, mLen)
+	    e = e - eBias
 	  }
-	  return (s ? -1 : 1) * m * Math.pow(2, e - mLen);
-	};
+	  return (s ? -1 : 1) * m * Math.pow(2, e - mLen)
+	}
 
-	exports.write = function(buffer, value, offset, isLE, mLen, nBytes) {
+	exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
 	  var e, m, c,
 	      eLen = nBytes * 8 - mLen - 1,
 	      eMax = (1 << eLen) - 1,
@@ -6273,49 +6399,49 @@ return /******/ (function(modules) { // webpackBootstrap
 	      rt = (mLen === 23 ? Math.pow(2, -24) - Math.pow(2, -77) : 0),
 	      i = isLE ? 0 : (nBytes - 1),
 	      d = isLE ? 1 : -1,
-	      s = value < 0 || (value === 0 && 1 / value < 0) ? 1 : 0;
+	      s = value < 0 || (value === 0 && 1 / value < 0) ? 1 : 0
 
-	  value = Math.abs(value);
+	  value = Math.abs(value)
 
 	  if (isNaN(value) || value === Infinity) {
-	    m = isNaN(value) ? 1 : 0;
-	    e = eMax;
+	    m = isNaN(value) ? 1 : 0
+	    e = eMax
 	  } else {
-	    e = Math.floor(Math.log(value) / Math.LN2);
+	    e = Math.floor(Math.log(value) / Math.LN2)
 	    if (value * (c = Math.pow(2, -e)) < 1) {
-	      e--;
-	      c *= 2;
+	      e--
+	      c *= 2
 	    }
 	    if (e + eBias >= 1) {
-	      value += rt / c;
+	      value += rt / c
 	    } else {
-	      value += rt * Math.pow(2, 1 - eBias);
+	      value += rt * Math.pow(2, 1 - eBias)
 	    }
 	    if (value * c >= 2) {
-	      e++;
-	      c /= 2;
+	      e++
+	      c /= 2
 	    }
 
 	    if (e + eBias >= eMax) {
-	      m = 0;
-	      e = eMax;
+	      m = 0
+	      e = eMax
 	    } else if (e + eBias >= 1) {
-	      m = (value * c - 1) * Math.pow(2, mLen);
-	      e = e + eBias;
+	      m = (value * c - 1) * Math.pow(2, mLen)
+	      e = e + eBias
 	    } else {
-	      m = value * Math.pow(2, eBias - 1) * Math.pow(2, mLen);
-	      e = 0;
+	      m = value * Math.pow(2, eBias - 1) * Math.pow(2, mLen)
+	      e = 0
 	    }
 	  }
 
-	  for (; mLen >= 8; buffer[offset + i] = m & 0xff, i += d, m /= 256, mLen -= 8);
+	  for (; mLen >= 8; buffer[offset + i] = m & 0xff, i += d, m /= 256, mLen -= 8) {}
 
-	  e = (e << mLen) | m;
-	  eLen += mLen;
-	  for (; eLen > 0; buffer[offset + i] = e & 0xff, i += d, e /= 256, eLen -= 8);
+	  e = (e << mLen) | m
+	  eLen += mLen
+	  for (; eLen > 0; buffer[offset + i] = e & 0xff, i += d, e /= 256, eLen -= 8) {}
 
-	  buffer[offset + i - d] |= s * 128;
-	};
+	  buffer[offset + i - d] |= s * 128
+	}
 
 
 /***/ },
