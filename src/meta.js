@@ -106,8 +106,8 @@ var defaultTransformFn = function(v){
 }
 
 var defaultTransform = {
-  setValue: defaultTransformFn,
-  getValue: defaultTransformFn,
+  _set_value: defaultTransformFn,
+  _get_value: defaultTransformFn,
 }
 
 var creatorDebugIntercept=function(debugId, meta, creator){
@@ -224,16 +224,16 @@ var normalizeMeta = function(meta, metaId, propertyPath){
           var type = typeof newMeta._transform;
           if(type === "object"){
             regulateTransform = util.shallowCopy(newMeta._transform, {});
-            if(!regulateTransform.setValue){
-              regulateTransform.setValue = defaultTransformFn;
+            if(!regulateTransform._set_value){
+              regulateTransform._set_value = defaultTransformFn;
             }
-            if(!regulateTransform.getValue){
-              regulateTransform.getValue = defaultTransformFn;
+            if(!regulateTransform._get_value){
+              regulateTransform._get_value = defaultTransformFn;
             }
-          }else if(type === "function"){//treat function as getValue for most common case
+          }else if(type === "function"){//treat function as _get_value for most common case
             regulateTransform = {
-              setValue: defaultTransformFn,
-              getValue: newMeta._transform,
+              _set_value: defaultTransformFn,
+              _get_value: newMeta._transform,
             };
           }else{
             throw "unsupported _transform define:" + JSON.stringify(newMeta._transform);

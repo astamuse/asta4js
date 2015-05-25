@@ -36,8 +36,8 @@ ValueMonitor.prototype.pathObserve=function(identifier, subPath, changeFn, trans
   if(transform){
     observer.open(function(newValue, oldValue){
       changeFn(
-        transform.getValue(newValue),
-        transform.getValue(oldValue)
+        transform._get_value(newValue),
+        transform._get_value(oldValue)
       );
     });
   }else{
@@ -66,7 +66,7 @@ ValueMonitor.prototype.getValueRef=function(subPath, transform){
   var scope = this.scope;
   return {
     setValue : function(v, spawnUnreachablePath){
-      var tv = transform ? transform.setValue(v) : v;
+      var tv = transform ? transform._set_value(v) : v;
       var success = path.setValueFrom(scope, tv);
       if(!success){//unreachable path
           var spawn = spawnUnreachablePath;
@@ -80,7 +80,7 @@ ValueMonitor.prototype.getValueRef=function(subPath, transform){
     },
     getValue : function(){
       var v = path.getValueFrom(scope);
-      return transform ? transform.getValue(v) : v;
+      return transform ? transform._get_value(v) : v;
     },
   };
 }

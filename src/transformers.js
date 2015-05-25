@@ -3,7 +3,7 @@
 var util = require("./util");
 
 var _int = {
-  setValue: function(v){
+  _set_value: function(v){
     var nv = parseInt(v, this._radix);
     if(isNaN(nv)){
       return v;
@@ -11,7 +11,7 @@ var _int = {
       return nv;
     }
   },
-  getValue: function(v){
+  _get_value: function(v){
     if(v){
       return (v).toString(this._radix);
     }else{
@@ -21,7 +21,7 @@ var _int = {
 }
 
 var _float = {
-  setValue: function(v){
+  _set_value: function(v){
     var nv = parseFloat(v);
     if(isNaN(nv)){
       return v;
@@ -29,7 +29,7 @@ var _float = {
       return nv;
     }
   },
-  getValue: function(v){
+  _get_value: function(v){
     if(v){
       return (v).toString(this._radix);
     }else{
@@ -73,7 +73,7 @@ var _datetime = {
   _stringy_as_local : true,
   //default to remove tail milliseconds value
   _stringy_keep_ms : false,
-  setValue : function(v){
+  _set_value : function(v){
     var time = Date.parse(v);
     if(isNaN(time)){
       return v;
@@ -82,7 +82,7 @@ var _datetime = {
       return new Date(time);
     }
   },
-  getValue : function(v){
+  _get_value : function(v){
     if(v && v.toISOString && v.getTime){//is a date
       if(this._stringy_as_local){
         var d = new Date(v.getTime());

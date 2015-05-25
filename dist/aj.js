@@ -137,98 +137,153 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	"use strict";
 
+	var _ = __webpack_require__(14);
+
 	var util = __webpack_require__(11);
 	var config = __webpack_require__(2);
-	var BindContext = __webpack_require__(12);
-	var ValueMonitor = __webpack_require__(13);
+	var ResourceMap = __webpack_require__(17);
 
-	var $ = config.$;
+	var ValueMonitor=function(scope, varRefRoot){
+	  this.scope = scope;
+	  this.varRefRoot = varRefRoot;
+	  this.observerMap = new ResourceMap();;
+	}
 
-	var Snippet = function(arg){
-	  this._root = config.snippet.resolveRoot(arg);
-	  if(this._root.length == 0){
-	    var err = new Error("Snippet was not found for given selector:" + this.root.selector);
-	    console.error(err);
+	var convertObservePath=function(rootPath, subPath){
+	  var observePath;
+	  if(rootPath){
+	    observePath = subPath ? rootPath + "." + subPath : rootPath;
+	  }else{
+	    observePath = subPath;
+	  }
+	  if(!observePath){
+	      throw "The scope root cannot be observed";
+	  }
+	  return observePath;
+	}
+
+	ValueMonitor.prototype.createSubMonitor=function(subPath){
+	  var observePath = convertObservePath(this.varRefRoot, subPath);
+	  return new ValueMonitor(this.scope, observePath);
+	};
+
+	ValueMonitor.prototype.pathObserve=function(identifier, subPath, changeFn, transform){
+	  var observePath = convertObservePath(this.varRefRoot, subPath);
+	  var observer = new _.PathObserver(this.scope, observePath);
+	  if(transform){
+	    observer.open(function(newValue, oldValue){
+	      changeFn(
+	        transform._get_value(newValue),
+	        transform._get_value(oldValue)
+	      );
+	    });
+	  }else{
+	    observer.open(changeFn);
+	  }
+	  this.observerMap.add(observePath, identifier, observer);
+	}
+
+	function setValueWithSpawn(ref, path, value){
+	  var dotIndex = path.indexOf(".");
+	  if(dotIndex < 0){
+	    ref[path] = value;
+	  }else{
+	    var firstSeg = path.substring(0, dotIndex);
+	    var leftSeg = path.substring(dotIndex+1);
+	    if(!ref[firstSeg]){
+	      ref[firstSeg] = {};
+	    }
+	    setValueWithSpawn(ref[firstSeg], leftSeg, value);
 	  }
 	}
 
-	Snippet.prototype._discard = function(){
-	  this._root.remove();
-	}
-
-	Snippet.prototype.find = function(selector){
-	  return util.findWithRoot(this._root, selector);
-	}
-
-	Snippet.prototype.bind = function(){
-	  if(typeof arguments[0] === "string"){
-	    return this.bindEvent.apply(this, arguments);
-	  }{
-	    return this.bindMeta.apply(this, arguments);
-	  }
-	}
-
-	Snippet.prototype.bindMeta = function(meta, context){
-	  var ctx = context ? util.shallowCopy(context) : {};
-	  ctx._snippet = this;
-	  var bindContext = new BindContext(ctx);
-	  bindContext._bind(meta);
-	  return this;
-	}
-
-	var _convertArgumentsWithSyncOnFunctions = function(){
-	  var newArgs = new Array();
-	  for(var i=0;i<arguments.length;i++){
-	    newArgs[i] = (function(arg){
-	      if(typeof arg === "function"){
-	        return function(){
-	          var ret = arg.apply(this, arguments);
-	          util.sync();
-	          return ret;
-	        }
-	      }else{
-	        return arg;
+	ValueMonitor.prototype.getValueRef=function(subPath, transform){
+	  var observePath = convertObservePath(this.varRefRoot, subPath);
+	  var path = _.Path.get(observePath);
+	  var scope = this.scope;
+	  return {
+	    setValue : function(v, spawnUnreachablePath){
+	      var tv = transform ? transform._set_value(v) : v;
+	      var success = path.setValueFrom(scope, tv);
+	      if(!success){//unreachable path
+	          var spawn = spawnUnreachablePath;
+	          if(spawn === undefined){
+	            spawn = true; //default to generate all necessary sub path
+	          }
+	          if(spawn){
+	            setValueWithSpawn(scope, observePath, tv);
+	          }
 	      }
-	    })(arguments[i]);
+	    },
+	    getValue : function(){
+	      var v = path.getValueFrom(scope);
+	      return transform ? transform._get_value(v) : v;
+	    },
+	  };
+	}
+
+	ValueMonitor.prototype.arrayObserve=function(identifier, targetArray, changeFn){
+	  var observer = new _.ArrayObserver(targetArray);
+	  observer.open(changeFn);
+	  this.observerMap.add(identifier, identifier, observer);
+	}
+	ValueMonitor.prototype.removeArrayObserve=function(identifier){
+	  this.observerMap.remove(identifier, identifier);
+	}
+
+	ValueMonitor.prototype.compoundObserve=function(identifier, pathes, changeFn){
+	  var observer = new _.CompoundObserver();
+	  var p;
+	  for(var i=0;i<pathes.length;i++){
+	    p = pathes[i];
+	    if(p.indexOf("@:") == 0){//absolute path from scope root
+	      p = p.substr(2);
+	    }else{//relative path from current monitor ref path
+	      p = convertObservePath(this.varRefRoot, p);
+	    }
+	    observer.addPath(this.scope, p);
 	  }
-	  return newArgs;
+	  observer.open(changeFn);
+	  this.observerMap.add(identifier, identifier, observer);
 	}
 
-	Snippet.prototype.bindEvent = function(){
-	  var newArgs = _convertArgumentsWithSyncOnFunctions.apply(null, arguments);
-	  
-	  var selector = newArgs[0];
-	  newArgs.shift();
-	  
-	  var target = this.find(selector);
-	  if(target.length == 0){
-	    console.error("could not find target to bind event for:", selector);
-	    return this;
-	  }else{
-	    target.bind.apply(target, newArgs);
-	    return this;
+	ValueMonitor.prototype.getCompoundValueRef=function(pathes){
+	  var ps = [];
+	  var p;
+	  for(var i=0;i<pathes.length;i++){
+	    p = pathes[i];
+	    if(p.indexOf("@:") == 0){//absolute path from scope root
+	      p = p.substr(2);
+	    }else{//relative path from current monitor ref path
+	      p = convertObservePath(this.varRefRoot, p);
+	    }
+	    ps[i] = _.Path.get(p);
 	  }
+	  var scope = this.scope;
+	  return {
+	    setValues : function(values){
+	      if(values.length != ps.length){
+	        throw "length not equal for compound value set";
+	      }
+	      for(var i=0;i<values.length;i++){
+	        ps[i].setValueFrom(scope, values[i]);
+	      }
+	    },
+	    getValues : function(){
+	      var values = [];
+	      for(var i=0;i<ps.length;i++){
+	        values[i] = ps[i].getValueFrom(scope);
+	      }
+	      return values;
+	    },
+	  };
 	}
 
-	Snippet.prototype.on = function () {
-	  var newArgs = _convertArgumentsWithSyncOnFunctions.apply(null, arguments);
-	  this._root.on.apply(this._root, newArgs);
-	  return this;
+	ValueMonitor.prototype.discard=function(){
+	  this.observerMap.discard();
 	}
 
-	config.snippet.resolveRoot = function(arg){
-	  var root;
-	  if (typeof arg === "string"){
-	    root = $(arg);//as selector
-	  }else if(util.isJQuery(arg)){
-	    root = arg;
-	  }else{
-	    throw "JQuery object is expected for snippet root but found:" + JSON.stringify(arg);
-	  }
-	  return root;
-	}
-
-	module.exports = Snippet;
+	module.exports=ValueMonitor;
 
 /***/ },
 /* 2 */
@@ -270,11 +325,11 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	var util = __webpack_require__(11);
 	var config = __webpack_require__(2);
-	var Snippet = __webpack_require__(1);
-	var rewriteObserverMeta = __webpack_require__(10);
+	var Snippet = __webpack_require__(9);
+	var rewriteObserverMeta = __webpack_require__(8);
 
-	var BindContext = __webpack_require__(12);
-	var ValueMonitor = __webpack_require__(13);
+	var BindContext = __webpack_require__(10);
+	var ValueMonitor = __webpack_require__(1);
 
 
 	var Scope = function(){
@@ -332,9 +387,9 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	var util = __webpack_require__(11);
 	var config = __webpack_require__(2);
-	var constant = __webpack_require__(8)
-	var Snippet = __webpack_require__(1);
-	var BindContext = __webpack_require__(12);
+	var constant = __webpack_require__(12)
+	var Snippet = __webpack_require__(9);
+	var BindContext = __webpack_require__(10);
 
 	var $ = config.$;
 
@@ -675,8 +730,8 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	var util = __webpack_require__(11);
 	var config = __webpack_require__(2);
-	var constant = __webpack_require__(8)
-	var ValueMonitor = __webpack_require__(13)
+	var constant = __webpack_require__(12)
+	var ValueMonitor = __webpack_require__(1)
 
 	var getWatchDelegateScope=function(bindContext, meta){
 	  var watchDelegateScope = bindContext._getResource("_watch", meta._meta_trace_id);
@@ -786,11 +841,11 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	var util = __webpack_require__(11);
 	var config = __webpack_require__(2);
-	var constant = __webpack_require__(8)
-	var Snippet = __webpack_require__(1)
+	var constant = __webpack_require__(12)
+	var Snippet = __webpack_require__(9)
 
-	var BindContext = __webpack_require__(12)
-	var ValueMonitor = __webpack_require__(13)
+	var BindContext = __webpack_require__(10)
+	var ValueMonitor = __webpack_require__(1)
 
 	var optionUtil = __webpack_require__(16)
 
@@ -1189,8 +1244,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	var util = __webpack_require__(11);
 	var transformers = __webpack_require__(15);
 	var config = __webpack_require__(2);
-	var constant = __webpack_require__(8)
-	var Snippet = __webpack_require__(1)
+	var constant = __webpack_require__(12)
+	var Snippet = __webpack_require__(9)
 
 	var api={};
 
@@ -1471,224 +1526,11 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	"use strict";
 
-	var constant={};
-
-	constant.metaRewritterPriority={
-	  _watch: 10000,
-	  _form : 20000,
-	  _duplicator: 30000,
-	  _selector : 40000,
-	  _attr_op : 50000,
-	  _selector_after_attr_op : 60000,
-	  _render : 70000,
-	  _register_dom_change: 80000,
-	  _on_change: 90000,
-	  _assign : 100000
-	};
-
-	constant.impossibleSearchKey = "aj-impossible-search-key-ashfdpnasvdnoaisdfn3423#$%$#$%0as8d23nalsfdasdf";
-
-
-	module.exports = constant;
-
-/***/ },
-/* 9 */
-/***/ function(module, exports, __webpack_require__) {
-
-	/* WEBPACK VAR INJECTION */(function(Buffer) {/**
-	 * Copyright © 2011-2015 Paul Vorbach <paul@vorba.ch>
-
-	 * Permission is hereby granted, free of charge, to any person obtaining a copy of
-	 * this software and associated documentation files (the “Software”), to deal in
-	 * the Software without restriction, including without limitation the rights to
-	 * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
-	 * the Software, and to permit persons to whom the Software is furnished to do so,
-	 * subject to the following conditions:
-	 * 
-	 * The above copyright notice and this permission notice shall be included in all
-	 * copies or substantial portions of the Software.
-	 * 
-	 * THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-	 * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
-	 * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
-	 * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
-	 * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, OUT OF OR IN CONNECTION WITH THE
-	 * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-	 */
-	var clone = (function() {
-	'use strict';
-
-	/**
-	 * Clones (copies) an Object using deep copying.
-	 *
-	 * This function supports circular references by default, but if you are certain
-	 * there are no circular references in your object, you can save some CPU time
-	 * by calling clone(obj, false).
-	 *
-	 * Caution: if `circular` is false and `parent` contains circular references,
-	 * your program may enter an infinite loop and crash.
-	 *
-	 * @param `parent` - the object to be cloned
-	 * @param `circular` - set to true if the object to be cloned may contain
-	 *    circular references. (optional - true by default)
-	 * @param `depth` - set to a number if the object is only to be cloned to
-	 *    a particular depth. (optional - defaults to Infinity)
-	 * @param `prototype` - sets the prototype to be used when cloning an object.
-	 *    (optional - defaults to parent prototype).
-	*/
-	function clone(parent, circular, depth, prototype) {
-	  var filter;
-	  if (typeof circular === 'object') {
-	    depth = circular.depth;
-	    prototype = circular.prototype;
-	    filter = circular.filter;
-	    circular = circular.circular
-	  }
-	  // maintain two arrays for circular references, where corresponding parents
-	  // and children have the same index
-	  var allParents = [];
-	  var allChildren = [];
-
-	  var useBuffer = typeof Buffer != 'undefined';
-
-	  if (typeof circular == 'undefined')
-	    circular = true;
-
-	  if (typeof depth == 'undefined')
-	    depth = Infinity;
-
-	  // recurse this function so we don't reset allParents and allChildren
-	  function _clone(parent, depth) {
-	    // cloning null always returns null
-	    if (parent === null)
-	      return null;
-
-	    if (depth == 0)
-	      return parent;
-
-	    var child;
-	    var proto;
-	    if (typeof parent != 'object') {
-	      return parent;
-	    }
-
-	    if (clone.__isArray(parent)) {
-	      child = [];
-	    } else if (clone.__isRegExp(parent)) {
-	      child = new RegExp(parent.source, __getRegExpFlags(parent));
-	      if (parent.lastIndex) child.lastIndex = parent.lastIndex;
-	    } else if (clone.__isDate(parent)) {
-	      child = new Date(parent.getTime());
-	    } else if (useBuffer && Buffer.isBuffer(parent)) {
-	      child = new Buffer(parent.length);
-	      parent.copy(child);
-	      return child;
-	    } else {
-	      if (typeof prototype == 'undefined') {
-	        proto = Object.getPrototypeOf(parent);
-	        child = Object.create(proto);
-	      }
-	      else {
-	        child = Object.create(prototype);
-	        proto = prototype;
-	      }
-	    }
-
-	    if (circular) {
-	      var index = allParents.indexOf(parent);
-
-	      if (index != -1) {
-	        return allChildren[index];
-	      }
-	      allParents.push(parent);
-	      allChildren.push(child);
-	    }
-
-	    for (var i in parent) {
-	      var attrs;
-	      if (proto) {
-	        attrs = Object.getOwnPropertyDescriptor(proto, i);
-	      }
-
-	      if (attrs && attrs.set == null) {
-	        continue;
-	      }
-	      child[i] = _clone(parent[i], depth - 1);
-	    }
-
-	    return child;
-	  }
-
-	  return _clone(parent, depth);
-	}
-
-	/**
-	 * Simple flat clone using prototype, accepts only objects, usefull for property
-	 * override on FLAT configuration object (no nested props).
-	 *
-	 * USE WITH CAUTION! This may not behave as you wish if you do not know how this
-	 * works.
-	 */
-	clone.clonePrototype = function clonePrototype(parent) {
-	  if (parent === null)
-	    return null;
-
-	  var c = function () {};
-	  c.prototype = parent;
-	  return new c();
-	};
-
-	// private utility functions
-
-	function __objToStr(o) {
-	  return Object.prototype.toString.call(o);
-	};
-	clone.__objToStr = __objToStr;
-
-	function __isDate(o) {
-	  return typeof o === 'object' && __objToStr(o) === '[object Date]';
-	};
-	clone.__isDate = __isDate;
-
-	function __isArray(o) {
-	  return typeof o === 'object' && __objToStr(o) === '[object Array]';
-	};
-	clone.__isArray = __isArray;
-
-	function __isRegExp(o) {
-	  return typeof o === 'object' && __objToStr(o) === '[object RegExp]';
-	};
-	clone.__isRegExp = __isRegExp;
-
-	function __getRegExpFlags(re) {
-	  var flags = '';
-	  if (re.global) flags += 'g';
-	  if (re.ignoreCase) flags += 'i';
-	  if (re.multiline) flags += 'm';
-	  return flags;
-	};
-	clone.__getRegExpFlags = __getRegExpFlags;
-
-	return clone;
-	})();
-
-	if (typeof module === 'object' && module.exports) {
-	  module.exports = clone;
-	}
-
-	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(18).Buffer))
-
-/***/ },
-/* 10 */
-/***/ function(module, exports, __webpack_require__) {
-
-	"use strict";
-
 	var _lib_observe = __webpack_require__(14);
 
 	var util=__webpack_require__(11);
 	var config=__webpack_require__(2);
-	var constant = __webpack_require__(8)
+	var constant = __webpack_require__(12)
 
 	var __reverseMetaKeys = ["_meta_type", "_meta_id", "_meta_trace_id", "_meta_desc", "_value", "_prop", "_splice", "_target_path"];
 
@@ -1790,8 +1632,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	}
 
 	var defaultTransform = {
-	  setValue: defaultTransformFn,
-	  getValue: defaultTransformFn,
+	  _set_value: defaultTransformFn,
+	  _get_value: defaultTransformFn,
 	}
 
 	var creatorDebugIntercept=function(debugId, meta, creator){
@@ -1908,16 +1750,16 @@ return /******/ (function(modules) { // webpackBootstrap
 	          var type = typeof newMeta._transform;
 	          if(type === "object"){
 	            regulateTransform = util.shallowCopy(newMeta._transform, {});
-	            if(!regulateTransform.setValue){
-	              regulateTransform.setValue = defaultTransformFn;
+	            if(!regulateTransform._set_value){
+	              regulateTransform._set_value = defaultTransformFn;
 	            }
-	            if(!regulateTransform.getValue){
-	              regulateTransform.getValue = defaultTransformFn;
+	            if(!regulateTransform._get_value){
+	              regulateTransform._get_value = defaultTransformFn;
 	            }
-	          }else if(type === "function"){//treat function as getValue for most common case
+	          }else if(type === "function"){//treat function as _get_value for most common case
 	            regulateTransform = {
-	              setValue: defaultTransformFn,
-	              getValue: newMeta._transform,
+	              _set_value: defaultTransformFn,
+	              _get_value: newMeta._transform,
 	            };
 	          }else{
 	            throw "unsupported _transform define:" + JSON.stringify(newMeta._transform);
@@ -2192,231 +2034,113 @@ return /******/ (function(modules) { // webpackBootstrap
 	module.exports = normalizeMeta
 
 /***/ },
-/* 11 */
-/***/ function(module, exports, __webpack_require__) {
-
-	"use strict";
-
-	var constant = __webpack_require__(8)
-	var config = __webpack_require__(2);
-
-	var util = {};
-	var $ = config.$;
-
-	util.sync = function(){
-	  Platform.performMicrotaskCheckpoint();
-	};
-
-	util.determineRefPath = function (scope, varRef, searchKey) {
-	  var deleteSearchKey;
-	  if(searchKey){
-	    deleteSearchKey = false;
-	  }else{
-	    deleteSearchKey = true;
-	    searchKey = constant.impossibleSearchKey;
-	    varRef[searchKey] = 1;
-	  }
-
-	  var refPath = null;
-	  for (var p in scope) {
-	    var ref = scope[p];
-	    if (ref[searchKey]) {
-	      refPath = p;
-	      break;
-	    }
-	  }
-	  
-	  if(deleteSearchKey){
-	    delete varRef[searchKey];
-	  }
-
-	  return refPath;
-	};
-
-	var __uidTimestamp = Date.now();
-	var __uidSeq = 0;
-	util.createUID = function () {
-	  if(__uidSeq >= 1000000){
-	    __uidTimestamp = Date.now();
-	    __uidSeq = 0;
-	  }
-	  __uidSeq++;
-	  return "aj-" + __uidSeq + "-"+ __uidTimestamp;
-	};
-
-	//TODO we should keep ref always
-	util.regulateArray = function (v, tryKeepRef) {
-	  if (Array.isArray(v)) {
-	    if(tryKeepRef){
-	      return v;
-	    }else{
-	      return [].concat(v);
-	    }
-	  } else if (v === null || v === undefined) {
-	    return new Array();
-	  } else {
-	    return [v];
-	  }
-	};
-
-	util.clone = __webpack_require__(9);
-
-	util.isJQuery = function(obj){
-	  if(obj){
-	    if($){
-	      return obj instanceof $
-	          || obj.constructor == $
-	          || Boolean(obj.jquery);
-	    }else{
-	      return Boolean(obj.jquery);
-	    }
-	  }else{
-	    return false;
-	  }
-	}
-
-	/**
-	 * (from)
-	 * (from, [propList])
-	 * (from, to)
-	 * (from, to, [propList])
-	 */
-	util.shallowCopy = function(arg1, arg2, arg3){
-	  var from = arg1;
-	  var to;
-	  var props;
-	  if(Array.isArray(arg2)){
-	    to = {};
-	    props = arg2;
-	  }else{
-	    to = arg2;
-	    props = arg3;
-	  }
-	  if(!to){
-	    to = {};
-	  }
-	  if(props){
-	    var p;
-	    for(var i=0;i<props.length;i++){
-	      p = props[i];
-	      to[p] = from[p];
-	    }
-	  }else{
-	    for(var p in from){
-	      to[p] = from[p];
-	    }
-	  }
-	  
-	  return to;
-	};
-
-	util.override = function(from, to){
-	  var ret = to;
-	  if(from === undefined || from === null){
-	    //do nothing
-	  }else if (to === undefined || to === null){
-	    ret = util.clone(from);
-	  }else if(Array.isArray(from) && Array.isArray(to)){
-	    Array.prototype.push.apply(to, from);
-	  }else if (util.isPlainObject(from) && util.isPlainObject(to)){
-	    for(var p in from){
-	      to[p] = util.override(from[p], to[p]);
-	    }
-	  }else{
-	    throw "cannot override different type data from \n"
-	          + JSON.stringify(from) + "\n"
-	          + " to \n"
-	          + JSON.stringify(to) + "\n";
-	  }
-	  return ret;
-	}
-
-	/*
-	 * copied from jquery
-	 */
-	util.isPlainObject = function(obj){
-	    if ( !obj || obj.toString() !== "[object Object]" || obj.nodeType || obj.setInterval ) {
-	        return false;
-	    }
-	     
-	    if ( obj.constructor && !obj.hasOwnProperty("constructor") && !obj.constructor.prototype.hasOwnProperty("isPrototypeOf") ) {
-	        return false;
-	    }
-	     
-	    var key;
-	    for ( key in obj ) {}
-	 
-	    return key === undefined || obj.hasOwnProperty(key);
-	}
-
-	util.arraySwap = function (array, index1, index2) {
-	      var tmp = array[index1];
-	      array[index1] = array[index2];
-	      array[index2] = tmp;
-	};
-
-	util.arrayLengthAdjust = function (targetArray, hopeLength, initialNewFn, discardCutFn) {
-	  var existingLength = targetArray.length;
-	  if(initialNewFn){
-	    var newItem;
-	    for(var i=existingLength;i<hopeLength;i++){
-	      newItem = initialNewFn(i);
-	      targetArray[i] = newItem;
-	    }
-	  }else{
-	    for(var i=existingLength;i<hopeLength;i++){
-	      targetArray[i] = undefined;
-	    }
-	  }
-	  var removeCount = existingLength - hopeLength;
-	  if(removeCount > 0){
-	    if(discardCutFn){
-	      for(var i=hopeLength;i<existingLength;i++){
-	        discardCutFn(targetArray[i], i);
-	      }
-	    }
-	    targetArray.splice(hopeLength, removeCount);
-	  }
-	};
-	    
-	util.findWithRoot = function(rootElem, selector){
-	      if(selector === ":root"){
-	        return rootElem;
-	      }
-	      var result = rootElem.find(selector);
-	      if(result.length === 0){
-	        if(rootElem.is(selector)){
-	          return rootElem;
-	        }
-	      }
-	      return result;
-	};
-
-	util.delay=function(callback, timeout, delayMoreCycles){
-	  if(delayMoreCycles && delayMoreCycles > 0){
-	    setTimeout(function(){
-	      util.delay(callback, timeout, delayMoreCycles-1);
-	    }, 0);
-	    return;
-	  }else{
-	    setTimeout(function(){
-	      callback.apply();
-	      util.sync();
-	    }, timeout ? timeout : 0);
-	  }
-	}
-
-	module.exports = util;
-
-/***/ },
-/* 12 */
+/* 9 */
 /***/ function(module, exports, __webpack_require__) {
 
 	"use strict";
 
 	var util = __webpack_require__(11);
 	var config = __webpack_require__(2);
-	var normalizeMeta = __webpack_require__(10);
+	var BindContext = __webpack_require__(10);
+	var ValueMonitor = __webpack_require__(1);
+
+	var $ = config.$;
+
+	var Snippet = function(arg){
+	  this._root = config.snippet.resolveRoot(arg);
+	  if(this._root.length == 0){
+	    var err = new Error("Snippet was not found for given selector:" + this.root.selector);
+	    console.error(err);
+	  }
+	}
+
+	Snippet.prototype._discard = function(){
+	  this._root.remove();
+	}
+
+	Snippet.prototype.find = function(selector){
+	  return util.findWithRoot(this._root, selector);
+	}
+
+	Snippet.prototype.bind = function(){
+	  if(typeof arguments[0] === "string"){
+	    return this.bindEvent.apply(this, arguments);
+	  }{
+	    return this.bindMeta.apply(this, arguments);
+	  }
+	}
+
+	Snippet.prototype.bindMeta = function(meta, context){
+	  var ctx = context ? util.shallowCopy(context) : {};
+	  ctx._snippet = this;
+	  var bindContext = new BindContext(ctx);
+	  bindContext._bind(meta);
+	  return this;
+	}
+
+	var _convertArgumentsWithSyncOnFunctions = function(){
+	  var newArgs = new Array();
+	  for(var i=0;i<arguments.length;i++){
+	    newArgs[i] = (function(arg){
+	      if(typeof arg === "function"){
+	        return function(){
+	          var ret = arg.apply(this, arguments);
+	          util.sync();
+	          return ret;
+	        }
+	      }else{
+	        return arg;
+	      }
+	    })(arguments[i]);
+	  }
+	  return newArgs;
+	}
+
+	Snippet.prototype.bindEvent = function(){
+	  var newArgs = _convertArgumentsWithSyncOnFunctions.apply(null, arguments);
+	  
+	  var selector = newArgs[0];
+	  newArgs.shift();
+	  
+	  var target = this.find(selector);
+	  if(target.length == 0){
+	    console.error("could not find target to bind event for:", selector);
+	    return this;
+	  }else{
+	    target.bind.apply(target, newArgs);
+	    return this;
+	  }
+	}
+
+	Snippet.prototype.on = function () {
+	  var newArgs = _convertArgumentsWithSyncOnFunctions.apply(null, arguments);
+	  this._root.on.apply(this._root, newArgs);
+	  return this;
+	}
+
+	config.snippet.resolveRoot = function(arg){
+	  var root;
+	  if (typeof arg === "string"){
+	    root = $(arg);//as selector
+	  }else if(util.isJQuery(arg)){
+	    root = arg;
+	  }else{
+	    throw "JQuery object is expected for snippet root but found:" + JSON.stringify(arg);
+	  }
+	  return root;
+	}
+
+	module.exports = Snippet;
+
+/***/ },
+/* 10 */
+/***/ function(module, exports, __webpack_require__) {
+
+	"use strict";
+
+	var util = __webpack_require__(11);
+	var config = __webpack_require__(2);
+	var normalizeMeta = __webpack_require__(8);
 
 	var ResourceMap = __webpack_require__(17);
 
@@ -2584,158 +2308,434 @@ return /******/ (function(modules) { // webpackBootstrap
 	module.exports=BindContext;
 
 /***/ },
-/* 13 */
+/* 11 */
 /***/ function(module, exports, __webpack_require__) {
 
 	"use strict";
 
-	var _ = __webpack_require__(14);
-
-	var util = __webpack_require__(11);
+	var constant = __webpack_require__(12)
 	var config = __webpack_require__(2);
-	var ResourceMap = __webpack_require__(17);
 
-	var ValueMonitor=function(scope, varRefRoot){
-	  this.scope = scope;
-	  this.varRefRoot = varRefRoot;
-	  this.observerMap = new ResourceMap();;
-	}
+	var util = {};
+	var $ = config.$;
 
-	var convertObservePath=function(rootPath, subPath){
-	  var observePath;
-	  if(rootPath){
-	    observePath = subPath ? rootPath + "." + subPath : rootPath;
-	  }else{
-	    observePath = subPath;
-	  }
-	  if(!observePath){
-	      throw "The scope root cannot be observed";
-	  }
-	  return observePath;
-	}
-
-	ValueMonitor.prototype.createSubMonitor=function(subPath){
-	  var observePath = convertObservePath(this.varRefRoot, subPath);
-	  return new ValueMonitor(this.scope, observePath);
+	util.sync = function(){
+	  Platform.performMicrotaskCheckpoint();
 	};
 
-	ValueMonitor.prototype.pathObserve=function(identifier, subPath, changeFn, transform){
-	  var observePath = convertObservePath(this.varRefRoot, subPath);
-	  var observer = new _.PathObserver(this.scope, observePath);
-	  if(transform){
-	    observer.open(function(newValue, oldValue){
-	      changeFn(
-	        transform.getValue(newValue),
-	        transform.getValue(oldValue)
-	      );
-	    });
+	util.determineRefPath = function (scope, varRef, searchKey) {
+	  var deleteSearchKey;
+	  if(searchKey){
+	    deleteSearchKey = false;
 	  }else{
-	    observer.open(changeFn);
+	    deleteSearchKey = true;
+	    searchKey = constant.impossibleSearchKey;
+	    varRef[searchKey] = 1;
 	  }
-	  this.observerMap.add(observePath, identifier, observer);
-	}
 
-	function setValueWithSpawn(ref, path, value){
-	  var dotIndex = path.indexOf(".");
-	  if(dotIndex < 0){
-	    ref[path] = value;
+	  var refPath = null;
+	  for (var p in scope) {
+	    var ref = scope[p];
+	    if (ref[searchKey]) {
+	      refPath = p;
+	      break;
+	    }
+	  }
+	  
+	  if(deleteSearchKey){
+	    delete varRef[searchKey];
+	  }
+
+	  return refPath;
+	};
+
+	var __uidTimestamp = Date.now();
+	var __uidSeq = 0;
+	util.createUID = function () {
+	  if(__uidSeq >= 1000000){
+	    __uidTimestamp = Date.now();
+	    __uidSeq = 0;
+	  }
+	  __uidSeq++;
+	  return "aj-" + __uidSeq + "-"+ __uidTimestamp;
+	};
+
+	//TODO we should keep ref always
+	util.regulateArray = function (v, tryKeepRef) {
+	  if (Array.isArray(v)) {
+	    if(tryKeepRef){
+	      return v;
+	    }else{
+	      return [].concat(v);
+	    }
+	  } else if (v === null || v === undefined) {
+	    return new Array();
+	  } else {
+	    return [v];
+	  }
+	};
+
+	util.clone = __webpack_require__(13);
+
+	util.isJQuery = function(obj){
+	  if(obj){
+	    if($){
+	      return obj instanceof $
+	          || obj.constructor == $
+	          || Boolean(obj.jquery);
+	    }else{
+	      return Boolean(obj.jquery);
+	    }
 	  }else{
-	    var firstSeg = path.substring(0, dotIndex);
-	    var leftSeg = path.substring(dotIndex+1);
-	    if(!ref[firstSeg]){
-	      ref[firstSeg] = {};
-	    }
-	    setValueWithSpawn(ref[firstSeg], leftSeg, value);
+	    return false;
 	  }
 	}
 
-	ValueMonitor.prototype.getValueRef=function(subPath, transform){
-	  var observePath = convertObservePath(this.varRefRoot, subPath);
-	  var path = _.Path.get(observePath);
-	  var scope = this.scope;
-	  return {
-	    setValue : function(v, spawnUnreachablePath){
-	      var tv = transform ? transform.setValue(v) : v;
-	      var success = path.setValueFrom(scope, tv);
-	      if(!success){//unreachable path
-	          var spawn = spawnUnreachablePath;
-	          if(spawn === undefined){
-	            spawn = true; //default to generate all necessary sub path
-	          }
-	          if(spawn){
-	            setValueWithSpawn(scope, observePath, tv);
-	          }
-	      }
-	    },
-	    getValue : function(){
-	      var v = path.getValueFrom(scope);
-	      return transform ? transform.getValue(v) : v;
-	    },
-	  };
-	}
-
-	ValueMonitor.prototype.arrayObserve=function(identifier, targetArray, changeFn){
-	  var observer = new _.ArrayObserver(targetArray);
-	  observer.open(changeFn);
-	  this.observerMap.add(identifier, identifier, observer);
-	}
-	ValueMonitor.prototype.removeArrayObserve=function(identifier){
-	  this.observerMap.remove(identifier, identifier);
-	}
-
-	ValueMonitor.prototype.compoundObserve=function(identifier, pathes, changeFn){
-	  var observer = new _.CompoundObserver();
-	  var p;
-	  for(var i=0;i<pathes.length;i++){
-	    p = pathes[i];
-	    if(p.indexOf("@:") == 0){//absolute path from scope root
-	      p = p.substr(2);
-	    }else{//relative path from current monitor ref path
-	      p = convertObservePath(this.varRefRoot, p);
-	    }
-	    observer.addPath(this.scope, p);
+	/**
+	 * (from)
+	 * (from, [propList])
+	 * (from, to)
+	 * (from, to, [propList])
+	 */
+	util.shallowCopy = function(arg1, arg2, arg3){
+	  var from = arg1;
+	  var to;
+	  var props;
+	  if(Array.isArray(arg2)){
+	    to = {};
+	    props = arg2;
+	  }else{
+	    to = arg2;
+	    props = arg3;
 	  }
-	  observer.open(changeFn);
-	  this.observerMap.add(identifier, identifier, observer);
-	}
-
-	ValueMonitor.prototype.getCompoundValueRef=function(pathes){
-	  var ps = [];
-	  var p;
-	  for(var i=0;i<pathes.length;i++){
-	    p = pathes[i];
-	    if(p.indexOf("@:") == 0){//absolute path from scope root
-	      p = p.substr(2);
-	    }else{//relative path from current monitor ref path
-	      p = convertObservePath(this.varRefRoot, p);
-	    }
-	    ps[i] = _.Path.get(p);
+	  if(!to){
+	    to = {};
 	  }
-	  var scope = this.scope;
-	  return {
-	    setValues : function(values){
-	      if(values.length != ps.length){
-	        throw "length not equal for compound value set";
-	      }
-	      for(var i=0;i<values.length;i++){
-	        ps[i].setValueFrom(scope, values[i]);
-	      }
-	    },
-	    getValues : function(){
-	      var values = [];
-	      for(var i=0;i<ps.length;i++){
-	        values[i] = ps[i].getValueFrom(scope);
-	      }
-	      return values;
-	    },
-	  };
+	  if(props){
+	    var p;
+	    for(var i=0;i<props.length;i++){
+	      p = props[i];
+	      to[p] = from[p];
+	    }
+	  }else{
+	    for(var p in from){
+	      to[p] = from[p];
+	    }
+	  }
+	  
+	  return to;
+	};
+
+	util.override = function(from, to){
+	  var ret = to;
+	  if(from === undefined || from === null){
+	    //do nothing
+	  }else if (to === undefined || to === null){
+	    ret = util.clone(from);
+	  }else if(Array.isArray(from) && Array.isArray(to)){
+	    Array.prototype.push.apply(to, from);
+	  }else if (util.isPlainObject(from) && util.isPlainObject(to)){
+	    for(var p in from){
+	      to[p] = util.override(from[p], to[p]);
+	    }
+	  }else{
+	    throw "cannot override different type data from \n"
+	          + JSON.stringify(from) + "\n"
+	          + " to \n"
+	          + JSON.stringify(to) + "\n";
+	  }
+	  return ret;
 	}
 
-	ValueMonitor.prototype.discard=function(){
-	  this.observerMap.discard();
+	/*
+	 * copied from jquery
+	 */
+	util.isPlainObject = function(obj){
+	    if ( !obj || obj.toString() !== "[object Object]" || obj.nodeType || obj.setInterval ) {
+	        return false;
+	    }
+	     
+	    if ( obj.constructor && !obj.hasOwnProperty("constructor") && !obj.constructor.prototype.hasOwnProperty("isPrototypeOf") ) {
+	        return false;
+	    }
+	     
+	    var key;
+	    for ( key in obj ) {}
+	 
+	    return key === undefined || obj.hasOwnProperty(key);
 	}
 
-	module.exports=ValueMonitor;
+	util.arraySwap = function (array, index1, index2) {
+	      var tmp = array[index1];
+	      array[index1] = array[index2];
+	      array[index2] = tmp;
+	};
+
+	util.arrayLengthAdjust = function (targetArray, hopeLength, initialNewFn, discardCutFn) {
+	  var existingLength = targetArray.length;
+	  if(initialNewFn){
+	    var newItem;
+	    for(var i=existingLength;i<hopeLength;i++){
+	      newItem = initialNewFn(i);
+	      targetArray[i] = newItem;
+	    }
+	  }else{
+	    for(var i=existingLength;i<hopeLength;i++){
+	      targetArray[i] = undefined;
+	    }
+	  }
+	  var removeCount = existingLength - hopeLength;
+	  if(removeCount > 0){
+	    if(discardCutFn){
+	      for(var i=hopeLength;i<existingLength;i++){
+	        discardCutFn(targetArray[i], i);
+	      }
+	    }
+	    targetArray.splice(hopeLength, removeCount);
+	  }
+	};
+	    
+	util.findWithRoot = function(rootElem, selector){
+	      if(selector === ":root"){
+	        return rootElem;
+	      }
+	      var result = rootElem.find(selector);
+	      if(result.length === 0){
+	        if(rootElem.is(selector)){
+	          return rootElem;
+	        }
+	      }
+	      return result;
+	};
+
+	util.delay=function(callback, timeout, delayMoreCycles){
+	  if(delayMoreCycles && delayMoreCycles > 0){
+	    setTimeout(function(){
+	      util.delay(callback, timeout, delayMoreCycles-1);
+	    }, 0);
+	    return;
+	  }else{
+	    setTimeout(function(){
+	      callback.apply();
+	      util.sync();
+	    }, timeout ? timeout : 0);
+	  }
+	}
+
+	module.exports = util;
+
+/***/ },
+/* 12 */
+/***/ function(module, exports, __webpack_require__) {
+
+	"use strict";
+
+	var constant={};
+
+	constant.metaRewritterPriority={
+	  _watch: 10000,
+	  _form : 20000,
+	  _duplicator: 30000,
+	  _selector : 40000,
+	  _attr_op : 50000,
+	  _selector_after_attr_op : 60000,
+	  _render : 70000,
+	  _register_dom_change: 80000,
+	  _on_change: 90000,
+	  _assign : 100000
+	};
+
+	constant.impossibleSearchKey = "aj-impossible-search-key-ashfdpnasvdnoaisdfn3423#$%$#$%0as8d23nalsfdasdf";
+
+
+	module.exports = constant;
+
+/***/ },
+/* 13 */
+/***/ function(module, exports, __webpack_require__) {
+
+	/* WEBPACK VAR INJECTION */(function(Buffer) {/**
+	 * Copyright © 2011-2015 Paul Vorbach <paul@vorba.ch>
+
+	 * Permission is hereby granted, free of charge, to any person obtaining a copy of
+	 * this software and associated documentation files (the “Software”), to deal in
+	 * the Software without restriction, including without limitation the rights to
+	 * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+	 * the Software, and to permit persons to whom the Software is furnished to do so,
+	 * subject to the following conditions:
+	 * 
+	 * The above copyright notice and this permission notice shall be included in all
+	 * copies or substantial portions of the Software.
+	 * 
+	 * THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+	 * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+	 * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+	 * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+	 * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, OUT OF OR IN CONNECTION WITH THE
+	 * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+	 */
+	var clone = (function() {
+	'use strict';
+
+	/**
+	 * Clones (copies) an Object using deep copying.
+	 *
+	 * This function supports circular references by default, but if you are certain
+	 * there are no circular references in your object, you can save some CPU time
+	 * by calling clone(obj, false).
+	 *
+	 * Caution: if `circular` is false and `parent` contains circular references,
+	 * your program may enter an infinite loop and crash.
+	 *
+	 * @param `parent` - the object to be cloned
+	 * @param `circular` - set to true if the object to be cloned may contain
+	 *    circular references. (optional - true by default)
+	 * @param `depth` - set to a number if the object is only to be cloned to
+	 *    a particular depth. (optional - defaults to Infinity)
+	 * @param `prototype` - sets the prototype to be used when cloning an object.
+	 *    (optional - defaults to parent prototype).
+	*/
+	function clone(parent, circular, depth, prototype) {
+	  var filter;
+	  if (typeof circular === 'object') {
+	    depth = circular.depth;
+	    prototype = circular.prototype;
+	    filter = circular.filter;
+	    circular = circular.circular
+	  }
+	  // maintain two arrays for circular references, where corresponding parents
+	  // and children have the same index
+	  var allParents = [];
+	  var allChildren = [];
+
+	  var useBuffer = typeof Buffer != 'undefined';
+
+	  if (typeof circular == 'undefined')
+	    circular = true;
+
+	  if (typeof depth == 'undefined')
+	    depth = Infinity;
+
+	  // recurse this function so we don't reset allParents and allChildren
+	  function _clone(parent, depth) {
+	    // cloning null always returns null
+	    if (parent === null)
+	      return null;
+
+	    if (depth == 0)
+	      return parent;
+
+	    var child;
+	    var proto;
+	    if (typeof parent != 'object') {
+	      return parent;
+	    }
+
+	    if (clone.__isArray(parent)) {
+	      child = [];
+	    } else if (clone.__isRegExp(parent)) {
+	      child = new RegExp(parent.source, __getRegExpFlags(parent));
+	      if (parent.lastIndex) child.lastIndex = parent.lastIndex;
+	    } else if (clone.__isDate(parent)) {
+	      child = new Date(parent.getTime());
+	    } else if (useBuffer && Buffer.isBuffer(parent)) {
+	      child = new Buffer(parent.length);
+	      parent.copy(child);
+	      return child;
+	    } else {
+	      if (typeof prototype == 'undefined') {
+	        proto = Object.getPrototypeOf(parent);
+	        child = Object.create(proto);
+	      }
+	      else {
+	        child = Object.create(prototype);
+	        proto = prototype;
+	      }
+	    }
+
+	    if (circular) {
+	      var index = allParents.indexOf(parent);
+
+	      if (index != -1) {
+	        return allChildren[index];
+	      }
+	      allParents.push(parent);
+	      allChildren.push(child);
+	    }
+
+	    for (var i in parent) {
+	      var attrs;
+	      if (proto) {
+	        attrs = Object.getOwnPropertyDescriptor(proto, i);
+	      }
+
+	      if (attrs && attrs.set == null) {
+	        continue;
+	      }
+	      child[i] = _clone(parent[i], depth - 1);
+	    }
+
+	    return child;
+	  }
+
+	  return _clone(parent, depth);
+	}
+
+	/**
+	 * Simple flat clone using prototype, accepts only objects, usefull for property
+	 * override on FLAT configuration object (no nested props).
+	 *
+	 * USE WITH CAUTION! This may not behave as you wish if you do not know how this
+	 * works.
+	 */
+	clone.clonePrototype = function clonePrototype(parent) {
+	  if (parent === null)
+	    return null;
+
+	  var c = function () {};
+	  c.prototype = parent;
+	  return new c();
+	};
+
+	// private utility functions
+
+	function __objToStr(o) {
+	  return Object.prototype.toString.call(o);
+	};
+	clone.__objToStr = __objToStr;
+
+	function __isDate(o) {
+	  return typeof o === 'object' && __objToStr(o) === '[object Date]';
+	};
+	clone.__isDate = __isDate;
+
+	function __isArray(o) {
+	  return typeof o === 'object' && __objToStr(o) === '[object Array]';
+	};
+	clone.__isArray = __isArray;
+
+	function __isRegExp(o) {
+	  return typeof o === 'object' && __objToStr(o) === '[object RegExp]';
+	};
+	clone.__isRegExp = __isRegExp;
+
+	function __getRegExpFlags(re) {
+	  var flags = '';
+	  if (re.global) flags += 'g';
+	  if (re.ignoreCase) flags += 'i';
+	  if (re.multiline) flags += 'm';
+	  return flags;
+	};
+	clone.__getRegExpFlags = __getRegExpFlags;
+
+	return clone;
+	})();
+
+	if (typeof module === 'object' && module.exports) {
+	  module.exports = clone;
+	}
+
+	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(18).Buffer))
 
 /***/ },
 /* 14 */
@@ -4464,7 +4464,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	var util = __webpack_require__(11);
 
 	var _int = {
-	  setValue: function(v){
+	  _set_value: function(v){
 	    var nv = parseInt(v, this._radix);
 	    if(isNaN(nv)){
 	      return v;
@@ -4472,7 +4472,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	      return nv;
 	    }
 	  },
-	  getValue: function(v){
+	  _get_value: function(v){
 	    if(v){
 	      return (v).toString(this._radix);
 	    }else{
@@ -4482,7 +4482,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	}
 
 	var _float = {
-	  setValue: function(v){
+	  _set_value: function(v){
 	    var nv = parseFloat(v);
 	    if(isNaN(nv)){
 	      return v;
@@ -4490,7 +4490,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	      return nv;
 	    }
 	  },
-	  getValue: function(v){
+	  _get_value: function(v){
 	    if(v){
 	      return (v).toString(this._radix);
 	    }else{
@@ -4534,7 +4534,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  _stringy_as_local : true,
 	  //default to remove tail milliseconds value
 	  _stringy_keep_ms : false,
-	  setValue : function(v){
+	  _set_value : function(v){
 	    var time = Date.parse(v);
 	    if(isNaN(time)){
 	      return v;
@@ -4543,7 +4543,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	      return new Date(time);
 	    }
 	  },
-	  getValue : function(v){
+	  _get_value : function(v){
 	    if(v && v.toISOString && v.getTime){//is a date
 	      if(this._stringy_as_local){
 	        var d = new Date(v.getTime());
@@ -4591,9 +4591,9 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	var util = __webpack_require__(11);
 	var config = __webpack_require__(2);
-	var constant = __webpack_require__(8)
-	var Snippet = __webpack_require__(1)
-	var normalizeMeta = __webpack_require__(10)
+	var constant = __webpack_require__(12)
+	var Snippet = __webpack_require__(9)
+	var normalizeMeta = __webpack_require__(8)
 
 	var $ = config.$;
 
@@ -4929,8 +4929,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	 */
 
 	var base64 = __webpack_require__(22)
-	var ieee754 = __webpack_require__(20)
-	var isArray = __webpack_require__(21)
+	var ieee754 = __webpack_require__(21)
+	var isArray = __webpack_require__(20)
 
 	exports.Buffer = Buffer
 	exports.SlowBuffer = SlowBuffer
@@ -6358,6 +6358,45 @@ return /******/ (function(modules) { // webpackBootstrap
 /* 20 */
 /***/ function(module, exports, __webpack_require__) {
 
+	
+	/**
+	 * isArray
+	 */
+
+	var isArray = Array.isArray;
+
+	/**
+	 * toString
+	 */
+
+	var str = Object.prototype.toString;
+
+	/**
+	 * Whether or not the given `val`
+	 * is an array.
+	 *
+	 * example:
+	 *
+	 *        isArray([]);
+	 *        // > true
+	 *        isArray(arguments);
+	 *        // > false
+	 *        isArray('');
+	 *        // > false
+	 *
+	 * @param {mixed} val
+	 * @return {bool}
+	 */
+
+	module.exports = isArray || function (val) {
+	  return !! val && '[object Array]' == str.call(val);
+	};
+
+
+/***/ },
+/* 21 */
+/***/ function(module, exports, __webpack_require__) {
+
 	exports.read = function (buffer, offset, isLE, mLen, nBytes) {
 	  var e, m,
 	      eLen = nBytes * 8 - mLen - 1,
@@ -6442,45 +6481,6 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	  buffer[offset + i - d] |= s * 128
 	}
-
-
-/***/ },
-/* 21 */
-/***/ function(module, exports, __webpack_require__) {
-
-	
-	/**
-	 * isArray
-	 */
-
-	var isArray = Array.isArray;
-
-	/**
-	 * toString
-	 */
-
-	var str = Object.prototype.toString;
-
-	/**
-	 * Whether or not the given `val`
-	 * is an array.
-	 *
-	 * example:
-	 *
-	 *        isArray([]);
-	 *        // > true
-	 *        isArray(arguments);
-	 *        // > false
-	 *        isArray('');
-	 *        // > false
-	 *
-	 * @param {mixed} val
-	 * @return {bool}
-	 */
-
-	module.exports = isArray || function (val) {
-	  return !! val && '[object Array]' == str.call(val);
-	};
 
 
 /***/ },
