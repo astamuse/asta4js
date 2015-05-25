@@ -24,7 +24,9 @@ Then we can bind the two DOM elements with the javascript model as following:
   });
 ```
 
-See more details at [Asta4js wiki](https://github.com/astamuse/asta4js/wiki)
+A complete sample of [todoApp](https://github.com/astamuse/asta4js/blob/master/examples/todoApp/todoApp.js) shows how we can make things amazing.
+
+User guide is at [Asta4js wiki](https://github.com/astamuse/asta4js/wiki)
 
 ## status and road map
 
@@ -39,7 +41,6 @@ Todo things:
 * binding
     * add test for multiple select
     * add support for option group of select
-    * Aj.form should allow meta override
 * docs
     * complete the basic user guide and reference(in progress)
 * virtual component(web component support)
