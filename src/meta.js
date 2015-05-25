@@ -328,14 +328,16 @@ var normalizeMeta = function(meta, metaId, propertyPath){
                     if(diff > 0){
                       var childContext;
                       var newRootMonitorPath;
+                      var newIndex;
                       for (var i = diff; i >0; i--) {
-                        newRootMonitorPath = targetPath + "[" + (newLength - i) +"]";
+                        newIndex = newLength - i;
+                        newRootMonitorPath = targetPath + "[" + newIndex +"]";
                         newMonitor = bindContext._valueMonitor.createSubMonitor(newRootMonitorPath);
                         var childContext = {
                           _valueMonitor: newMonitor,
-                          _mappedItem: mappedArray[i] //must be not null
+                          _mappedItem: mappedArray[newIndex] //must be not null
                         };
-                        childContext = arrayChildContextCreator.call(newMeta, bindContext, childContext, newLength - i);
+                        childContext = arrayChildContextCreator.call(newMeta, bindContext, childContext, newIndex);
                         childContext._bind(itemMeta);
                       }
                     }else{

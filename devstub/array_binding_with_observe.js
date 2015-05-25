@@ -18,15 +18,27 @@ $(function () {
           var hopeLength = Array.isArray(newValue) ? newValue.length : 0;
           Aj.util.arrayLengthAdjust(list, hopeLength, function(){//initialize new item
             return "";
-          }, function(){//discard mapped array
-            list = [];
+          }, function(item, index){//discard mapped items
+            //if necessary, this is a chance to clear the resource of mapped item before they are removed
+            //item.discard()
           });
           return list;
         },
+        _array_discard: function(){
+          delete $scope.observeData.list;
+          //$scope.observeData.list = [];
+        },
         _item: {
           _value: function(newValue, oldValue, bindContext){
+            var suffix = "-observed-changed";
+            //mapped item should equal to initial value "" or the oldValue + "-observed-changed"
+            if(bindContext._mappedItem === "" || bindContext._mappedItem === (oldValue + suffix)){
+              //is ok
+            }else{
+              throw "value of _mappedItem is not correct, got:" + bindContext._mappedItem + "  but expect:" + (oldValue + suffix);
+            }
             var targetIndex = bindContext._getArrayIndex();
-            $scope.observeData.list[targetIndex] = $scope.data.list[targetIndex] + "-observed-changed";
+            $scope.observeData.list[targetIndex] = $scope.data.list[targetIndex] + suffix;
           }
         }
       }
