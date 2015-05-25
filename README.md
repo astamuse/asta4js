@@ -42,7 +42,9 @@ Todo things:
     * add test for multiple select
     * add support for option group of select
 * docs
-    * complete the basic user guide and reference(in progress)
+    * complete the basic user guide and reference(has almost covered current situations)
+    * reimplement the todoApp sample to follow the todoMVC's guide line and submit it to todoMVC.
+    * make the user list example more beautiful.
 * virtual component(web component support)
     * **Not yet started.**
 
