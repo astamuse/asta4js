@@ -82,7 +82,7 @@ $(function () {
 
     //following is the event binding
 
-    //must use on for dynamically generated array items
+    //static binding on global operations
     $scope.snippet("#todoapp")
       .bind("#new-todo", "keypress",  function(e){
         if(e.keyCode != 13){
@@ -107,7 +107,18 @@ $(function () {
         $scope.data.list.forEach(function(t){
           t.complete = $scope.uiControlData.allCompleted;
         });
-      }).on("dblclick", ".x-todo-item", function(){//double click to edit
+      }).bind("#clear-completed", "click", function(){//clear all completed
+        var list = $scope.data.list;
+        for(var i=list.length-1;i>=0;i--){
+          if(list[i].complete){
+            list.splice(i, 1);
+          }
+        }
+      });
+    
+    //dynamical binding generated array items
+    $scope.snippet("#todoapp")
+      .on("dblclick", ".x-todo-item", function(){//double click to edit
         $(this).addClass("editing");
       }).on("blur", ".x-todo-item", function(){//blur to exit edit
         $(this).removeClass("editing");
@@ -120,22 +131,14 @@ $(function () {
       }).on("click", ".destroy", function(){ //click to destroy current item
         var index = parseInt($(this).attr("index"));
         $scope.data.list.splice(index, 1);
-      }).bind("#clear-completed", "click", function(){//clear all completed
-        var list = $scope.data.list;
-        for(var i=list.length-1;i>=0;i--){
-          if(list[i].complete){
-            list.splice(i, 1);
-          }
-        }
       });
     
-    //data init
+    //data initialization
     $.ajax({
       type: "get",
       url: "test.json",
     }).done(function(data){
-      var list = data;
-      $scope.data.list = list;
+      $scope.data.list = data;
     }).fail(function(){
       //fallback
       var list = [
