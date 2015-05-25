@@ -110,11 +110,11 @@ var defaultTransform = {
   _get_value: defaultTransformFn,
 }
 
-var creatorDebugIntercept=function(debugId, meta, creator){
+var creatorDebugIntercept=function(debugId, meta, creator, creatorType){
   return function(bindContext){
     var fn = creator.call(this, bindContext);
     return function(){
-      console.log("debug info:", debugId, "\ncurrent meta:", meta, "\ncalling args:", arguments);
+      console.log("debug info:", debugId, "\ncurrent meta:", meta, "\n("+creatorType+")calling args:", arguments);
       if(meta._item && bindContext._snippet && !meta._duplicator){
         console.error("it seems that _duplicator is absent for current meta which is with _item define. current meta:", meta);
       }
@@ -408,10 +408,10 @@ var normalizeMeta = function(meta, metaId, propertyPath){
       //debugger
       if(config.debug && newMeta._debug){
         if(newMeta._change_handler_creator){
-          newMeta._change_handler_creator = creatorDebugIntercept(newMeta._debug, newMeta, newMeta._change_handler_creator);
+          newMeta._change_handler_creator = creatorDebugIntercept(newMeta._debug, newMeta, newMeta._change_handler_creator, "on change");
         }
         if(newMeta._assign_change_handler_creator){
-          newMeta._assign_change_handler_creator = creatorDebugIntercept(newMeta._debug, newMeta, newMeta._assign_change_handler_creator);
+          newMeta._assign_change_handler_creator = creatorDebugIntercept(newMeta._debug, newMeta, newMeta._assign_change_handler_creator, "on assign");
         }
       }
       
