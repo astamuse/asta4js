@@ -24,7 +24,9 @@ Then we can bind the two DOM elements with the javascript model as following:
   });
 ```
 
-A complete sample of [todoApp](https://github.com/astamuse/asta4js/blob/master/examples/todoApp/todoApp.js) shows how we can make things amazing.
+A complete sample of [todoApp](http://astamuse.github.io/asta4js/examples/todoApp/todoApp.html) shows how we can make things amazing.
+
+More examples can be found at [http://astamuse.github.io/asta4js](http://astamuse.github.io/asta4js)
 
 User guide is at [Asta4js wiki](https://github.com/astamuse/asta4js/wiki)
 
@@ -47,6 +49,7 @@ Todo things:
     * make the user list example more beautiful.
 * web component support(in progress)
     * it has been working with [brick](https://mozbrick.github.io/).
+        * [example of working with brick](http://astamuse.github.io/asta4js/examples/brick/calendar.html)
     * waiting for confirm with shadow DOM.
 
 Any issue report or contribution/PR is appreciated.
