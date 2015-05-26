@@ -1,81 +1,108 @@
+<!DOCTYPE html>
 <html>
 <head>
 <title>user list</title>
+
+<!-- Latest compiled and minified CSS -->
+<link rel="stylesheet" href="https://cdn.rawgit.com/mblode/marx/master/css/marx.min.css">
+<link rel="stylesheet" href="userList.css">
+
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
 <script src="../../dist/aj.js"></script>
 <script src="userList.js"></script>
 
-<style>
-
-</style>
-
 </head>
 <body>
-<table>
-    <tr>
-        <td class="c1">name: <input type="text" name="name"></td>
-        <td class="c2"><pre id="name-pre"></pre></td>
-    </tr>
-    <tr>
-        <td>bloodType: 
-            <select name="bloodType">
-                <option value="">template option</option>
-            </select>
-        </td>
-        <td><pre id="bloodType-pre"></pre></td>
-    </tr>
-    <tr>
-        <td>sex: 
-            <span class="x-sex-group">
-                <input id="sex-radio" type="radio" name="sex">
-                <label for="sex-radio">xxx</label>
-            </span>
-        </td>
-        <td><pre id="sex-pre"></pre></td>
-    </tr>
-    <tr>
-        <td>language: 
-            <span class="x-lang-group">
-                <input id="lang-ck" type="checkbox" name="language">
-                <label for="lang-ck">xxx</label>
-            </span>
-        </td>
-        <td><pre id="language-pre"></pre></td>
-    </tr>
-    <tr>
-        <td>set private: <input type=checkbox name="private"></td>
-        <td>&nbsp;</td>
-    </tr>
-    <tr>
-        <td>desc: <textarea name="desc"></textarea></td>
-        <td><pre id="desc-pre"></pre></td>
-    </tr>
-</table>
+    <main>
+        <h1>user list
+            <small>sample</small>
+        </h1>
 
-<button id="addBtn">add</button>
+        <ul class="form-list">
+            <li>
+                <label for="name" class="form-list-label">name</label>
+                <div class="form-list-input">
+                    <input id="name" type="text" name="name">
+                </div>
+            </li>
+            <li>
+                <label for="bloodType" class="form-list-label">bloodType</label>
+                <div class="form-list-input">
+                    <select id="bloodType" name="bloodType">
+                        <option value="">template option</option>
+                    </select>
+                </div>
+            </li>
+            <li>
+                <div class="form-list-label">sex</div>
+                <div class="form-list-input">
+                    <span class="x-sex-group">
+                        <input id="sex-radio" type="radio" name="sex">
+                        <label for="sex-radio">xxx</label>
+                    </span>
+                </div>
+            </li>
+            <li>
+                <label for="" class="form-list-label">language</label>
+                <div class="form-list-input">
+                    <span class="x-lang-group">
+                        <input id="lang-ck" type="checkbox" name="language">
+                        <label for="lang-ck">xxx</label>
+                    </span>
+                </div>
+            </li>
+            <li>
+                <div class="form-list-label">set private</div>
+                <div class="form-list-input">
+                    <div class="onoffswitch">
+                        <input type="checkbox" name="private" class="onoffswitch-checkbox" id="private">
+                        <label class="onoffswitch-label" for="private">
+                            <span class="onoffswitch-inner"></span>
+                            <span class="onoffswitch-switch"></span>
+                        </label>
+                    </div>
+                </div>
+            </li>
+            <li>
+                <label for="desc" class="form-list-label">description</label>
+                <div class="form-list-input">
+                    <textarea id="desc" name="desc" placeholder="description"></textarea>
+                </div>
+            </li>
+        </ul>
 
-<table border=1 style="width:80%">
-<tr>
-    <th style="width:5%">seq</th>
-    <th style="width:10%">name</th>
-    <th style="width:5%">blood type</th>
-    <th style="width:10%">sex</th>
-    <th style="width:30%">languages</th>
-    <th style="width:10%">keep private</th>
-    <th style="width:20%">description</th>
-    <th style="width:10%">operations</th>
-</tr>
-<tr class="x-row">
-    <td class="x-seq">seq</td>
-    <td class="x-name">name</td>
-    <td class="x-bloodtype">blood type</td>
-    <td class="x-sex">sex</td>
-    <td class="x-lang">languages</td>
-    <td class="x-private">keep private</td>
-    <td class="x-desc">description</td>
-    <td><button class="x-remove">remove current</button></td>
-</tr>
-</table>
+<!--     <pre id="name-pre"></pre>
+         <pre id="bloodType-pre"></pre>
+         <pre id="language-pre"></pre>
+         <pre id="desc-pre"></pre>
+ -->
 
+        <button id="addBtn" type="button">add</button>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>seq</th>
+                    <th>name</th>
+                    <th>blood type</th>
+                    <th>sex</th>
+                    <th>languages</th>
+                    <th>keep private</th>
+                    <th>description</th>
+                    <th>operations</th>
+                </tr>
+            </thead>
+            <tr class="x-row">
+                <td class="x-seq">seq</td>
+                <td class="x-name">name</td>
+                <td class="x-bloodtype">blood type</td>
+                <td class="x-sex">sex</td>
+                <td class="x-lang">languages</td>
+                <td class="x-private">keep private</td>
+                <td class="x-desc">description</td>
+                <td><button class="x-remove">remove current</button></td>
+            </tr>
+        </table>
+    </main>
 </body>
 </html>
