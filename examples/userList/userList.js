@@ -51,19 +51,15 @@ $(function () {
           ],
           name      : ".x-name",
           bloodType : ".x-bloodtype",
-          sex_display : {
+          sex : {
             _selector: ".x-sex",
-            _watch   : {
-              _fields : ["sex"],
-              _cal : function(sex){
-                if(sex === ""){
+            _transform: function(sex){
+              if(sex === ""){
                   sex = undefined;
                 }
-                return Aj.form.optionText($scope.dataOption.genders, sex);
-              }
+              return Aj.form.optionText($scope.dataOption.genders, sex);
             }
           },
-          //sex: ".x-sex",
           language  : ".x-lang",
           "private" : ".x-private",
           desc      : ".x-desc"
