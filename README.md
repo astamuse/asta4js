@@ -45,7 +45,8 @@ Todo things:
     * complete the basic user guide and reference(has almost covered current situations)
     * reimplement the todoApp sample to follow the todoMVC's guide line and submit it to todoMVC.
     * make the user list example more beautiful.
-* virtual component(web component support)
-    * **Not yet started.**
+* web component support(in progress)
+    * it has been working with [brick](https://mozbrick.github.io/).
+    * waiting for confirm with shadow DOM.
 
 Any issue report or contribution/PR is appreciated.
