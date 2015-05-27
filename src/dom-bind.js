@@ -36,14 +36,6 @@ var _duplicator = function(meta){
   }
   var targetPath = meta._target_path;
   if(!meta._array_map && !meta._array_discard){
-    meta._array_discard = function(){
-      var mappedArrayInfo = bindContext._getResource("_duplicator", duplicator);
-      if(!mappedArrayInfo){
-        //it seems that we do not need to remove all the existing DOMs
-      }
-      bindContext._removeResource("_duplicator", duplicator);
-    };
-    
     meta._array_child_context_creator = function(parentContext, contextOverride, index, itemMeta){
       var mappedArrayInfo = parentContext._getResource("_duplicator", duplicator);//must have
       var item = mappedArrayInfo.items[index];
@@ -61,7 +53,7 @@ var _duplicator = function(meta){
       return composedContext;
     }
     
-    meta._array_discard = function(){
+    meta._array_discard = function(bindContext){
       var mappedArrayInfo = bindContext._getResource("_duplicator", duplicator);
       if(!mappedArrayInfo){
         //it seems that we do not need to remove all the existing DOMs

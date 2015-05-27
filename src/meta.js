@@ -298,7 +298,7 @@ var normalizeMeta = function(meta, metaId, propertyPath){
               //we have to discard the mapped array before current context is discarded.
               if(arrayDiscard){
                 bindContext._addDiscardHook(function(){
-                  arrayDiscard.apply(newMeta);
+                  arrayDiscard.call(newMeta, bindContext);
                 });
               }
               return function(newValue, oldValue, bindContext){

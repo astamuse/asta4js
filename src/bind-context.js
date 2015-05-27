@@ -155,6 +155,11 @@ BindContext.prototype._addDiscardHook=function(fn){
 };
 
 BindContext.prototype._discard=function(){
+  
+  for(var i=0;i<this._discardHook.length;i++){
+    this._discardHook[i].apply();
+  }
+  
   var p;
   for(var k in this){
     p = this[k];
@@ -162,9 +167,7 @@ BindContext.prototype._discard=function(){
       p.discard();
     }
   }
-  for(var i=0;i<this._discardHook.length;i++){
-    this._discardHook[i].apply();
-  }
+
 };
 
 module.exports=BindContext;

@@ -364,14 +364,6 @@ return /******/ (function(modules) { // webpackBootstrap
 	  }
 	  var targetPath = meta._target_path;
 	  if(!meta._array_map && !meta._array_discard){
-	    meta._array_discard = function(){
-	      var mappedArrayInfo = bindContext._getResource("_duplicator", duplicator);
-	      if(!mappedArrayInfo){
-	        //it seems that we do not need to remove all the existing DOMs
-	      }
-	      bindContext._removeResource("_duplicator", duplicator);
-	    };
-	    
 	    meta._array_child_context_creator = function(parentContext, contextOverride, index, itemMeta){
 	      var mappedArrayInfo = parentContext._getResource("_duplicator", duplicator);//must have
 	      var item = mappedArrayInfo.items[index];
@@ -389,7 +381,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	      return composedContext;
 	    }
 	    
-	    meta._array_discard = function(){
+	    meta._array_discard = function(bindContext){
 	      var mappedArrayInfo = bindContext._getResource("_duplicator", duplicator);
 	      if(!mappedArrayInfo){
 	        //it seems that we do not need to remove all the existing DOMs
@@ -1982,7 +1974,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	              //we have to discard the mapped array before current context is discarded.
 	              if(arrayDiscard){
 	                bindContext._addDiscardHook(function(){
-	                  arrayDiscard.apply(newMeta);
+	                  arrayDiscard.call(newMeta, bindContext);
 	                });
 	              }
 	              return function(newValue, oldValue, bindContext){
@@ -2571,6 +2563,11 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 	BindContext.prototype._discard=function(){
+	  
+	  for(var i=0;i<this._discardHook.length;i++){
+	    this._discardHook[i].apply();
+	  }
+	  
 	  var p;
 	  for(var k in this){
 	    p = this[k];
@@ -2578,9 +2575,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	      p.discard();
 	    }
 	  }
-	  for(var i=0;i<this._discardHook.length;i++){
-	    this._discardHook[i].apply();
-	  }
+
 	};
 
 	module.exports=BindContext;
@@ -2613,6 +2608,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	  if(!observePath){
 	      throw "The scope root cannot be observed";
 	  }
+	  //fix the n-dimensions array path
+	  observePath = observePath.replace("].[", "][");
 	  return observePath;
 	}
 

@@ -13,7 +13,7 @@ $(function () {
         $scope.observeData.value = newValue + "-observed";
       },
       list: {
-        _array_map: function(newValue, oldValue){
+        _array_map: function(newValue, oldValue, bindContext){
           var list = $scope.observeData.list;
           var hopeLength = Array.isArray(newValue) ? newValue.length : 0;
           Aj.util.arrayLengthAdjust(list, hopeLength, function(){//initialize new item
@@ -24,7 +24,7 @@ $(function () {
           });
           return list;
         },
-        _array_discard: function(){
+        _array_discard: function(bindContext){
           delete $scope.observeData.list;
           //$scope.observeData.list = [];
         },
