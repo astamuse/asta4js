@@ -1,0 +1,55 @@
+<html>
+<head>
+
+<title>book info</title>
+
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+<script src="../../lib/webcomponents.js"></script>
+<script src="../../dist/aj.js"></script>
+<script src="bookInfo.js"></script>
+
+<!-- Importing Custom Elemenent -->
+<link rel="import" href="bookCard.html">
+
+<style>
+
+.current-row {
+    background-color: lightgrey;
+}
+
+</style>
+
+</head>
+<body>
+
+<div class="x-book-info-snippet">
+book list(click to edit):
+    <table border=1>
+        <tr>
+            <th>title</th>
+            <th>authors</th>
+            <th>publish year</th>
+        </tr>
+        <tr class="x-row">
+            <td class="x-title"></td>
+            <td class="x-authors">
+                <ul>
+                    <li class="x-person"></li>
+                </ul>
+            </td>
+            <td class="x-year"></td>
+        </tr>
+
+    </table>
+
+    
+<p>
+<p>
+edit current:
+
+<book-card id="edit-card"></book-card>
+
+</div>
+
+</body>
+</html>
