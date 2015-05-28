@@ -1,19 +1,20 @@
+<!-- Importing Custom Elemenent -->
+<link rel="import" href="personsEdit.html">
+
 <template id="bookCardTemplate">
 
 <div id="card">
 
     <ul>
         <li><label>title:</label><input name="title">
-        <li><label>authors:</label><button class="x-add">add</button>
+        <li><label>authors:<persons-edit class="x-persons"></persons-edit></label>
             <ul>
                 <li class="person-row">
-                    <input name="person"></input>
-                    <button class="x-remove">remove</button>
             </ul>
         <li><label>year:</label><input name="year">
     </ul>
     
-
+    
 </div>
 
 </template>

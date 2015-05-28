@@ -28,34 +28,35 @@ $(function(){
           },// authors
           year: ".x-year"
         }
-      }//books
+      },//books,
+      currentBook: [
+        {
+          _selector: "#edit-card",
+          _render: function(target, newValue){
+            target.prop("book", newValue);
+          }
+        },
+        {
+          _selector: "#edit-card@>[style:display=]",
+          _transform: function(v){
+            return v ? "block": "none";
+          }
+        }
+      ]
     }).on("click", "tr.x-row", function(){
       $("tr.x-row").removeClass("current-row");
-      $(this).addClass("current-row");
-      var idx = parseInt($(this).attr("idx"));
-      //$("#edit-card").prop("book", $scope.data.books[idx]);
-      $scope.data.currentBook = $scope.data.books[idx];
-      return false;
-    }).bind("#edit-card", "click", function(){
-      return false;
-    });
-
-    $scope.observe($scope.data,{
-      currentBook: function(newValue){
-        $("#edit-card").prop("book", newValue);
-        if(!newValue){
-          $("#edit-card").css("display", "none");
-        }else{
-          $("#edit-card").css("display", "block");
-        }
+      var self = $(this);
+      var idx = parseInt(self.attr("idx"));
+      if($scope.data.currentBook == $scope.data.books[idx]){
+        //cancel selection
+        $scope.data.currentBook = null;
+      }else{
+        //switch selection
+        $scope.data.currentBook = $scope.data.books[idx];
+        self.addClass("current-row");
       }
     });
 
-    $("body").click(function(){
-      $(".x-book-info-snippet tr.x-row").removeClass("current-row");
-      //$("#edit-card").prop("book", null);
-      $scope.data.currentBook = null;
-    });
 
   });//end init
 });
