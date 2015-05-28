@@ -1,0 +1,34 @@
+<html>
+<head>
+
+<title>component parent</title>
+
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+<script src="../../lib/webcomponents.js"></script>
+<script src="../../dist/aj.js"></script>
+<script src="componentParent.js"></script>
+
+<!-- Importing Custom Elemenent -->
+<link rel="import" href="component.html">
+
+</head>
+<body>
+
+  <fieldset>
+    <legend>outside editing area:</legend>
+    value input: <input name="value"><br>
+    value preview: <span id="value-preview"></span>
+  </fieldset>
+  <p>
+  <p>
+  <fieldset>
+    <legend>inside componenent area:</legend>
+    this is the value text inside the component, 
+    which should not be synchronized by the outer 
+    value binding:
+    <my-component></my-component>
+  </fieldset>
+</div>
+
+</body>
+</html>
