@@ -33,12 +33,29 @@ $(function(){
       $("tr.x-row").removeClass("current-row");
       $(this).addClass("current-row");
       var idx = parseInt($(this).attr("idx"));
-      $("#edit-card").prop("book", $scope.data.books[idx]);
+      //$("#edit-card").prop("book", $scope.data.books[idx]);
+      $scope.data.currentBook = $scope.data.books[idx];
+      return false;
+    }).bind("#edit-card", "click", function(){
       return false;
     });
-  });
-  
-  $("body").click(function(){
-    $(".x-book-info-snippet tr.x-row").removeClass("current-row");
-  });
+
+    $scope.observe($scope.data,{
+      currentBook: function(newValue){
+        $("#edit-card").prop("book", newValue);
+        if(!newValue){
+          $("#edit-card").css("display", "none");
+        }else{
+          $("#edit-card").css("display", "block");
+        }
+      }
+    });
+
+    $("body").click(function(){
+      $(".x-book-info-snippet tr.x-row").removeClass("current-row");
+      //$("#edit-card").prop("book", null);
+      $scope.data.currentBook = null;
+    });
+
+  });//end init
 });

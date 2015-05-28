@@ -18,10 +18,23 @@
         var self = this;
         Aj.init(function($scope){
           $scope.data = self.data;
-          $scope.snippet($(self.shadowRoot)).bind($scope.data, {
+          $scope.snippet($(self.shadowRoot).find("#card")).bind($scope.data, {
             book: {
-              title: ".x-title"
+              title: Aj.form({},null, ["keyup"]),
+              year: Aj.form({},null, ["keyup"]),
+              authors:{
+                _duplicator: ".person-row",
+                _item:{
+                  _index: ".x-remove@>[index=]",
+                  _value: Aj.form({name: "person"}, null, ["keyup"])
+                }
+              }
             }
+          }).bind(".x-add", "click", function(e){
+            $scope.data.book.authors.push("");
+          }).on("click", ".x-remove", function(e){
+            var index = parseInt($(this).attr("index"));
+            $scope.data.book.authors.splice(index, 1);
           });
         });
       }

@@ -1,8 +1,18 @@
 <template id="bookCardTemplate">
 
-<div>
+<div id="card">
 
-    title: <span class="x-title"></span>
+    <ul>
+        <li><label>title:</label><input name="title">
+        <li><label>authors:</label><button class="x-add">add</button>
+            <ul>
+                <li class="person-row">
+                    <input name="person"></input>
+                    <button class="x-remove">remove</button>
+            </ul>
+        <li><label>year:</label><input name="year">
+    </ul>
+    
 
 </div>
 
