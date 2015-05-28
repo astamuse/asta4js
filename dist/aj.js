@@ -147,7 +147,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	var Snippet = function(arg){
 	  this._root = config.snippet.resolveRoot(arg);
 	  if(this._root.length == 0){
-	    var err = new Error("Snippet was not found for given selector:" + this.root.selector);
+	    var err = new Error("Snippet was not found for given parameter:" + JSON.stringify(arg));
 	    console.error(err);
 	  }
 	}
