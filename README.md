@@ -32,41 +32,7 @@ Asta4js is a MVVM framework which allows independent html template and separate 
 
     Asta4js supports [web component](http://webcomponents.org/) as well, thus we can develope our application on component base as the same as what react or polymer does.
 
-    The following sample shows how we can [bind our model to a brick calendar component](http://astamuse.github.io/asta4js/examples/brick/calendar.html).
-
-    ```javascript
-    $(function(){
-      //a help function to wrap the binding of brick calendar component
-      var BrickCalendar = function(selector){
-        return {
-          _selector: selector,
-          _render:function(target, newValue, oldValue){
-            target.prop("chosen", newValue);
-          },
-          _register_dom_change : function(target, changeHandler, bindContext){
-            target.bind("datetoggleon", function(e){
-              changeHandler(e.originalEvent.detail.iso, bindContext);
-            });
-            return function(){
-              changeHandler(target.prop("chosen").toISOString(), bindContext);
-            }
-          }
-        };
-      };
-      Aj.init(function($scope){
-        $scope.data = {};
-        $scope.snippet("body").bind($scope.data, {
-          calendar: [
-            Aj.form({name: "calendar-input"}, "keyup"),
-            "#calendar-value",
-            BrickCalendar("#my-calendar"),
-          ]
-        });
-      });
-    });
-    ```
-
-    Futher, we can use Asta4js to [implement our own web component](http://astamuse.github.io/asta4js/examples/component/bookInfo.html), the details can be found at the guide of [Web Component Developing](https://github.com/astamuse/asta4js/wiki/Web-Component-Developing).
+    Asta4js can be used to [bind our model to a brick calendar component](http://astamuse.github.io/asta4js/examples/brick/calendar.html). Aslo we can use Asta4js to [implement our own web component](http://astamuse.github.io/asta4js/examples/component/bookInfo.html), the details can be found at the guide of [Web Component Developing](https://github.com/astamuse/asta4js/wiki/Web-Component-Developing).
 
 
 More examples can be found at [http://astamuse.github.io/asta4js](http://astamuse.github.io/asta4js)
