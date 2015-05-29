@@ -44,6 +44,7 @@
           
           root.find(".x-edit").click(function(){
             $scope.data.editing = Aj.util.clone($scope.data.value);
+            Aj.sync();
             dialog.dialog("open");
           });
           
