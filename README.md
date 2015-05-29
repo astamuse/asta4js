@@ -1,7 +1,7 @@
 Asta4js is a MVVM framework which allows independent html template and separate rendering/binding logic to independent js file from html template.
 
 
-## source taste
+## Overview
 
 There is a simple html template which contains a text input and a preview text label.
 
@@ -29,6 +29,12 @@ A complete sample of [todoApp](http://astamuse.github.io/asta4js/examples/todoAp
 More examples can be found at [http://astamuse.github.io/asta4js](http://astamuse.github.io/asta4js)
 
 User guide is at [Asta4js wiki](https://github.com/astamuse/asta4js/wiki)
+
+## Why Asta4js
+
+We have been practicing separating rendering/binding logic from the front-end template files for years, and we believe that separated rendering/binding is the best way to release the productivity of developers and designers since they can completely work independently.
+
+We have created a server side framework [Asta4D](https://github.com/astamuse/asta4d) to achieve our goal years ago,nowadays we believe it is the time to create one for client size programming, thus we created Asta4js.  
 
 ## status and road map
 
