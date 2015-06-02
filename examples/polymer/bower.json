@@ -1,0 +1,6 @@
+{
+  "name": "polymer-project",
+  "dependencies": {
+    "paper-slider": "PolymerElements/paper-slider#^1.0.0"
+  }
+}
