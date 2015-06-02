@@ -1,7 +1,7 @@
 <html>
 <head>
 
-<title>book info</title>
+<title>Custom Component</title>
 
 <script src="../../../lib/webcomponents.js"></script>
 <script src="../../../lib/webcomponents-compatible-jquery-2.1.4.js"></script>
@@ -22,6 +22,10 @@
 
 </head>
 <body style="height:100%">
+
+<h1>Custom Component</h1>
+
+<hr>
 
 <div class="x-book-info-snippet">
 book list(click to edit):
@@ -47,9 +51,14 @@ book list(click to edit):
 <p>
 <p>
 
-The editing will reflect to the list in real time:
 
-<book-card id="edit-card"></book-card>
+<div id="edit-card-wrapper">
+
+    <i>(The edit component will synchronize the editing value to the above list immediately)</i>
+
+    <book-card id="edit-card"></book-card>
+
+</div>
 
 </div>
 
