@@ -37,7 +37,7 @@ $(function(){
           }
         },
         {
-          _selector: "#edit-card@>[style:display=]",
+          _selector: "#edit-card-wrapper@>[style:display=]",
           _transform: function(v){
             return v ? "block": "none";
           }

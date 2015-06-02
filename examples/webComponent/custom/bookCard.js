@@ -15,7 +15,6 @@
     },
     attachedCallback : {
       value : function(){
-        this.data.book = this.getAttribute("book");
         var self = this;
         
         Aj.init(function($scope){
