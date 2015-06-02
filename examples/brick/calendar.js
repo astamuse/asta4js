@@ -5,6 +5,7 @@ $(function(){
       _selector: selector,
       _render:function(target, newValue, oldValue){
         target.prop("chosen", newValue);
+        target.prop("view", newValue);
       },
       _register_dom_change : function(target, changeHandler, bindContext){
         target.bind("datetoggleon", function(e){

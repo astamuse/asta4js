@@ -12,15 +12,26 @@
 <body>
 
 <div>
-    <div>Input Value:<input name="calendar-input"></div>
-    <div>Selected Value:<span id="calendar-value"></span></div>
+    <div>
+    The "Input Value" and "Selected Value" are linked to the brick calendar component. <br>
+    The selected day of calendar component will be synchronized to the input element and the "Select Value" label, and vise versa.
+    </div>
+    <p>
+    <div>
+        Input Value:<input name="calendar-input">(yyyy-mm-dd)<br>
+    </div>
+    <p>
 </div>
 
 <div style="height:300px;">
     <figure class="demo">
-      <brick-calendar id="my-calendar"></brick-calendar>
+      <brick-calendar id="my-calendar" controls></brick-calendar>
     </figure>
 </div>
+
+<p>
+
+<div>Selected Value:<span id="calendar-value" style="display:inline-block;background-color:lightgrey;width:150px;height:1em;"></span></div>
     
 </body>
 </html>
