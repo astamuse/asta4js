@@ -1,0 +1,44 @@
+<html>
+<head>
+
+    <title>Example of working with brick component</title>
+    
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+    <script src="../../../lib/webcomponents.js"></script>
+    <script src="../../../dist/aj.js"></script>
+    <script src="calendar.js"></script>
+
+    <!-- Importing Custom Elemenent -->
+    <link rel="import" href="brick-calendar.html">
+
+</head>
+<body>
+
+<h1>Example of working with brick component</h1>
+
+<hr>
+
+<div>
+    <div>
+    The "Manual Value" and "Selected Value" are linked to the brick calendar component. <br>
+    The selected day of calendar component will be synchronized to the "Manual Value" input and the "Select Value" label, and vise versa.
+    </div>
+    <p>
+    <div>
+        Manual Value:<input name="calendar-input">(yyyy-mm-dd)<br>
+    </div>
+    <p>
+</div>
+
+<div style="height:300px;">
+    <figure class="demo">
+      <brick-calendar id="my-calendar" controls></brick-calendar>
+    </figure>
+</div>
+
+<p>
+
+<div>Selected Value:<span id="calendar-value" style="display:inline-block;background-color:lightgrey;width:150px;height:1em;"></span></div>
+    
+</body>
+</html>
