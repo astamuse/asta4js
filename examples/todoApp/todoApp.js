@@ -49,13 +49,11 @@ $(function () {
         }
       }
       
-      control.mainDisplay = list.length == 0 ? "none" : "block";
-      control.clearDisplay = completeCount > 0 ? "block" : "none";
+      control.count = list.length;
       control.completeCount = completeCount;
       control.unCompleteCount = list.length-completeCount;
       control.allCompleted = completeCount == list.length;
-      
-      console.log("recal invoked");
+
     };
     
     //observe the data to response ui control recalculating
@@ -72,9 +70,21 @@ $(function () {
     
     //bind ui control data
     $scope.snippet("#todoapp").bind($scope.uiControlData,{
-      mainDisplay: "#main@>[style:display=]",
-      clearDisplay: "#clear-completed@>[style:display=]",
-      completeCount: ".x-complete-count",
+      count: {
+        _selector: "#main@>[style:display=]",
+        _transform: function(v){
+          return v == 0 ? "none" : "block";
+        }
+      },
+      completeCount: [
+        ".x-complete-count",
+        {
+          _selector: "#clear-completed@>[style:display=]",
+          _transform: function(v){
+            return v > 0 ? "block" : "none";
+          }
+        }
+      ],
       unCompleteCount: ".x-uncomplete-count",
       allCompleted: Aj.form("#toggle-all", "click").asSingleCheck()
     });
