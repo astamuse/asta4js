@@ -28,14 +28,14 @@ Asta4js is a MVVM framework which allows independent html template and separate 
     
     A complete sample of [todoApp](http://astamuse.github.io/asta4js/examples/todoApp/todoApp.html) shows how we can make things amazing.
 
-- web component developing
+- web component support
 
     Asta4js supports [web component](http://webcomponents.org/) as well, thus we can develope our application on component base as the same as what react or polymer does.
 
-    Asta4js can be used to [bind our model to a brick calendar component](http://astamuse.github.io/asta4js/examples/brick/calendar.html). Aslo we can use Asta4js to [implement our own web component](http://astamuse.github.io/asta4js/examples/component/bookInfo.html), the details can be found at the guide of [Web Component Developing](https://github.com/astamuse/asta4js/wiki/Web-Component-Developing).
+    Even that Asta4js can make use of polymer's components by treating them as standard web component. The [mozilla brick](http://brick.mozilla.io/) can be integrated as well. The details can be found at our wiki page [Web Component Developing](https://github.com/astamuse/asta4js/wiki/Web-Component-Developing)
 
 
-More examples can be found at [http://astamuse.github.io/asta4js](http://astamuse.github.io/asta4js)
+All examples can be found at [http://astamuse.github.io/asta4js](http://astamuse.github.io/asta4js)
 
 User guide is at [Asta4js wiki](https://github.com/astamuse/asta4js/wiki)
 
