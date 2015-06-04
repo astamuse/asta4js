@@ -58,9 +58,7 @@ Todo things:
 * binding
     * add test for multiple select
     * add support for option group of select
-* docs
-    * complete the basic user guide and reference(has almost covered current situations)
-    * reimplement the todoApp sample to follow the todoMVC's guide line and submit it to todoMVC.
-    * make the user list example more beautiful.
+* spa
+    * to confirm what else we need for a single page application?
 
-Any issue report or contribution/PR is appreciated.
+Any issue report or contribution/PR is appreciated. You can also open issues for discussion.
