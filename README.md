@@ -52,13 +52,13 @@ Currently, Asta4js is still in alpha developing, which means it still lacks of s
 Todo things:
 
 * build
-    * it seems that karma is not a good option for common unit test purpose.
-    * CI support(better with sauce)
-    * source format and jshint
+    * it seems that karma is not a good option for common unit test purpose.(waiting)
+    * CI support(better with sauce)(waiting)
+    * source format and jshint(waiting)
 * binding
-    * add test for multiple select
-    * add support for option group of select
+    * add test for multiple select(waiting)
+    * add support for option group of select(waiting)
 * spa
-    * to confirm what else we need for a single page application?
+    * to confirm what else we need for a single page application?(being considered)
 
-Any issue report or contribution/PR is appreciated. You can also open issues for discussion.
+Any issue report or contribution/PR is appreciated, especially for the waiting items in above todo things. You can also open issues for discussion.
