@@ -55,9 +55,13 @@ Todo things:
     * it seems that karma is not a good option for common unit test purpose.(waiting)
     * CI support(better with sauce)(waiting)
     * source format and jshint(waiting)
+* core
+    * remove dependency of JQuery, use document.querySelector instead(waiting)
 * binding
     * add test for multiple select(waiting)
     * add support for option group of select(waiting)
+* example
+    * reimplement the todoApp example to follow the [todoMVC's guide line](https://github.com/tastejs/todomvc/blob/master/contributing.md) and submit it to todoMVC.(waiting)
 * spa
     * to confirm what else we need for a single page application?(being considered)
 
