@@ -303,7 +303,7 @@ var normalizeMeta = function(meta, metaId, propertyPath){
               }
               return function(newValue, oldValue, bindContext){
                 if(existingChangeFn){
-                  existingChangeFn.call(this, arguments);
+                  existingChangeFn.apply(this, arguments);
                 }
                 
                 //register spice at first
@@ -335,6 +335,7 @@ var normalizeMeta = function(meta, metaId, propertyPath){
                         newMonitor = bindContext._valueMonitor.createSubMonitor(newRootMonitorPath);
                         var childContext = {
                           _valueMonitor: newMonitor,
+                          _boundItem: newValue[newIndex],
                           _mappedItem: mappedArray[newIndex] //must be not null
                         };
                         childContext = arrayChildContextCreator.call(newMeta, bindContext, childContext, newIndex);
@@ -369,6 +370,7 @@ var normalizeMeta = function(meta, metaId, propertyPath){
                   newMonitor = bindContext._valueMonitor.createSubMonitor(newRootMonitorPath);
                   var childContext = {
                     _valueMonitor: newMonitor,
+                    _boundItem: newValue[i],
                     _mappedItem: mappedArray[i] //must be not null
                   };
                   childContext = arrayChildContextCreator.call(newMeta, bindContext, childContext, i);
