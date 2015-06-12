@@ -35,7 +35,7 @@ Asta4js is a MVVM framework which allows independent html template and separate 
     Even that Asta4js can make use of polymer's components by treating them as standard web component. The [mozilla brick](http://brick.mozilla.io/) can be integrated as well. The details can be found at our wiki page [Web Component Developing](https://github.com/astamuse/asta4js/wiki/Web-Component-Developing)
 
 
-All examples can be found at [http://astamuse.github.io/asta4js](http://astamuse.github.io/asta4js)
+Plenty examples can be found at [http://astamuse.github.io/asta4js](http://astamuse.github.io/asta4js)
 
 User guide is at [Asta4js wiki](https://github.com/astamuse/asta4js/wiki)
 
