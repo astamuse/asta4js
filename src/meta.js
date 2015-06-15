@@ -335,8 +335,8 @@ var normalizeMeta = function(meta, metaId, propertyPath){
                         newMonitor = bindContext._valueMonitor.createSubMonitor(newRootMonitorPath);
                         var childContext = {
                           _valueMonitor: newMonitor,
-                          _boundItem: newValue[newIndex],
-                          _mappedItem: mappedArray[newIndex] //must be not null
+                          _boundArray: newValue,
+                          _mappedArray: mappedArray
                         };
                         childContext = arrayChildContextCreator.call(newMeta, bindContext, childContext, newIndex);
                         childContext._bind(itemMeta);
@@ -370,8 +370,8 @@ var normalizeMeta = function(meta, metaId, propertyPath){
                   newMonitor = bindContext._valueMonitor.createSubMonitor(newRootMonitorPath);
                   var childContext = {
                     _valueMonitor: newMonitor,
-                    _boundItem: newValue[i],
-                    _mappedItem: mappedArray[i] //must be not null
+                    _boundArray: newValue,
+                    _mappedArray: mappedArray //must be not null
                   };
                   childContext = arrayChildContextCreator.call(newMeta, bindContext, childContext, i);
                   childContext._bind(itemMeta);
@@ -429,7 +429,7 @@ var normalizeMeta = function(meta, metaId, propertyPath){
         if(ppm.nonMeta){
           continue;
         }
-        if(p === "_index" || p === "_indexes"){
+        if(p === "_index" || p === "_indexes" || p === "_context"){
           newMeta[p] = normalizeMeta(ppm, newMeta._meta_id, p);
         }else{
           var recursivePath;

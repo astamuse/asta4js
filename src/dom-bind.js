@@ -7,6 +7,7 @@ var config = require("./config");
 var constant = require("./constant")
 var Snippet = require("./snippet");
 var BindContext = require("./bind-context");
+var RenderContextWrapper = require("./render-context-wrapper")
 
 var $ = config.$;
 
@@ -146,7 +147,10 @@ var _selector = function (meta) {
   if (attrOpIndex >= 0) {
     meta._attr_op = meta._selector.substr(attrOpIndex + 2);
     meta._selector = meta._selector.substring(0, attrOpIndex);
+  }else if(meta._target_path === "_context" %% !meta._attr_op){
+    meta._attr_op = "[aj-rendered-context-ref=]";
   }
+    
   meta._selector_after_attr_op = meta._selector;
 };
 
@@ -249,7 +253,7 @@ var _selector_after_attr_op = function (meta) {
   //revive _selector because we will need it later
   meta._selector = meta._selector_after_attr_op;
 };
-      
+
 var _render = function (meta) {
   if(!meta._change_handler_creator){
     var renderFn = meta._render;
@@ -261,7 +265,14 @@ var _render = function (meta) {
       if(target.length === 0 && !meta._omit_target_not_found){
         console.error("could not find target of selector:", selector, meta);
       }
-      if(targetPath === "_index"){
+      if(targetPath === "_context"){
+        //retrieve the rendered context wrapper
+        var contextWrapper = RenderContextWrapper.get(bindContext);
+        //we do not need to observe anything, just return a force render handler
+        return function(){
+          renderFn(target, contextWrapper._identifier, undefined, bindContext);
+        }
+      }else if(targetPath === "_index"){
         //we do not need to observe anything, just return a force render handler
         return function(){
           renderFn(target, bindContext._arrayIndexes[bindContext._arrayIndexes.length - 1], undefined, bindContext);
@@ -326,4 +337,21 @@ config.meta.rewritterMap["_register_dom_change"] = {
   fn : _register_dom_change
 };
 
+module.exports.api = {
+  getContext: function(node, attrName){
+    var attr = attrName ? attrName : "aj-rendered-context-ref";
+    var contextId;
+    if(util.isJQuery(node)){
+      contextId = node.attr(attr);
+    }else{
+      //as raw dom element
+      contextId = node.getAttribute(attr);
+    }
+    if(contextId){
+      return RenderContextWrapper.get(contextId);
+    }else{
+      return undefined;
+    }
+  }
+}
 

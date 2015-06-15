@@ -116,10 +116,10 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	//internal extension
 	__webpack_require__(17);
-	__webpack_require__(18);
 	__webpack_require__(19);
+	__webpack_require__(20);
 
-	shallow(__webpack_require__(21), Aj);
+	shallow(__webpack_require__(22), Aj);
 
 	if($){
 	  if(Aj.config.autoSyncAfterJqueryAjax){
@@ -2674,8 +2674,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	                        newMonitor = bindContext._valueMonitor.createSubMonitor(newRootMonitorPath);
 	                        var childContext = {
 	                          _valueMonitor: newMonitor,
-	                          _boundItem: newValue[newIndex],
-	                          _mappedItem: mappedArray[newIndex] //must be not null
+	                          _boundArray: newValue,
+	                          _mappedArray: mappedArray
 	                        };
 	                        childContext = arrayChildContextCreator.call(newMeta, bindContext, childContext, newIndex);
 	                        childContext._bind(itemMeta);
@@ -2709,8 +2709,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	                  newMonitor = bindContext._valueMonitor.createSubMonitor(newRootMonitorPath);
 	                  var childContext = {
 	                    _valueMonitor: newMonitor,
-	                    _boundItem: newValue[i],
-	                    _mappedItem: mappedArray[i] //must be not null
+	                    _boundArray: newValue,
+	                    _mappedArray: mappedArray //must be not null
 	                  };
 	                  childContext = arrayChildContextCreator.call(newMeta, bindContext, childContext, i);
 	                  childContext._bind(itemMeta);
@@ -2768,7 +2768,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	        if(ppm.nonMeta){
 	          continue;
 	        }
-	        if(p === "_index" || p === "_indexes"){
+	        if(p === "_index" || p === "_indexes" || p === "_context"){
 	          newMeta[p] = normalizeMeta(ppm, newMeta._meta_id, p);
 	        }else{
 	          var recursivePath;
@@ -4701,6 +4701,10 @@ return /******/ (function(modules) { // webpackBootstrap
 	  }
 
 	  this._arrayIndexes = arrayIndexes;
+	  if(arrayIndexes){
+	      this._arrayIndex = arrayIndexes[arrayIndexes.length-1];
+	  }
+	  
 	  this._resourceMap = new ResourceMap();
 	  //we declared an independent map for child context due to performance reason
 	  this._childContextMap = new ResourceMap();
@@ -5154,6 +5158,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	var constant = __webpack_require__(2)
 	var Snippet = __webpack_require__(13);
 	var BindContext = __webpack_require__(14);
+	var RenderContextWrapper = __webpack_require__(18)
 
 	var $ = config.$;
 
@@ -5293,7 +5298,10 @@ return /******/ (function(modules) { // webpackBootstrap
 	  if (attrOpIndex >= 0) {
 	    meta._attr_op = meta._selector.substr(attrOpIndex + 2);
 	    meta._selector = meta._selector.substring(0, attrOpIndex);
+	  }else if(meta._target_path === "_context"){
+	    
 	  }
+	    
 	  meta._selector_after_attr_op = meta._selector;
 	};
 
@@ -5396,7 +5404,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  //revive _selector because we will need it later
 	  meta._selector = meta._selector_after_attr_op;
 	};
-	      
+
 	var _render = function (meta) {
 	  if(!meta._change_handler_creator){
 	    var renderFn = meta._render;
@@ -5408,7 +5416,14 @@ return /******/ (function(modules) { // webpackBootstrap
 	      if(target.length === 0 && !meta._omit_target_not_found){
 	        console.error("could not find target of selector:", selector, meta);
 	      }
-	      if(targetPath === "_index"){
+	      if(targetPath === "_context"){
+	        //retrieve the rendered context wrapper
+	        var contextWrapper = RenderContextWrapper.get(bindContext);
+	        //we do not need to observe anything, just return a force render handler
+	        return function(){
+	          renderFn(target, bindContext._arrayIndexes[bindContext._arrayIndexes.length - 1], undefined, bindContext);
+	        }
+	      }else if(targetPath === "_index"){
 	        //we do not need to observe anything, just return a force render handler
 	        return function(){
 	          renderFn(target, bindContext._arrayIndexes[bindContext._arrayIndexes.length - 1], undefined, bindContext);
@@ -5478,6 +5493,95 @@ return /******/ (function(modules) { // webpackBootstrap
 
 /***/ },
 /* 18 */
+/***/ function(module, exports, __webpack_require__) {
+
+	"use strict";
+
+	var util = __webpack_require__(1);
+
+	var WrapperMap = {};
+
+	var RenderContextWrapper = function(bindContext){
+	  this._identifier = util.createUID();
+	  this._originalContext = bindContext;
+	  WrapperMap[this._identifier] = this;
+	}
+
+	RenderContextWrapper.prototype._discard = function(){
+	  delete WrapperMap[this._identifier];
+	}
+
+	RenderContextWrapper.prototype.getIndex = function(){
+	  return this._originalContext._arrayIndex;
+	}
+
+	RenderContextWrapper.prototype.getIndexes = function(){
+	  if(this._arrayIndexes === undefined){
+	    this._arrayIndexes = util.clone(this._originalContext._arrayIndexes);
+	  }
+	  return this._arrayIndexes;
+	}
+
+	var backtrackingArrayContext=function(context, backtracking){
+	  var tracking = backtracking ? backtracking : 0;
+	  var currentContext = context;
+	  var lastFoundContext = undefined;
+	  while(currentContext){
+	    if(currentContext._boundArray){
+	      lastFoundContext = currentContext;
+	      if(tracking > 0){
+	        currentContext = currentContext._parentContext;
+	        tracking--;
+	        continue;
+	      }else{
+	        break;
+	      }
+	    }else{
+	      //undefined or null, 0 length is impossible in this case
+	      //currentContext
+	      currentContext = currentContext._parentContext;
+	    }
+	  }
+	  return lastFoundContext;
+	}
+
+	RenderContextWrapper.prototype.getArray = function(backtracking){
+	  var trackedContext = backtrackingArrayContext(this._originalContext, backtracking);
+	  if(trackedContext){
+	    return trackedContext._boundArray;
+	  }else{
+	    return undefined;
+	  }
+	}
+
+	RenderContextWrapper.prototype.getItem = function(backtracking){
+	  var trackedArray = this.getArray(backtracking);
+	  if(trackedArray){
+	    return trackedContext._boundArray[trackedContext._arrayIndex];
+	  }else{
+	    return undefined;
+	  }
+	}
+
+	module.exports={
+	  get: function(arg){
+	    if(typeof arg === "string"){//by identifier
+	      return WrapperMap[arg];
+	    }else{//as context
+	      var wrapper = arg._getResource("RenderContextWrapper", "RenderContextWrapper");
+	      if(wrapper){
+	        // it is ok
+	      }else{
+	        wrapper = new RenderContextWrapper(arg);
+	        arg._addResource("RenderContextWrapper", "RenderContextWrapper", wrapper);
+	      }
+	      return wrapper;
+	    }
+	  }
+	};
+
+/***/ },
+/* 19 */
 /***/ function(module, exports, __webpack_require__) {
 
 	"use strict";
@@ -5588,7 +5692,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ },
-/* 19 */
+/* 20 */
 /***/ function(module, exports, __webpack_require__) {
 
 	"use strict";
@@ -5603,7 +5707,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	var BindContext = __webpack_require__(14)
 	var ValueMonitor = __webpack_require__(16)
 
-	var optionUtil = __webpack_require__(20)
+	var optionUtil = __webpack_require__(21)
 
 	var $ = config.$;
 
@@ -5990,7 +6094,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ },
-/* 20 */
+/* 21 */
 /***/ function(module, exports, __webpack_require__) {
 
 	"use strict";
@@ -6200,7 +6304,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ },
-/* 21 */
+/* 22 */
 /***/ function(module, exports, __webpack_require__) {
 
 	"use strict";
@@ -6208,7 +6312,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	var _lib_observe = __webpack_require__(11);
 
 	var util = __webpack_require__(1);
-	var transformers = __webpack_require__(22);
+	var transformers = __webpack_require__(23);
 	var config = __webpack_require__(3);
 	var constant = __webpack_require__(2)
 	var Snippet = __webpack_require__(13)
@@ -6487,7 +6591,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ },
-/* 22 */
+/* 23 */
 /***/ function(module, exports, __webpack_require__) {
 
 	"use strict";

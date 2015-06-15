@@ -12,6 +12,10 @@ var BindContext=function(override, arrayIndexes){
   }
 
   this._arrayIndexes = arrayIndexes;
+  if(arrayIndexes){
+      this._arrayIndex = arrayIndexes[arrayIndexes.length-1];
+  }
+  
   this._resourceMap = new ResourceMap();
   //we declared an independent map for child context due to performance reason
   this._childContextMap = new ResourceMap();
