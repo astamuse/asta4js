@@ -1,0 +1,38 @@
+[
+  {
+    "name": "dd1"
+  },
+  {
+    "name": "dd2"
+  },
+  {
+    "name": "dd3",
+    "children": [
+    {
+      "name": "nb1",
+      "children": [
+        {
+          "name": "zz"
+        },
+        {
+          "name": "yy(to be removed after modify)"
+        },
+        {
+          "name": "xx",
+          "children":[
+            {
+              "name": "fly"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "nb2"
+    },
+    {
+      "name": "nb3"
+    }
+    ]
+  }
+]

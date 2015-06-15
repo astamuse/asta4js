@@ -2,48 +2,23 @@ $(function () {
 
   Aj.init(function ($scope) {
     
-    var treeData = [
-      {
-        name: "dd1"
-      },
-      {
-        name: "dd2"
-      },
-      {
-        name: "dd3",
-        children: [
-        {
-          name: "nb1",
-          children: [
-            {
-              name: "zz"
-            },
-            {
-              name: "yy(to be removed after modify)"
-            },
-            {
-              name: "xx",
-              children:[
-                {
-                  name: "fly"
-                }
-              ]
-            },
-          ]
-        },
-        {
-          name: "nb2"
-        },
-        {
-          name: "nb3"
-        },
-        ]
-      },
-    ];//end treeData
+    var initTreeData = function(){
+      $.ajax({
+        type: "get",
+        url: "data.json",
+      }).done(function(data){
+        $scope.data.tree = data;
+      }).fail(function(jqXHR, textStatus, errorThrown ){
+        //fallback
+        $scope.data.tree = [];
+      });
+    };
     
     $scope.data = {
-      tree: Aj.util.clone(treeData)
+      tree: null
     }; 
+    
+    initTreeData();
     
     // I am worry about whether there is memory leak...
     // I should dig it in next week. DO NOT FORGET IT!!!
@@ -92,11 +67,12 @@ $(function () {
      
     $scope.snippet(".x-tree").bind($scope.data, {
       tree:treeMeta
+    }).on("unload", "li", function(){
+      console.log("unloading", this);
     });
     
     $("#x-reset-value").click(function(){
-      $scope.data.tree = Aj.util.clone(treeData);
-      Aj.sync();
+      initTreeData();
     });
     
     $("#x-set-value").click(function(){
@@ -125,12 +101,17 @@ $(function () {
       });
       
        $scope.data.tree[2].children[0].children.splice(1,1);
+       
+       $scope.data.tree.push({
+         name: "added:top-last"
+       });
 
       Aj.sync();
     });
       
     //treeMeta._item.children = treeMeta;
     
+
 
     
   });
