@@ -6,10 +6,14 @@ var normalizeMeta = require("./meta");
 
 var ResourceMap = require("./resource-map");
 
+var currentBackgroundContext = undefined;
+
 var BindContext=function(override, arrayIndexes){
   if(override){
     util.shallowCopy(override, this);
   }
+  
+  this._backgroundContext = currentBackgroundContext;
 
   this._arrayIndexes = arrayIndexes;
   if(arrayIndexes){
@@ -25,6 +29,16 @@ var BindContext=function(override, arrayIndexes){
   this._forceSyncFromObserveTargetMap={};
   this._forceSyncToObserveTargetMap={};  
 
+}
+
+BindContext.prototype.asBackground = function(fn) {
+  var backup = currentBackgroundContext;
+  try{
+    currentBackgroundContext = this;
+    fn.apply();
+  }finally{
+    currentBackgroundContext = backup;
+  }
 }
 
 BindContext.prototype._getArrayIndexes=function(){
@@ -60,6 +74,10 @@ BindContext.prototype._createChildContext=function(identifier, index, override){
 
 BindContext.prototype._removeChildContext=function(identifier, index){
   this._childContextMap.remove(index, identifier);
+}
+
+BindContext.prototype._getChildContext=function(identifier, index){
+  return this._childContextMap.get(index, identifier);
 }
 
 var forceSyncWithObserveTarget=function(targetMap, metaTraceId){

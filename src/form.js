@@ -3,6 +3,7 @@
 var _lib_observe = require("../lib/observe");
 
 var util = require("./util");
+var arrayUtil=require("./arrayUtil");
 var config = require("./config");
 var constant = require("./constant")
 var Snippet = require("./snippet")
@@ -43,7 +44,7 @@ var combinedChangeEvents = function(formDef, inputType){
   }
 
   var extraChangeEvents = formDef._extra_change_events;
-  extraChangeEvents = util.regulateArray(extraChangeEvents);
+  extraChangeEvents = arrayUtil.regulateArray(extraChangeEvents);
   Array.prototype.push.apply(changeEvents, extraChangeEvents);
   return changeEvents;
 }
@@ -65,7 +66,7 @@ var selectRender = function(meta, formDef, inputType, target, newValue, oldValue
   //move diverge value option at first
   target.find("[aj-diverge-value]").remove();
   
-  var va = util.regulateArray(newValue);
+  var va = arrayUtil.regulateArray(newValue);
   if(!target.prop("multiple") && va.length == 0){
     //single select with 0 length value array means we have a undefined/null/empty value
     va[0] = "";
@@ -117,7 +118,7 @@ var checkboxOrRadioRender = function(meta, formDef, inputType, target, newValue,
     }
   }else{
     var optionBindingHub = optionUtil.getOptionBindingHub(bindContext, meta._meta_trace_id);
-    var va = util.regulateArray(newValue);
+    var va = arrayUtil.regulateArray(newValue);
     if(inputType === "radio" && va.length > 1){
       throw "There are over than one candidate value for radio:" + va;
     }

@@ -23,6 +23,9 @@ util.determineRefPath = function (scope, varRef, searchKey) {
   var refPath = null;
   for (var p in scope) {
     var ref = scope[p];
+    if( ref === undefined || ref === null){
+      continue;
+    }
     if (ref[searchKey]) {
       refPath = p;
       break;
@@ -45,21 +48,6 @@ util.createUID = function () {
   }
   __uidSeq++;
   return "aj-" + __uidSeq + "-"+ __uidTimestamp;
-};
-
-//TODO we should keep ref always
-util.regulateArray = function (v, tryKeepRef) {
-  if (Array.isArray(v)) {
-    if(tryKeepRef){
-      return v;
-    }else{
-      return [].concat(v);
-    }
-  } else if (v === null || v === undefined) {
-    return new Array();
-  } else {
-    return [v];
-  }
 };
 
 util.clone = require("../lib/clone");
@@ -151,36 +139,6 @@ util.isPlainObject = function(obj){
  
     return key === undefined || obj.hasOwnProperty(key);
 }
-
-util.arraySwap = function (array, index1, index2) {
-      var tmp = array[index1];
-      array[index1] = array[index2];
-      array[index2] = tmp;
-};
-
-util.arrayLengthAdjust = function (targetArray, hopeLength, initialNewFn, discardCutFn) {
-  var existingLength = targetArray.length;
-  if(initialNewFn){
-    var newItem;
-    for(var i=existingLength;i<hopeLength;i++){
-      newItem = initialNewFn(i);
-      targetArray[i] = newItem;
-    }
-  }else{
-    for(var i=existingLength;i<hopeLength;i++){
-      targetArray[i] = undefined;
-    }
-  }
-  var removeCount = existingLength - hopeLength;
-  if(removeCount > 0){
-    if(discardCutFn){
-      for(var i=hopeLength;i<existingLength;i++){
-        discardCutFn(targetArray[i], i);
-      }
-    }
-    targetArray.splice(hopeLength, removeCount);
-  }
-};
     
 util.findWithRoot = function(rootElem, selector){
       if(selector === ":root"){

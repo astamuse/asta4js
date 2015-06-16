@@ -19,11 +19,11 @@
     <hr>
 
     <div id="tree-view">
-        <a class="x-reset-btn top-btn btn btn-info btn-xs" nodrag ng-click="initData(this)" style="margin-right: 8px;">
+        <a class="x-reset-btn top-btn btn btn-info btn-xs" style="margin-right: 8px;">
             <span class="glyphicon glyphicon-refresh"></span>
             reset tree data
         </a>
-        <a class="x-add-top-btn top-btn btn btn-primary btn-xs" nodrag ng-click="newSubItem(this)" style="margin-right: 8px;">
+        <a class="x-add-top-btn top-btn btn btn-primary btn-xs" style="margin-right: 8px;">
             <span class="glyphicon glyphicon-plus"></span>
             add to top
         </a>
@@ -31,12 +31,12 @@
           <ol class="x-tree">
             <li>
               <div class="tree-node tree-node-content">
-                <a class="btn btn-success btn-xs">
-                    <span class="glyphicon glyphicon-chevron-down"></span>
+                <a class="x-toggle-btn btn btn-success btn-xs">
+                    <span class="x-toggle-icon glyphicon glyphicon-chevron-down"></span>
                 </a>
                 <span class="x-title">node1.1</span>
-                <a class="pull-right btn btn-danger btn-xs"><span class="glyphicon glyphicon-remove"></span></a>
-                <a class="pull-right btn btn-primary btn-xs"><span class="glyphicon glyphicon-plus"></span></a>
+                <a class="x-remove-btn pull-right btn btn-danger btn-xs"><span class="glyphicon glyphicon-remove"></span></a>
+                <a class="x-add-btn pull-right btn btn-primary btn-xs"><span class="glyphicon glyphicon-plus"></span></a>
               </div>
               <div class="x-child-tree-root">
               </div>

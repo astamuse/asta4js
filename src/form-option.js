@@ -1,6 +1,7 @@
 "use strict";
 
 var util = require("./util");
+var arrayUtil=require("./arrayUtil");
 var config = require("./config");
 var constant = require("./constant")
 var Snippet = require("./snippet")
@@ -162,7 +163,7 @@ var rewriteOptionMeta=function(optionMeta, inputType){
         var value = changedValue.value;
         var checked = changedValue.checked;
         if(inputType === "checkbox"){
-          var newResult = util.regulateArray(targetValueRef.getValue());
+          var newResult = arrayUtil.regulateArray(targetValueRef.getValue());
           var vidx = newResult.indexOf(value);
           if(checked && vidx>= 0){
             //it is ok

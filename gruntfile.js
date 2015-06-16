@@ -45,7 +45,8 @@ module.exports = function (grunt) {
       options: {
         frameworks: ['jasmine', 'commonjs'],
         files: [
-          'lib/**/*.js',
+          'lib/clone.js',
+          'lib/observe.js',
           'src/**/*.js',
           'test/spec/**/*.js'
         ],

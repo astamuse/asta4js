@@ -3,6 +3,7 @@
 var _lib_observe = require("../lib/observe");
 
 var util = require("./util");
+var arrayUtil=require("./arrayUtil");
 var config = require("./config");
 var constant = require("./constant")
 var Snippet = require("./snippet");
@@ -107,10 +108,10 @@ var _duplicator = function(meta){
       }
       
       var existingLength = mappedArrayInfo.items.length;
-      var regularNew = util.regulateArray(newValue);
+      var regularNew = arrayUtil.regulateArray(newValue);
       var targetLength = mappedArrayInfo.dupTargets.length;
       
-      util.arrayLengthAdjust(mappedArrayInfo.items, regularNew.length, function(){
+      arrayUtil.arrayLengthAdjust(mappedArrayInfo.items, regularNew.length, function(){
         var mappedItem = [];
         var dupTarget;
         var dupSpawned;
@@ -147,7 +148,7 @@ var _selector = function (meta) {
   if (attrOpIndex >= 0) {
     meta._attr_op = meta._selector.substr(attrOpIndex + 2);
     meta._selector = meta._selector.substring(0, attrOpIndex);
-  }else if(meta._target_path === "_context" %% !meta._attr_op){
+  }else if(meta._target_path === "_context" && !meta._attr_op){
     meta._attr_op = "[aj-rendered-context-ref=]";
   }
     

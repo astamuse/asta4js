@@ -12,14 +12,13 @@ var $ = Aj.config.$;
 
 Aj.util = shallow(util, {}, [
   "createUID",
-  "regulateArray",
   "clone",
-  "arraySwap",
-  "arrayLengthAdjust",
   "delay",
 ]);
 
 Aj.sync = util.sync;
+
+Aj.arrayUtil = require("./arrayUtil");
 
 Aj.init = function(initFunc){
   var scope = Aj.config.scope.create();
@@ -34,10 +33,9 @@ Aj.delay=Aj.util.delay;
 require("./scope");
 
 //internal extension
-require("./dom-bind");
 require("./watch");
 require("./form");
-
+shallow(require("./dom-bind").api, Aj);
 shallow(require("./form-api"), Aj);
 
 if($){

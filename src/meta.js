@@ -3,6 +3,8 @@
 var _lib_observe = require("../lib/observe");
 
 var util=require("./util");
+var arrayUtil=require("./arrayUtil");
+
 var config=require("./config");
 var constant = require("./constant")
 
@@ -290,7 +292,6 @@ var normalizeMeta = function(meta, metaId, propertyPath){
                 var childContext = parentContext._createChildContext(this._item._meta_trace_id, index, contextOverride);
                 return childContext;
               };
-              //may not be necessary, but...
               newMeta._array_child_context_creator = arrayChildContextCreator;
             }
             newMeta._change_handler_creator = function(bindContext){
@@ -359,11 +360,17 @@ var normalizeMeta = function(meta, metaId, propertyPath){
                 }
                 
                 //bind item context
-                var regularOld = util.regulateArray(oldValue);
-                var regularNew = util.regulateArray(newValue);
+                var regularOld = arrayUtil.regulateArray(oldValue);
+                var regularNew = arrayUtil.regulateArray(newValue);
                 var childContext;
                 var newRootMonitorPath;
                 var newMonitor;
+                //update existing child context bound/mapped array
+                for(var i=0;i<regularOld.length;i++){
+                  childContext = bindContext._getChildContext(itemMeta._meta_trace_id, i);
+                  childContext._boundArray = newValue;
+                  childContext._mappedArray = mappedArray;
+                }
                 //add new child context binding
                 for(var i=regularOld.length;i<regularNew.length;i++){
                   newRootMonitorPath = targetPath + "[" + i +"]";
@@ -486,7 +493,9 @@ config.meta.nonObjectMetaConvertor = function(meta){
 };
 
 config.meta.fieldClassifier = function (fieldName, metaId) {
-  if (fieldName === "_index"){
+  if (fieldName === "_context"){
+    return "_prop";
+  } else if (fieldName === "_index"){
     return "_prop";
   } else if (fieldName === "_indexes") {
     return "_prop";

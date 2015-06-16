@@ -2,6 +2,14 @@
 
 var util = require("./util");
 
+var CommonTask = function(rcw){
+  this._rcw = rcw;
+}
+
+CommonTask.prototype.prepend = function(){
+  var array = this._rcw.getArray();
+}
+
 var WrapperMap = {};
 
 var RenderContextWrapper = function(bindContext){
@@ -25,16 +33,32 @@ RenderContextWrapper.prototype.getIndexes = function(){
   return this._arrayIndexes;
 }
 
-var backtrackingArrayContext=function(context, backtracking){
+var getBacktrackingContext=function(context, ignoreBackgroundContext){
+  if(context){
+    var backtracking =  context._parentContext;
+    if(backtracking){
+      return backtracking;
+    }else if (!ignoreBackgroundContext){
+      return context._backgroundContext;
+    }
+  }else{
+    return undefined;
+  }
+}
+
+var backtrackingArrayContext=function(context, backtracking, ignoreBackgroundContext){
   var tracking = backtracking ? backtracking : 0;
+  if(tracking < 0){
+    tracking = 0;
+  }
   var currentContext = context;
   var lastFoundContext = undefined;
   while(currentContext){
     if(currentContext._boundArray){
       lastFoundContext = currentContext;
-      if(tracking > 0){
-        currentContext = currentContext._parentContext;
-        tracking--;
+      tracking--;
+      if(tracking >= 0){
+        currentContext = getBacktrackingContext(currentContext, ignoreBackgroundContext);
         continue;
       }else{
         break;
@@ -42,14 +66,15 @@ var backtrackingArrayContext=function(context, backtracking){
     }else{
       //undefined or null, 0 length is impossible in this case
       //currentContext
-      currentContext = currentContext._parentContext;
+      currentContext = getBacktrackingContext(currentContext, ignoreBackgroundContext);
     }
   }
-  return lastFoundContext;
+  
+  return tracking < 0 ? lastFoundContext : undefined;
 }
 
-RenderContextWrapper.prototype.getArray = function(backtracking){
-  var trackedContext = backtrackingArrayContext(this._originalContext, backtracking);
+RenderContextWrapper.prototype.getArray = function(backtracking, ignoreBackgroundContext){
+  var trackedContext = backtrackingArrayContext(this._originalContext, backtracking, ignoreBackgroundContext);
   if(trackedContext){
     return trackedContext._boundArray;
   }else{
@@ -57,9 +82,9 @@ RenderContextWrapper.prototype.getArray = function(backtracking){
   }
 }
 
-RenderContextWrapper.prototype.getItem = function(backtracking){
-  var trackedArray = this.getArray(backtracking);
-  if(trackedArray){
+RenderContextWrapper.prototype.getItem = function(backtracking, ignoreBackgroundContext){
+var trackedContext = backtrackingArrayContext(this._originalContext, backtracking, ignoreBackgroundContext);
+  if(trackedContext){
     return trackedContext._boundArray[trackedContext._arrayIndex];
   }else{
     return undefined;

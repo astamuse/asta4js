@@ -24,7 +24,7 @@ $(function () {
     var treeMeta ={
       _duplicator: "li",
       _item: {
-        title: ".x-title",
+        _context: "a.btn",
         _value: {
           _selector: ".x-child-tree-root",
           _render: function(target, newValue, oldValue, bindContext){
@@ -35,21 +35,59 @@ $(function () {
               if(newValue){
                 var clone = document.importNode(treeClone, true);
                 target.append(clone);
-                Aj.init(function(_scope){
-                  _scope.currentNode = newValue;
-                  _scope.snippet($(clone)).bind(_scope.currentNode, {
-                    nodes: treeMeta
+                bindContext.asBackground(function(){
+                  Aj.init(function(_scope){
+                    _scope.currentNode = newValue;
+                    _scope.snippet($(clone)).bind(_scope.currentNode, {
+                      nodes: treeMeta
+                    });
                   });
                 });
               }
             });
           } // _render
-        }// _value
-      }
+        },// _value,
+        title: ".x-title",
+        nodes:{
+          length: {
+            _selector: ".x-toggle-btn@>[style:display=]",
+            _transform: function(v){
+              return v ? "" : "none";
+            }
+          }
+        }
+      },
     };
      
     $scope.snippet(".x-tree").bind($scope.data, {
       tree:treeMeta
+    }).on("click", ".x-remove-btn", function(){
+      Aj.arrayUtil.commonEventTask.remove(this);
+    }).on("click", ".x-add-btn", function(){
+      var context = Aj.getContext(this);
+      var item = context.getItem();
+      if(!Array.isArray(item.nodes)){
+        item.nodes = [];
+      }
+      item.nodes.push({
+        id: item.id * 10 + item.nodes.length,
+        title: item.title + "." + (item.nodes.length + 1),
+        nodes: []
+      });
+    }).on("click", ".x-toggle-btn", function(){
+      var btn = $(this);
+      var targetChildTree = btn.closest("li").find(".x-child-tree-root>ol");
+      var icon = btn.find(".x-toggle-icon");
+      if(icon.hasClass("glyphicon-chevron-down")){//collapse
+        icon.removeClass("glyphicon-chevron-down");
+        icon.addClass("glyphicon-chevron-right");
+        targetChildTree.css("display", "none");
+      }else{//expand
+        icon.removeClass("glyphicon-chevron-right");
+        icon.addClass("glyphicon-chevron-down");
+        targetChildTree.css("display", "");
+      }
+      
     });
     
     $scope.snippet("#tree-view")
