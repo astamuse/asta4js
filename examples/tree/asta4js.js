@@ -5,7 +5,7 @@ $(function () {
     var initTreeData = function(){
       $.ajax({
         type: "get",
-        url: "data2.json",
+        url: "data.json",
       }).done(function(data){
         $scope.data.tree = data;
       }).fail(function(jqXHR, textStatus, errorThrown ){
@@ -30,21 +30,26 @@ $(function () {
           _render: function(target, newValue, oldValue, bindContext){
             //we have to delay the children binding due to avoiding the ".x-name" 
             //to be propagated to the child tree
-            Aj.delay(function(){
-              target.find(".x-tree").remove();
-              if(newValue){
-                var clone = document.importNode(treeClone, true);
-                target.append(clone);
-                bindContext.asBackground(function(){
-                  Aj.init(function(_scope){
-                    _scope.currentNode = newValue;
-                    _scope.snippet($(clone)).bind(_scope.currentNode, {
-                      nodes: treeMeta
+            if(bindContext.childNodesScopeRef){
+              bindContext.childNodesScopeRef.currentNode = newValue;
+            }else{
+              Aj.delay(function(){
+                target.find(".x-tree").remove();
+                if(newValue){
+                  var clone = document.importNode(treeClone, true);
+                  target.append(clone);
+                  bindContext.asBackground(function(){
+                    Aj.init(function(_scope){
+                      bindContext.childNodesScopeRef = _scope;
+                      _scope.currentNode = newValue;
+                      _scope.snippet($(clone)).bind(_scope.currentNode, {
+                        nodes: treeMeta
+                      });
                     });
                   });
-                });
-              }
-            });
+                }
+              });
+            }
           } // _render
         },// _value,
         title: ".x-title",

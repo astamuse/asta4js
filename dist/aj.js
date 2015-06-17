@@ -2147,6 +2147,18 @@ return /******/ (function(modules) { // webpackBootstrap
 	  }
 	}
 
+	util.safeRemove=function(el){
+	  if(this.isJQuery(el)){
+	    if(document.body.contains(el[0])){
+	      el.remove();
+	    }
+	  }else{
+	    if(document.body.contains(el)){
+	      el.parentNode.removeChild(el);
+	    }
+	  }
+	}
+
 	module.exports = util;
 
 /***/ },
@@ -4349,7 +4361,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  for(var p in this.map){
 	    this.map[p].discard();
 	  }
-	  delete this.map;
+	  this.map = [];//we cannot delete it to avoid discarding flow conflict
 	}
 
 	module.exports=ResourceMap;
@@ -5218,6 +5230,12 @@ return /******/ (function(modules) { // webpackBootstrap
 	  }
 	  
 	  this._backgroundContext = currentBackgroundContext;
+	  if(this._backgroundContext){
+	    var self = this;
+	    this._backgroundContext._addDiscardHook(function(){
+	      self._discard();
+	    });
+	  }
 
 	  this._arrayIndexes = arrayIndexes;
 	  if(arrayIndexes){
@@ -5231,7 +5249,16 @@ return /******/ (function(modules) { // webpackBootstrap
 	  this._discardHook = [];
 	  
 	  this._forceSyncFromObserveTargetMap={};
-	  this._forceSyncToObserveTargetMap={};  
+	  this._forceSyncToObserveTargetMap={};
+	  
+	  /*
+	  this._iid = util.createUID();
+	  var backgroundIID;
+	  if(this._backgroundContext){
+	    backgroundIID = this._backgroundContext._iid;
+	  }
+	  console.log("create context", this._iid, "for indexes:", this._arrayIndexes, "via background", backgroundIID);
+	  */
 
 	}
 
@@ -5388,11 +5415,18 @@ return /******/ (function(modules) { // webpackBootstrap
 	  
 	  var p;
 	  for(var k in this){
+	    if(k === "_parentContext" || k === "_backgroundContext"){
+	      continue;
+	    }
 	    p = this[k];
-	    if(p && p.discard){
+	    if(p && p._discard){
+	      p._discard();
+	    }else if(p && p.discard){
 	      p.discard();
 	    }
 	  }
+	  
+	  //console.log("discard context", this._iid);
 
 	};
 
@@ -5768,16 +5802,16 @@ return /******/ (function(modules) { // webpackBootstrap
 	      var optionMonitor = new ValueMonitor(scope, varPath);
 	      var snippet = optionBindingHub.optionSnippet ? optionBindingHub.optionSnippet : bindContext._snippet;
 	      
-	      var optionContext = new BindContext({
-	        _valueMonitor: optionMonitor,
-	        _snippet: snippet,
-	        _optionBindingHub: optionBindingHub,
-	        _inputTargetBindContext: bindContext,
-	      });
-	      bindContext._addDiscardHook(function(){
-	        optionContext._discard();
-	      });
-	      optionContext._bind(optionMeta);
+	      bindContext.asBackground(function(){
+	        var optionContext = new BindContext({
+	          _valueMonitor: optionMonitor,
+	          _snippet: snippet,
+	          _optionBindingHub: optionBindingHub,
+	          _inputTargetBindContext: bindContext,
+	        });
+	        optionContext._bind(optionMeta);
+	      })
+
 	    });
 	  }
 	}
