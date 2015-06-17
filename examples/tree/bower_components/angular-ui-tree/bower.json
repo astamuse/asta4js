@@ -1,0 +1,49 @@
+{
+  "name": "AngularJS UI Tree",
+  "version": "2.5.0",
+  "homepage": "https://github.com/angular-ui-tree/angular-ui-tree",
+  "authors": [
+    "Jim Liu <https://github.com/JimLiu>",
+    "Voles <https://github.com/Voles>"
+  ],
+  "description": "Tree directive for AngularJS",
+  "main": [
+    "dist/angular-ui-tree.js",
+    "dist/angular-ui-tree.min.js",
+    "dist/angular-ui-tree.min.css"
+  ],
+  "keywords": [
+    "angular",
+    "NestedSortable",
+    "sortable",
+    "nested",
+    "drag",
+    "drop",
+    "tree",
+    "node"
+  ],
+  "dependencies": {
+    "angular": ">= 1.2.0"
+  },
+  "devDependencies": {
+    "angular-mocks": ">= 1.2.0",
+    "angular-route": ">= 1.2.0",
+    "angularfire": "~0.8.2",
+    "bootstrap-css": "~3.2.0",
+    "jasmine-jquery": "~1.7.0",
+    "jquery": "~2.1.1"
+  },
+  "ignore": [
+    "examples",
+    "demo",
+    "build",
+    "guide",
+    "node_modules",
+    "source",
+    "tasks",
+    "tests",
+    "gulpfile.js",
+    "karma.conf.js",
+    "package.json"
+  ]
+}

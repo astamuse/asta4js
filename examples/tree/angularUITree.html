@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>tree</title>
+
+<link rel="stylesheet" href="bower_components/bootstrap/dist/css/bootstrap.min.css">
+<link rel="stylesheet" href="bower_components/angular-ui-tree/dist/angular-ui-tree.min.css">
+<link rel="stylesheet" href="tree.css">
+
+<style>
+
+
+
+</style>
+
+</head>
+<body ng-app="treeApp" ng-controller="treeCtrl">
+    <h1>Tree rendering sample by angular UI Tree</h1>
+    <hr>
+
+    <div id="tree-view">
+        <!-- Nested node template -->
+        <script type="text/ng-template" id="nodes_renderer.html">
+          <div ui-tree-handle class="tree-node tree-node-content">
+            <a class="btn btn-success btn-xs" ng-if="node.nodes && node.nodes.length > 0" nodrag ng-click="toggle(this)"><span class="glyphicon" ng-class="{'glyphicon-chevron-right': collapsed, 'glyphicon-chevron-down': !collapsed}"></span></a>
+            {{node.title}}
+            <a class="pull-right btn btn-danger btn-xs" nodrag ng-click="remove(this)"><span class="glyphicon glyphicon-remove"></span></a>
+            <a class="pull-right btn btn-primary btn-xs" nodrag ng-click="newSubItem(this)" style="margin-right: 8px;"><span class="glyphicon glyphicon-plus"></span></a>
+          </div>
+          <ol ui-tree-nodes="" ng-model="node.nodes" ng-class="{hidden: collapsed}">
+            <li ng-repeat="node in node.nodes" ui-tree-node ng-include="'nodes_renderer.html'">
+            </li>
+          </ol>
+        </script>
+        <a class="top-btn btn btn-info btn-xs" nodrag ng-click="initData(this)" style="margin-right: 8px;">
+            <span class="glyphicon glyphicon-refresh"></span>
+            reset tree data
+        </a>
+        <a class="top-btn btn btn-primary btn-xs" nodrag ng-click="newSubItem(this)" style="margin-right: 8px;">
+            <span class="glyphicon glyphicon-plus"></span>
+            add to top
+        </a>
+        <div ui-tree id="tree-root" data-drag-enabled="false">
+          <ol ui-tree-nodes ng-model="data">
+            <li ng-repeat="node in data" ui-tree-node ng-include="'nodes_renderer.html'"></li>
+          </ol>
+        </div>
+    </div>
+    
+    <script src="bower_components/angular/angular.min.js"></script>
+    <script src="bower_components/angular-ui-tree/dist/angular-ui-tree.js"></script>
+    <script src="angularUITree.js"></script>
+</body>
+</html>

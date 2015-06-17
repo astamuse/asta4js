@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>tree</title>
+
+<link rel="stylesheet" href="bower_components/bootstrap/dist/css/bootstrap.min.css">
+<link rel="stylesheet" href="bower_components/angular-ui-tree/dist/angular-ui-tree.min.css">
+<link rel="stylesheet" href="tree.css">
+
+<style>
+
+
+
+</style>
+
+</head>
+<body>
+    <h1>Tree rendering sample by Asta4js</h1>
+    <hr>
+
+    <div id="tree-view">
+        <a class="x-reset-btn top-btn btn btn-info btn-xs" style="margin-right: 8px;">
+            <span class="glyphicon glyphicon-refresh"></span>
+            reset tree data
+        </a>
+        <a class="x-add-top-btn top-btn btn btn-primary btn-xs" style="margin-right: 8px;">
+            <span class="glyphicon glyphicon-plus"></span>
+            add to top
+        </a>
+        <div id="tree-root">
+          <ol class="x-tree">
+            <li>
+              <div class="tree-node tree-node-content">
+                <a class="x-toggle-btn btn btn-success btn-xs">
+                    <span class="x-toggle-icon glyphicon glyphicon-chevron-down"></span>
+                </a>
+                <span class="x-title">node1.1</span>
+                <a class="x-remove-btn pull-right btn btn-danger btn-xs"><span class="glyphicon glyphicon-remove"></span></a>
+                <a class="x-add-btn pull-right btn btn-primary btn-xs"><span class="glyphicon glyphicon-plus"></span></a>
+              </div>
+              <div class="x-child-tree-root">
+              </div>
+            </li>
+          </ol>
+        </div>
+    </div>
+    
+    <script src="bower_components/jquery/dist/jquery.min.js"></script>
+    <script src="../../dist/aj.js"></script>
+    <script src="asta4js.js"></script>
+</body>
+</html>

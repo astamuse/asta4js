@@ -1,0 +1,8 @@
+{
+  "name": "tree-sample",
+  "dependencies": {
+    "angular-ui-tree": "~2.5.0",
+    "bootstrap": "~3.3.4",
+    "jquery": "~2.1.4"
+  }
+}
