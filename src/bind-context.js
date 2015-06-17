@@ -14,6 +14,12 @@ var BindContext=function(override, arrayIndexes){
   }
   
   this._backgroundContext = currentBackgroundContext;
+  if(this._backgroundContext){
+    var self = this;
+    this._backgroundContext._addDiscardHook(function(){
+      self._discard();
+    });
+  }
 
   this._arrayIndexes = arrayIndexes;
   if(arrayIndexes){
@@ -27,7 +33,16 @@ var BindContext=function(override, arrayIndexes){
   this._discardHook = [];
   
   this._forceSyncFromObserveTargetMap={};
-  this._forceSyncToObserveTargetMap={};  
+  this._forceSyncToObserveTargetMap={};
+  
+  /*
+  this._iid = util.createUID();
+  var backgroundIID;
+  if(this._backgroundContext){
+    backgroundIID = this._backgroundContext._iid;
+  }
+  console.log("create context", this._iid, "for indexes:", this._arrayIndexes, "via background", backgroundIID);
+  */
 
 }
 
@@ -184,11 +199,18 @@ BindContext.prototype._discard=function(){
   
   var p;
   for(var k in this){
+    if(k === "_parentContext" || k === "_backgroundContext"){
+      continue;
+    }
     p = this[k];
-    if(p && p.discard){
+    if(p && p._discard){
+      p._discard();
+    }else if(p && p.discard){
       p.discard();
     }
   }
+  
+  //console.log("discard context", this._iid);
 
 };
 

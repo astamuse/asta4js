@@ -113,7 +113,7 @@ ResourceMap.prototype.discard=function(){
   for(var p in this.map){
     this.map[p].discard();
   }
-  delete this.map;
+  this.map = [];//we cannot delete it to avoid discarding flow conflict
 }
 
 module.exports=ResourceMap;

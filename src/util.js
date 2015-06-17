@@ -167,4 +167,16 @@ util.delay=function(callback, timeout, delayMoreCycles){
   }
 }
 
+util.safeRemove=function(el){
+  if(this.isJQuery(el)){
+    if(document.body.contains(el[0])){
+      el.remove();
+    }
+  }else{
+    if(document.body.contains(el)){
+      el.parentNode.removeChild(el);
+    }
+  }
+}
+
 module.exports = util;

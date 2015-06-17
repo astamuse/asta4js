@@ -364,16 +364,16 @@ var _form = function (meta) {
       var optionMonitor = new ValueMonitor(scope, varPath);
       var snippet = optionBindingHub.optionSnippet ? optionBindingHub.optionSnippet : bindContext._snippet;
       
-      var optionContext = new BindContext({
-        _valueMonitor: optionMonitor,
-        _snippet: snippet,
-        _optionBindingHub: optionBindingHub,
-        _inputTargetBindContext: bindContext,
-      });
-      bindContext._addDiscardHook(function(){
-        optionContext._discard();
-      });
-      optionContext._bind(optionMeta);
+      bindContext.asBackground(function(){
+        var optionContext = new BindContext({
+          _valueMonitor: optionMonitor,
+          _snippet: snippet,
+          _optionBindingHub: optionBindingHub,
+          _inputTargetBindContext: bindContext,
+        });
+        optionContext._bind(optionMeta);
+      })
+
     });
   }
 }
