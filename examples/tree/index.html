@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>tree</title>
+
+<style>
+
+
+
+</style>
+
+</head>
+<body>
+    <h1>Tree rendering samples</h1>
+    <hr>
+    <div style="max-width: 600px">
+        <p>For most MVVM frameworks, it is difficult to implement an infinite nested tree rendering/binding.</p>
+        
+        <p>
+        For AngularJS, it becomes simple by making use of a third-party plug-in called
+        <a href="https://github.com/angular-ui-tree/angular-ui-tree">angular-ui-tree</a>.
+        As comparison, For Asta4js, it can be simply implemented by the default binding mechanism without any
+        extra plug-in.
+        </p>
+        
+        <p>There is a pair of pages to compare what is different between AngluarJS and Asta4js for tree rendering</p>
+        <ul>
+            <li><a href="asta4js.html">Tree rendering by Asta4js</a></li>
+            <li><a href="angularUITree.html">Tree rendering by Angular-UI-Tree</a></li>
+        </ul>
+        
+        <h2>What is different?</h2>
+        <hr>
+        <fieldset>
+            <legend>Asta4js</legend>
+            <ul>
+                <li>Pros
+                    <ul>
+                        <li>Very clean pure HTML template with high maintainability
+                    </ul>
+                </li>
+                <li>Cons
+                    <ul>
+                        <li>The javascript side's source is a little bit complicated than Angular's way.
+                        <li>Without common tasks(expand/collapse, drag/drop) support, but obviously, all of those can be done simply.
+                    </ul>
+                </li>
+            </ul>
+        </fieldset>
+        <fieldset>
+            <legend>Angular-UI-Tree</legend>
+            <ul>
+                <li>Pros
+                    <ul>
+                        <li>The logic in javascript is clean and simple
+                        <li>With plenty built-in common tasks support, such as expand/collapse, drag/drop, etc.
+                    </ul>
+                </li>
+                <li>Cons
+                    <ul>
+                        <li>The HTML template is chaos, even with HTML code in script tag.
+                    </ul>
+                </li>
+            </ul>
+        </fieldset>
+        
+    </div>
+
+</body>
+</html>
