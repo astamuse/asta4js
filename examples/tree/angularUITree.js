@@ -5,7 +5,7 @@
   .controller('treeCtrl', ['$scope', '$http', function($scope, $http) {
     
     $scope.initData = function(){
-      $http.get("data2.json")
+      $http.get("data.json")
             .success(function(data){
               $scope.data = data;
             });

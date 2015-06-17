@@ -5,7 +5,7 @@ $(function () {
     var initTreeData = function(){
       $.ajax({
         type: "get",
-        url: "data2.json",
+        url: "data.json",
       }).done(function(data){
         $scope.data.tree = data;
       }).fail(function(jqXHR, textStatus, errorThrown ){
