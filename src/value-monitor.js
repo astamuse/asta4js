@@ -23,7 +23,7 @@ var convertObservePath=function(rootPath, subPath){
       throw "The scope root cannot be observed";
   }
   //fix the n-dimensions array path
-  observePath = observePath.replace("].[", "][");
+  observePath = observePath.replace(".[", "[");
   return observePath;
 }
 

@@ -178,6 +178,10 @@ BindContext.prototype._bind=function(meta){
   for(var i=0;i<propSub.length;i++){
     var ps = propSub[i];
     for(var p in ps){
+      //TODO
+      if(p === "_parent_meta" || p === "_orginal_meta"){
+        continue;
+      }
       var pm = ps[p];
       if(typeof pm === "object"){
         this._bind(pm);

@@ -57,9 +57,10 @@ Todo things:
     * source format and jshint(waiting)
 * core
     * remove dependency of JQuery, use document.querySelector instead(waiting)
-* binding
     * add test for multiple select(waiting)
     * add support for option group of select(waiting)
+    * performance enhancement, especially for array binding which current implementation is inefficient(waiting)
+    * api enhancement for better development friendliness.(in progress)
 * example
     * reimplement the todoApp example to follow the [todoMVC's guide line](https://github.com/tastejs/todomvc/blob/master/contributing.md) and submit it to todoMVC.(waiting)
 * spa

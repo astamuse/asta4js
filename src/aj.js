@@ -27,6 +27,8 @@ Aj.init = function(initFunc){
 
 Aj.delay=Aj.util.delay;
 
+Aj.nest = require("./nestedBinding");
+
 
 
 //entry point

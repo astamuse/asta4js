@@ -261,6 +261,7 @@ var _render = function (meta) {
     var selector = meta._selector;
     var targetPath = meta._target_path;
     meta._change_handler_creator = function(bindContext){
+      var self = this;
       var snippet = bindContext._snippet;
       var target = snippet.find(selector);
       if(target.length === 0 && !meta._omit_target_not_found){
@@ -271,22 +272,22 @@ var _render = function (meta) {
         var contextWrapper = RenderContextWrapper.get(bindContext);
         //we do not need to observe anything, just return a force render handler
         return function(){
-          renderFn(target, contextWrapper._identifier, undefined, bindContext);
+          renderFn.call(self, target, contextWrapper._identifier, undefined, bindContext);
         }
       }else if(targetPath === "_index"){
         //we do not need to observe anything, just return a force render handler
         return function(){
-          renderFn(target, bindContext._arrayIndexes[bindContext._arrayIndexes.length - 1], undefined, bindContext);
+          renderFn.call(self, target, bindContext._arrayIndexes[bindContext._arrayIndexes.length - 1], undefined, bindContext);
         }
       }else if (targetPath == "_indexes"){
         //we do not need to observe anything, just return a force render handler
         return function(){
-          renderFn(target, bindContext._arrayIndexes, undefined, bindContext);
+          renderFn.call(self, target, bindContext._arrayIndexes, undefined, bindContext);
         }
       }else{
         return function(newValue, oldValue, bindContext){
           //TODO we should convert old value too.
-          renderFn(target, newValue, oldValue, bindContext);
+          renderFn.call(self, target, newValue, oldValue, bindContext);
         }
       }
     }

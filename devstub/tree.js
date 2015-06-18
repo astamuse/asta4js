@@ -52,11 +52,11 @@ $(function () {
     // I am worry about whether there is memory leak...
     // I should dig it in next week. DO NOT FORGET IT!!!
     var treeClone = document.importNode($(".x-tree")[0], true);
-    var ajcount = 0;
     var treeMeta ={
+      _meta_id: "treeMeta",
       _duplicator: "li",
       _item: {
-        _context: ".x-node-button",
+        _context: [".x-node-button", ".x-remove-button"],
         name: [
           ".x-name",
           {
@@ -70,30 +70,13 @@ $(function () {
             }
           }
         ],
-        _value: {
-          _selector: ".x-child-tree",
-          _render: function(target, newValue, oldValue, bindContext){
-            //we have to delay the children binding due to avoiding the ".x-name" 
-            //to be propagated to the child tree
-            Aj.delay(function(){
-              target.find(".x-tree").remove();
-              if(newValue){
-                var clone = document.importNode(treeClone, true);
-                target.append(clone);
-                bindContext.asBackground(function(){
-                  Aj.init(function(_scope){
-                    console.log(newValue.name, " children ajed ", ++ajcount);
-                    _scope.ajcount = ajcount;
-                    _scope.item = newValue;
-                    _scope.snippet($(clone)).bind(_scope.item, {
-                      children: treeMeta
-                    });
-                  });
-                });
-              }
-            });
-          } // _render
-        }// _value
+        children: {
+          _nest: {
+            _root: ".x-tree",
+            _child_root_parent: ".x-child-tree",
+            _meta_id: "treeMeta"
+          }
+        }
       }
     };
      
@@ -110,6 +93,8 @@ $(function () {
         item = context.getItem(backtracking);
       }
       $("#x-node-context-info").text(chain.join("->"));
+    }).on("click", ".x-remove-button", function(){
+      Aj.arrayUtil.commonEventTask.remove(this);
     });
     
     $scope.snippet("#x-btns")

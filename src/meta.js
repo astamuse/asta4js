@@ -8,7 +8,7 @@ var arrayUtil=require("./arrayUtil");
 var config=require("./config");
 var constant = require("./constant")
 
-var __reverseMetaKeys = ["_meta_type", "_meta_id", "_meta_trace_id", "_meta_desc", "_value", "_prop", "_splice", "_target_path"];
+var __reverseMetaKeys = ["_meta_type", "_parent_meta", "_orginal_meta", "_meta_id", "_meta_trace_id", "_meta_desc", "_value", "_prop", "_splice", "_target_path"];
 
 var __ordered_metaRewritter = null;
 
@@ -125,7 +125,7 @@ var creatorDebugIntercept=function(debugId, meta, creator, creatorType){
   }
 }
 
-var normalizeMeta = function(meta, metaId, propertyPath){
+var normalizeMeta = function(meta, propertyPath, parentMeta){
   
   if(propertyPath === undefined || propertyPath === null){
     propertyPath = "";
@@ -133,7 +133,7 @@ var normalizeMeta = function(meta, metaId, propertyPath){
   
   if(Array.isArray(meta)){
     return meta.map(function(m){
-      return normalizeMeta(m, metaId, propertyPath);
+      return normalizeMeta(m, propertyPath, parentMeta);
     });
   }
   
@@ -150,15 +150,12 @@ var normalizeMeta = function(meta, metaId, propertyPath){
   }else{
     newMeta._meta_type = "_root";
   }
-  if(!newMeta._meta_id){
-    if(metaId){
-      newMeta._meta_id = metaId;
-    }else{
-      newMeta._meta_id = util.createUID();
-    }
-  }
   
   newMeta._meta_trace_id = util.createUID();
+  newMeta._parent_meta = parentMeta;
+  if(newMeta._meta_id){
+    newMeta._orginal_meta = util.clone(meta);
+  }
 
   switch(newMeta._meta_type){
     case "_root":
@@ -207,7 +204,7 @@ var normalizeMeta = function(meta, metaId, propertyPath){
           }
           subMeta[i]._target_path = propertyPath;
         }
-        newMeta[subMetak] = normalizeMeta(subMeta, newMeta._meta_id, propertyPath);
+        newMeta[subMetak] = normalizeMeta(subMeta, propertyPath, newMeta);
       }
     break;
     case "_splice":
@@ -218,7 +215,7 @@ var normalizeMeta = function(meta, metaId, propertyPath){
         //array binding
         var itemMeta = newMeta._item;
         if(itemMeta){
-          newMeta._item = normalizeMeta(itemMeta, newMeta._meta_id, "");
+          newMeta._item = normalizeMeta(itemMeta, "", newMeta);
         }
         //transform
         if(newMeta._transform){
@@ -437,7 +434,7 @@ var normalizeMeta = function(meta, metaId, propertyPath){
           continue;
         }
         if(p === "_index" || p === "_indexes" || p === "_context"){
-          newMeta[p] = normalizeMeta(ppm, newMeta._meta_id, p);
+          newMeta[p] = normalizeMeta(ppm, p, newMeta);
         }else{
           var recursivePath;
           if(propertyPath){
@@ -445,7 +442,7 @@ var normalizeMeta = function(meta, metaId, propertyPath){
           }else{
             recursivePath = p;
           }
-          newMeta[p] = normalizeMeta(ppm, newMeta._meta_id, recursivePath);
+          newMeta[p] = normalizeMeta(ppm, recursivePath, newMeta);
         }
       }
     break;
