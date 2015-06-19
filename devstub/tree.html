@@ -10,18 +10,22 @@
 </head>
 <body>
     <h1>Tree rendering sample</h1>
+    <div id="x-btns">
+        <button id="x-reset-value">reset tree</button>
+        <button id="x-set-value">modify tree data</button>
+        <button id="x-add-top">add to top</button>
+    </div>
     <ul class="x-tree">
         <li>
             <label class="x-name">3</label>
-            <button class="x-node-button">node button</button>
-            <button class="x-remove-button">remove</button>
+            <button class="x-node-info-btn x-btn">node info</button>
+            <button class="x-up-btn x-btn">moveup</button>
+            <button class="x-down-btn x-btn">movedown</button>
+            <button class="x-remove-btn x-btn">remove</button>
+            <button class="x-add-btn x-btn">add</button>
             <div class="x-child-tree"></div>
         </li>
     </ul>
     <div id="x-node-context-info" style="padding:20px; background-color:lightgrey;"></div>
-    <div id="x-btns">
-        <button id="x-reset-value">reset tree</button>
-        <button id="x-set-value">modify tree data</button>
-    </div>
 </body>
 </html>

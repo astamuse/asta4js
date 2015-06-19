@@ -8,7 +8,6 @@ var config = require("./config");
 var constant = require("./constant")
 var Snippet = require("./snippet");
 var BindContext = require("./bind-context");
-var RenderContextWrapper = require("./render-context-wrapper")
 
 var $ = config.$;
 
@@ -268,11 +267,9 @@ var _render = function (meta) {
         console.error("could not find target of selector:", selector, meta);
       }
       if(targetPath === "_context"){
-        //retrieve the rendered context wrapper
-        var contextWrapper = RenderContextWrapper.get(bindContext);
         //we do not need to observe anything, just return a force render handler
         return function(){
-          renderFn.call(self, target, contextWrapper._identifier, undefined, bindContext);
+          renderFn.call(self, target, bindContext, undefined, bindContext);
         }
       }else if(targetPath === "_index"){
         //we do not need to observe anything, just return a force render handler
@@ -350,7 +347,7 @@ module.exports.api = {
       contextId = node.getAttribute(attr);
     }
     if(contextId){
-      return RenderContextWrapper.get(contextId);
+      return BindContext.retrieveById(contextId);
     }else{
       return undefined;
     }

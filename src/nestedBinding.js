@@ -53,14 +53,15 @@ var _nest = function(meta){
       if(cacheHoldingContext._nestedCache && cacheHoldingContext._nestedCache._meta_id === nestDef._meta_id){
         break;
       }
-      cacheHoldingContext = cacheHoldingContext._backgroundContext;
+      cacheHoldingContext = cacheHoldingContext._parentContext ?  
+                              cacheHoldingContext._parentContext : cacheHoldingContext._backgroundContext;
     }
     
     if(cacheHoldingContext){
       bindContext._nestedCache = cacheHoldingContext._nestedCache;
     }else{
       var parentMeta = this;
-      while(parentMeta._meta_id !== nestDef._meta_id){
+      while(parentMeta && parentMeta._meta_id !== nestDef._meta_id){
         parentMeta = parentMeta._parent_meta;
       }
       if(parentMeta){

@@ -116,9 +116,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	__webpack_require__(11);
 
 	//internal extension
-	__webpack_require__(19);
 	__webpack_require__(20);
-	shallow(__webpack_require__(22).api, Aj);
+	__webpack_require__(21);
+	shallow(__webpack_require__(23).api, Aj);
 	shallow(__webpack_require__(24), Aj);
 
 	if($){
@@ -2297,110 +2297,6 @@ return /******/ (function(modules) { // webpackBootstrap
 	  }
 	};
 
-	arrayUtil.commonEventTask = {
-	  
-	  prepend: function(targetElement, data){
-	    var context = Aj.getContext(targetElement);
-	    var array = context.getArray();
-	    if(Array.isArray(array)){
-	      array.unshift(data);
-	      return true;
-	    }else{
-	      return false;
-	    }
-	  },
-	  
-	  append: function(targetElement, data){
-	    var context = Aj.getContext(targetElement);
-	    var array = context.getArray();
-	    if(Array.isArray(array)){
-	      array.push(data);
-	      return true;
-	    }else{
-	      return false;
-	    }
-	  },
-	  
-	  before: function(targetElement, data){
-	    var context = Aj.getContext(targetElement);
-	    var array = context.getArray();
-	    var index = context.getIndex();
-	    if(Array.isArray(array)){
-	      array.splice(index, 0, data);
-	      return true;
-	    }else{
-	      return false;
-	    }
-	  },
-	  
-	  after: function(targetElement, data){
-	    var context = Aj.getContext(targetElement);
-	    var array = context.getArray();
-	    var index = context.getIndex();
-	    if(Array.isArray(array)){
-	      array.splice(index + 1, 0, data);
-	      return true;
-	    }else{
-	      return false;
-	    }
-	  },
-	  
-	  remove: function(targetElement){
-	    var context = Aj.getContext(targetElement);
-	    var array = context.getArray();
-	    var index = context.getIndex();
-	    if(Array.isArray(array)){
-	      array.splice(index, 1);
-	      return true;
-	    }else{
-	      return false;
-	    }
-	  },
-	  
-	  moveUp: function(targetElement, step){
-	    var s = step === undefined ? 1: step;
-	    var context = Aj.getContext(targetElement);
-	    var array = context.getArray();
-	    var index = context.getIndex();
-	    if(Array.isArray(array)){
-	      if(s > 0 && index > 0){
-	        var tmp = array[index];
-	        while(s > 0 && index > 0){
-	          array[index] = array[index - 1];
-	          s--;
-	          index--;
-	        }
-	        array[index] = tmp;
-	      }
-	    }else{
-	      return false;
-	    }
-	  },
-	  
-	  moveDown: function(targetElement, step){
-	    var s = step === undefined ? 1: step;
-	    var context = Aj.getContext(targetElement);
-	    var array = context.getArray();
-	    var index = context.getIndex();
-	    if(Array.isArray(array)){
-	      var maxIndex = array.length - 1;
-	      if(s > 0 && index < maxIndex){
-	        var tmp = array[index];
-	        while(s > 0 && index < maxIndex){
-	          array[index] = array[index + 1];
-	          s--;
-	          index++;
-	        }
-	        array[index] = tmp;
-	      }
-	    }else{
-	      return false;
-	    }
-	  },
-	};
-
-	arrayUtil.cet = arrayUtil.commonEventTask;
-
 	module.exports = arrayUtil;
 
 /***/ },
@@ -2462,14 +2358,15 @@ return /******/ (function(modules) { // webpackBootstrap
 	      if(cacheHoldingContext._nestedCache && cacheHoldingContext._nestedCache._meta_id === nestDef._meta_id){
 	        break;
 	      }
-	      cacheHoldingContext = cacheHoldingContext._backgroundContext;
+	      cacheHoldingContext = cacheHoldingContext._parentContext ?  
+	                              cacheHoldingContext._parentContext : cacheHoldingContext._backgroundContext;
 	    }
 	    
 	    if(cacheHoldingContext){
 	      bindContext._nestedCache = cacheHoldingContext._nestedCache;
 	    }else{
 	      var parentMeta = this;
-	      while(parentMeta._meta_id !== nestDef._meta_id){
+	      while(parentMeta && parentMeta._meta_id !== nestDef._meta_id){
 	        parentMeta = parentMeta._parent_meta;
 	      }
 	      if(parentMeta){
@@ -2529,7 +2426,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	var rewriteObserverMeta = __webpack_require__(12);
 
 	var BindContext = __webpack_require__(16);
-	var ValueMonitor = __webpack_require__(18);
+	var ValueMonitor = __webpack_require__(19);
 
 
 	var Scope = function(){
@@ -4843,7 +4740,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	var util = __webpack_require__(1);
 	var config = __webpack_require__(3);
 	var BindContext = __webpack_require__(16);
-	var ValueMonitor = __webpack_require__(18);
+	var ValueMonitor = __webpack_require__(19);
 
 	var $ = config.$;
 
@@ -4944,13 +4841,18 @@ return /******/ (function(modules) { // webpackBootstrap
 	var normalizeMeta = __webpack_require__(12);
 
 	var ResourceMap = __webpack_require__(17);
+	var ArrayAssistant = __webpack_require__(18)
 
 	var currentBackgroundContext = undefined;
+	var contextIdMap = {};
 
 	var BindContext=function(override, arrayIndexes){
 	  if(override){
 	    util.shallowCopy(override, this);
 	  }
+	  
+	  this._id = util.createUID();
+	  contextIdMap[this._id] = this;
 	  
 	  this._backgroundContext = currentBackgroundContext;
 	  if(this._backgroundContext){
@@ -5153,9 +5055,31 @@ return /******/ (function(modules) { // webpackBootstrap
 	    }
 	  }
 	  
+	  delete contextIdMap[this._id];
+	  
 	  //console.log("discard context", this._iid);
 
 	};
+
+	BindContext.prototype.getArrayAssistant=function(backtrackingToBackground){
+	  var cacheKey = Boolean(backtrackingToBackground);
+	  var assistant = this._getResource("array-assistant", cacheKey);
+	  if(assistant){
+	    //OK
+	  }else{
+	    assistant = new ArrayAssistant(this);
+	    this._addResource("array-assistant", cacheKey, assistant);
+	  }
+	  return assistant;
+	}
+
+	BindContext.prototype.toString=function(){
+	  return this._id;
+	}
+
+	BindContext.retrieveById=function(id){
+	  return contextIdMap[id];
+	}
 
 	module.exports=BindContext;
 
@@ -5285,6 +5209,235 @@ return /******/ (function(modules) { // webpackBootstrap
 
 /***/ },
 /* 18 */
+/***/ function(module, exports, __webpack_require__) {
+
+	"use strict";
+
+	var util = __webpack_require__(1);
+
+	var canFastReturn=function(assistant, backtracking){
+	  return !(assistant._backtrackingToBackground && backtracking);
+	}
+
+	var getBacktrackingArrayInfo=function(assistant, backtracking){
+	  var tracking = backtracking ? backtracking : 0;
+	  if(tracking < 0){
+	    tracking = 0;
+	  }
+	  
+	  var trackedInfo = assistant._backtrackingArrayInfo[tracking];
+	  if(trackedInfo){
+	    //we found cached info, it is ok
+	  }else{
+	    //then we have to retrieve it
+	    var currentContext = trackedInfo ? trackedInfo._context : assistant._originalContext;
+	    var lastFoundContext = undefined;
+	    var indexes = [];
+	    var trackingCounter = tracking;
+	    while(currentContext){
+	      if(currentContext._boundArray){
+	        indexes.unshift(currentContext._arrayIndex);
+	        lastFoundContext = currentContext;
+	        trackingCounter--;
+	        if(trackingCounter >= 0){
+	          currentContext = getBacktrackingContext(currentContext, assistant._backtrackingToBackground);
+	          continue;
+	        }else{
+	          break;
+	        }
+	      }else{
+	        //undefined or null, 0 length is impossible in this case
+	        //currentContext
+	        currentContext = getBacktrackingContext(currentContext, assistant._backtrackingToBackground);
+	      }
+	    }
+	    trackedInfo = {
+	      _context: lastFoundContext,
+	      _indexes: indexes,
+	      _out_of_tracking: trackingCounter >= 0,
+	    };
+	    assistant._backtrackingArrayInfo[tracking] = trackedInfo;
+	  }
+	  return trackedInfo;
+	}
+
+	var getBacktrackingContext=function(context, backtrackingToBackground){
+	  if(context){
+	    var backtracking =  context._parentContext;
+	    if(backtracking){
+	      return backtracking;
+	    }else if (backtrackingToBackground){
+	      return context._backgroundContext;
+	    }
+	  }else{
+	    return undefined;
+	  }
+	}
+
+	var BindContextArrayAssistant = function(bindContext, backtrackingToBackground){
+	  this._originalContext = bindContext;
+	  this._backtrackingToBackground = backtrackingToBackground;
+	  this._backtrackingArrayInfo = {};
+	}
+
+	BindContextArrayAssistant.prototype.getIndex = function(backtracking){
+	  if(canFastReturn(this, backtracking)){
+	    return this._originalContext._arrayIndex;
+	  }
+	  
+	  var arrayInfo = getBacktrackingArrayInfo(this, backtracking);
+	  if(arrayInfo._context){
+	    return arrayInfo._indexes[arrayInfo._indexes.length-1];
+	  }else{
+	    return undefined;
+	  }
+	}
+
+	BindContextArrayAssistant.prototype.getIndexes = function(backtracking){
+	  if(canFastReturn(this, backtracking)){
+	    return this._originalContext._arrayIndexes;
+	  }
+	  
+	  //we use an impossible backtracking cycle to retrieve all
+	  var arrayInfo = getBacktrackingArrayInfo(this, backtracking === undefined ? 1000 : backtracking);
+	  if(arrayInfo._context){
+	    return arrayInfo._indexes;
+	  }else{
+	    return undefined;
+	  }
+	}
+
+	BindContextArrayAssistant.prototype.getArray = function(backtracking){
+	  if(canFastReturn(this, backtracking)){
+	    return this._originalContext._boundArray;
+	  }
+	  
+	  var arrayInfo = getBacktrackingArrayInfo(this, backtracking);
+	  if(arrayInfo._out_of_tracking || !arrayInfo._context){
+	    return undefined;
+	  }else{
+	    return arrayInfo._context._boundArray;
+	  }
+	  
+	}
+
+	BindContextArrayAssistant.prototype.getItem = function(backtracking){
+	  if(canFastReturn(this, backtracking)){
+	    var array = this._originalContext._boundArray;
+	    if(array === undefined){
+	      return undefined;
+	    }else{
+	      return array[array.length-1];
+	    }
+	  }
+	  
+	  var arrayInfo = getBacktrackingArrayInfo(this, backtracking);
+	  if(arrayInfo._out_of_tracking || !arrayInfo._context){
+	    return undefined;
+	  }else{
+	    var index = this.getIndex(backtracking);
+	    return arrayInfo._context._boundArray[index];
+	  }
+	}
+
+	//common event tasks here
+
+	BindContextArrayAssistant.prototype.prepend=function(data){
+	  var array = this.getArray();
+	  if(Array.isArray(array)){
+	    array.unshift(data);
+	    return true;
+	  }else{
+	    return false;
+	  }
+	},
+
+	BindContextArrayAssistant.prototype.append=function(data){
+	  var array = this.getArray();
+	  if(Array.isArray(array)){
+	    array.push(data);
+	    return true;
+	  }else{
+	    return false;
+	  }
+	},
+
+	BindContextArrayAssistant.prototype.before=function(data){
+	  var array = this.getArray();
+	  var index = this.getIndex();
+	  if(Array.isArray(array)){
+	    array.splice(index, 0, data);
+	    return true;
+	  }else{
+	    return false;
+	  }
+	},
+
+	BindContextArrayAssistant.prototype.after=function(data){
+	  var array = this.getArray();
+	  var index = this.getIndex();
+	  if(Array.isArray(array)){
+	    array.splice(index + 1, 0, data);
+	    return true;
+	  }else{
+	    return false;
+	  }
+	},
+
+	BindContextArrayAssistant.prototype.remove=function(){
+	  var array = this.getArray();
+	  var index = this.getIndex();
+	  if(Array.isArray(array)){
+	    array.splice(index, 1);
+	    return true;
+	  }else{
+	    return false;
+	  }
+	},
+
+	BindContextArrayAssistant.prototype.moveUp=function(step){
+	  var s = step === undefined ? 1: step;
+	  var array = this.getArray();
+	  var index = this.getIndex();
+	  if(Array.isArray(array)){
+	    if(s > 0 && index > 0){
+	      var tmp = array[index];
+	      while(s > 0 && index > 0){
+	        array[index] = array[index - 1];
+	        s--;
+	        index--;
+	      }
+	      array[index] = tmp;
+	    }
+	  }else{
+	    return false;
+	  }
+	},
+
+	BindContextArrayAssistant.prototype.moveDown=function(step){
+	  var s = step === undefined ? 1: step;
+	  var array = this.getArray();
+	  var index = this.getIndex();
+	  if(Array.isArray(array)){
+	    var maxIndex = array.length - 1;
+	    if(s > 0 && index < maxIndex){
+	      var tmp = array[index];
+	      while(s > 0 && index < maxIndex){
+	        array[index] = array[index + 1];
+	        s--;
+	        index++;
+	      }
+	      array[index] = tmp;
+	    }
+	  }else{
+	    return false;
+	  }
+	},
+
+	module.exports=BindContextArrayAssistant
+
+/***/ },
+/* 19 */
 /***/ function(module, exports, __webpack_require__) {
 
 	"use strict";
@@ -5440,7 +5593,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	module.exports=ValueMonitor;
 
 /***/ },
-/* 19 */
+/* 20 */
 /***/ function(module, exports, __webpack_require__) {
 
 	"use strict";
@@ -5450,7 +5603,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	var util = __webpack_require__(1);
 	var config = __webpack_require__(3);
 	var constant = __webpack_require__(2)
-	var ValueMonitor = __webpack_require__(18)
+	var ValueMonitor = __webpack_require__(19)
 
 	var getWatchDelegateScope=function(bindContext, meta){
 	  var watchDelegateScope = bindContext._getResource("_watch", meta._meta_trace_id);
@@ -5551,7 +5704,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ },
-/* 20 */
+/* 21 */
 /***/ function(module, exports, __webpack_require__) {
 
 	"use strict";
@@ -5565,9 +5718,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	var Snippet = __webpack_require__(15)
 
 	var BindContext = __webpack_require__(16)
-	var ValueMonitor = __webpack_require__(18)
+	var ValueMonitor = __webpack_require__(19)
 
-	var optionUtil = __webpack_require__(21)
+	var optionUtil = __webpack_require__(22)
 
 	var $ = config.$;
 
@@ -5954,7 +6107,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ },
-/* 21 */
+/* 22 */
 /***/ function(module, exports, __webpack_require__) {
 
 	"use strict";
@@ -6165,7 +6318,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ },
-/* 22 */
+/* 23 */
 /***/ function(module, exports, __webpack_require__) {
 
 	"use strict";
@@ -6178,7 +6331,6 @@ return /******/ (function(modules) { // webpackBootstrap
 	var constant = __webpack_require__(2)
 	var Snippet = __webpack_require__(15);
 	var BindContext = __webpack_require__(16);
-	var RenderContextWrapper = __webpack_require__(23)
 
 	var $ = config.$;
 
@@ -6438,11 +6590,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	        console.error("could not find target of selector:", selector, meta);
 	      }
 	      if(targetPath === "_context"){
-	        //retrieve the rendered context wrapper
-	        var contextWrapper = RenderContextWrapper.get(bindContext);
 	        //we do not need to observe anything, just return a force render handler
 	        return function(){
-	          renderFn.call(self, target, contextWrapper._identifier, undefined, bindContext);
+	          renderFn.call(self, target, bindContext, undefined, bindContext);
 	        }
 	      }else if(targetPath === "_index"){
 	        //we do not need to observe anything, just return a force render handler
@@ -6520,7 +6670,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	      contextId = node.getAttribute(attr);
 	    }
 	    if(contextId){
-	      return RenderContextWrapper.get(contextId);
+	      return BindContext.retrieveById(contextId);
 	    }else{
 	      return undefined;
 	    }
@@ -6528,120 +6678,6 @@ return /******/ (function(modules) { // webpackBootstrap
 	}
 
 
-
-/***/ },
-/* 23 */
-/***/ function(module, exports, __webpack_require__) {
-
-	"use strict";
-
-	var util = __webpack_require__(1);
-
-	var CommonTask = function(rcw){
-	  this._rcw = rcw;
-	}
-
-	CommonTask.prototype.prepend = function(){
-	  var array = this._rcw.getArray();
-	}
-
-	var WrapperMap = {};
-
-	var RenderContextWrapper = function(bindContext){
-	  this._identifier = util.createUID();
-	  this._originalContext = bindContext;
-	  WrapperMap[this._identifier] = this;
-	}
-
-	RenderContextWrapper.prototype._discard = function(){
-	  delete WrapperMap[this._identifier];
-	}
-
-	RenderContextWrapper.prototype.getIndex = function(){
-	  return this._originalContext._arrayIndex;
-	}
-
-	RenderContextWrapper.prototype.getIndexes = function(){
-	  if(this._arrayIndexes === undefined){
-	    this._arrayIndexes = util.clone(this._originalContext._arrayIndexes);
-	  }
-	  return this._arrayIndexes;
-	}
-
-	var getBacktrackingContext=function(context, ignoreBackgroundContext){
-	  if(context){
-	    var backtracking =  context._parentContext;
-	    if(backtracking){
-	      return backtracking;
-	    }else if (!ignoreBackgroundContext){
-	      return context._backgroundContext;
-	    }
-	  }else{
-	    return undefined;
-	  }
-	}
-
-	var backtrackingArrayContext=function(context, backtracking, ignoreBackgroundContext){
-	  var tracking = backtracking ? backtracking : 0;
-	  if(tracking < 0){
-	    tracking = 0;
-	  }
-	  var currentContext = context;
-	  var lastFoundContext = undefined;
-	  while(currentContext){
-	    if(currentContext._boundArray){
-	      lastFoundContext = currentContext;
-	      tracking--;
-	      if(tracking >= 0){
-	        currentContext = getBacktrackingContext(currentContext, ignoreBackgroundContext);
-	        continue;
-	      }else{
-	        break;
-	      }
-	    }else{
-	      //undefined or null, 0 length is impossible in this case
-	      //currentContext
-	      currentContext = getBacktrackingContext(currentContext, ignoreBackgroundContext);
-	    }
-	  }
-	  
-	  return tracking < 0 ? lastFoundContext : undefined;
-	}
-
-	RenderContextWrapper.prototype.getArray = function(backtracking, ignoreBackgroundContext){
-	  var trackedContext = backtrackingArrayContext(this._originalContext, backtracking, ignoreBackgroundContext);
-	  if(trackedContext){
-	    return trackedContext._boundArray;
-	  }else{
-	    return undefined;
-	  }
-	}
-
-	RenderContextWrapper.prototype.getItem = function(backtracking, ignoreBackgroundContext){
-	var trackedContext = backtrackingArrayContext(this._originalContext, backtracking, ignoreBackgroundContext);
-	  if(trackedContext){
-	    return trackedContext._boundArray[trackedContext._arrayIndex];
-	  }else{
-	    return undefined;
-	  }
-	}
-
-	module.exports={
-	  get: function(arg){
-	    if(typeof arg === "string"){//by identifier
-	      return WrapperMap[arg];
-	    }else{//as context
-	      var wrapper = arg._getResource("RenderContextWrapper", "RenderContextWrapper");
-	      if(wrapper){
-	        // it is ok
-	      }else{
-	        wrapper = new RenderContextWrapper(arg);
-	        arg._addResource("RenderContextWrapper", "RenderContextWrapper", wrapper);
-	      }
-	      return wrapper;
-	    }
-	  }
-	};
 
 /***/ },
 /* 24 */

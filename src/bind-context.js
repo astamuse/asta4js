@@ -5,13 +5,18 @@ var config = require("./config");
 var normalizeMeta = require("./meta");
 
 var ResourceMap = require("./resource-map");
+var ArrayAssistant = require("./bind-context-array-assistant")
 
 var currentBackgroundContext = undefined;
+var contextIdMap = {};
 
 var BindContext=function(override, arrayIndexes){
   if(override){
     util.shallowCopy(override, this);
   }
+  
+  this._id = util.createUID();
+  contextIdMap[this._id] = this;
   
   this._backgroundContext = currentBackgroundContext;
   if(this._backgroundContext){
@@ -214,8 +219,30 @@ BindContext.prototype._discard=function(){
     }
   }
   
+  delete contextIdMap[this._id];
+  
   //console.log("discard context", this._iid);
 
 };
+
+BindContext.prototype.getArrayAssistant=function(backtrackingToBackground){
+  var cacheKey = Boolean(backtrackingToBackground);
+  var assistant = this._getResource("array-assistant", cacheKey);
+  if(assistant){
+    //OK
+  }else{
+    assistant = new ArrayAssistant(this);
+    this._addResource("array-assistant", cacheKey, assistant);
+  }
+  return assistant;
+}
+
+BindContext.prototype.toString=function(){
+  return this._id;
+}
+
+BindContext.retrieveById=function(id){
+  return contextIdMap[id];
+}
 
 module.exports=BindContext;

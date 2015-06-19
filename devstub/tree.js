@@ -12,33 +12,7 @@ $(function () {
         },
         {
           "name": "dd3",
-          "children": [
-          {
-            "name": "nb1",
-            "children": [
-              {
-                "name": "zz"
-              },
-              {
-                "name": "yy(to be removed after modify)"
-              },
-              {
-                "name": "xx",
-                "children":[
-                  {
-                    "name": "fly"
-                  }
-                ]
-              }
-            ]
-          },
-          {
-            "name": "nb2"
-          },
-          {
-            "name": "nb3"
-          }
-          ]
+          "children": []
         }
       ];
     };
@@ -49,91 +23,71 @@ $(function () {
     
     initTreeData();
     
-    // I am worry about whether there is memory leak...
-    // I should dig it in next week. DO NOT FORGET IT!!!
-    var treeClone = document.importNode($(".x-tree")[0], true);
-    var treeMeta ={
-      _meta_id: "treeMeta",
-      _duplicator: "li",
-      _item: {
-        _context: [".x-node-button", ".x-remove-button"],
-        name: [
-          ".x-name",
-          {
-            _selector: ".x-name@>[style:background-color=]",
-            _transform: function(v){
-              if(v){
-                return v.indexOf(":") >= 0 ? "yellow" : "";
-              }else{
-                return "";
+    $scope.snippet(".x-tree").bind($scope.data, {
+      tree:{
+        _meta_id: "treeMeta",
+        _duplicator: "li",
+        _item: {
+          _context: [
+            ".x-btn",
+            {
+              _selector: ".x-btn",
+              _render: function(target, newValue){
+                var assistant = newValue.getArrayAssistant();
+                var indexes = assistant.getIndexes();
+                target.attr("id", "btn-"+indexes.join("-"));
               }
             }
-          }
-        ],
-        children: {
-          _nest: {
-            _root: ".x-tree",
-            _child_root_parent: ".x-child-tree",
-            _meta_id: "treeMeta"
+          ],
+          name: ".x-name",
+          children: {
+            _nest: {
+              _root: ".x-tree",
+              _child_root_parent: ".x-child-tree",
+              _meta_id: "treeMeta"
+            }
           }
         }
       }
-    };
-     
-    $scope.snippet(".x-tree").bind($scope.data, {
-      tree:treeMeta
-    }).on("click", ".x-node-button", function(){
-      var context = Aj.getContext(this);
+    }).on("click", ".x-node-info-btn", function(){
+      var assistant = Aj.getContext(this).assistant(true);
       var chain = [];
       var backtracking = 0;
-      var item = context.getItem(backtracking);
+      var item = assistant.getItem(backtracking);
       while(item){
         chain.unshift(item.name);
         backtracking++;
-        item = context.getItem(backtracking);
+        item = assistant.getItem(backtracking);
       }
       $("#x-node-context-info").text(chain.join("->"));
-    }).on("click", ".x-remove-button", function(){
-      Aj.arrayUtil.commonEventTask.remove(this);
+    }).on("click", ".x-add-btn", function(){
+      var assistant = Aj.getContext(this).getArrayAssistant(true);
+      var item = assistant.getItem();
+      if(!Array.isArray(item.children)){
+        item.children = [];
+      }
+      item.children.push({
+        name: item.name + "-" + item.children.length,
+        children: []
+      });
+    }).on("click", ".x-remove-btn", function(){
+      Aj.getContext(this).getArrayAssistant(true).remove();
+    }).on("click", ".x-up-btn", function(){
+      Aj.getContext(this).getArrayAssistant(true).moveUp();
+    }).on("click", ".x-down-btn", function(){
+      Aj.getContext(this).getArrayAssistant(true).moveDown();
     });
     
-    $scope.snippet("#x-btns")
-      .bind("#x-reset-value", "click", function(){
-        initTreeData();
-      })
-      .bind("#x-set-value", "click", function(){
-        $scope.data.tree[1].name = "modified:uu2";
-        $scope.data.tree[1].children = [
-          {
-            name: "added:mm1"
-          },
-          {
-            name: "added:mm2"
-          },
-        ];
-        $scope.data.tree[2].children.push({
-          name: "added:mx1"
-        });
-        $scope.data.tree[2].children.push({
-          name: "added:mx2",
-          children: [
-            {
-              name: "added:@@@"
-            },
-            {
-              name: "added:###"
-            }
-          ]
-        });
-        
-         $scope.data.tree[2].children[0].children.splice(1,1);
-         
-         $scope.data.tree.push({
-           name: "added:top-last"
-         });
-
-        Aj.sync();
+    var topCounter = 0;
+    
+    $scope.snippet("#x-btns").bind("#x-reset-value", "click", function(){
+      initTreeData();
+    }).bind("#x-add-top", "click", function(){
+      $scope.data.tree.push({
+        name: "top-" + (++topCounter),
+        children: []
       });
+    });
       
    
   });

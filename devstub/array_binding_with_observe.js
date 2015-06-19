@@ -95,16 +95,16 @@ $(function () {
         }
       })
       .on("click", ".x-add", function () {
-        Aj.arrayUtil.commonEventTask.after(this, "added value" + new Date())
+        Aj.getContext(this).getArrayAssistant().after("added value" + new Date());
       })
       .on("click", ".x-remove", function () {
-        Aj.arrayUtil.commonEventTask.remove(this)
+        Aj.getContext(this).getArrayAssistant().remove()
       })
       .on("click", ".x-go-up", function () {
-        Aj.arrayUtil.commonEventTask.moveUp(this)
+        Aj.getContext(this).getArrayAssistant().moveUp()
       })
       .on("click", ".x-go-down", function () {
-        Aj.arrayUtil.commonEventTask.moveDown(this)
+        Aj.getContext(this).getArrayAssistant().moveDown()
       })
       .bind("#set-list-value", "click", function () {
         var v = $("#list-data-input").val();
