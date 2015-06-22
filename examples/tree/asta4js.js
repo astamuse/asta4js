@@ -19,58 +19,34 @@ $(function () {
     }; 
     
     initTreeData();
-    
-    var treeClone = document.importNode($(".x-tree")[0], true);
-    var treeMeta ={
-      _duplicator: "li",
-      _item: {
-        _context: "a.btn",
-        _value: {
-          _selector: ".x-child-tree-root",
-          _render: function(target, newValue, oldValue, bindContext){
-            //we have to delay the children binding due to avoiding the ".x-name" 
-            //to be propagated to the child tree
-            if(bindContext.childNodesScopeRef){
-              bindContext.childNodesScopeRef.currentNode = newValue;
-            }else{
-              Aj.delay(function(){
-                target.find(".x-tree").remove();
-                if(newValue){
-                  var clone = document.importNode(treeClone, true);
-                  target.append(clone);
-                  bindContext.asBackground(function(){
-                    Aj.init(function(_scope){
-                      bindContext.childNodesScopeRef = _scope;
-                      _scope.currentNode = newValue;
-                      _scope.snippet($(clone)).bind(_scope.currentNode, {
-                        nodes: treeMeta
-                      });
-                    });
-                  });
-                }
-              });
-            }
-          } // _render
-        },// _value,
-        title: ".x-title",
-        nodes:{
-          length: {
-            _selector: ".x-toggle-btn@>[style:display=]",
-            _transform: function(v){
-              return v ? "" : "none";
-            }
-          }
-        }
-      },
-    };
      
     $scope.snippet(".x-tree").bind($scope.data, {
-      tree:treeMeta
+      tree:{
+        _meta_id: "tree",
+        _duplicator: "li",
+        _item: {
+          _context: "a.btn",
+          title: ".x-title",
+          nodes: {
+            length: {
+              _selector: ".x-toggle-btn@>[style:display=]",
+              _transform: function(v){
+                return v ? "" : "none";
+              }
+            },
+            _nest: {
+              _root: ".x-tree",
+              _child_root_parent: ".x-child-tree-root",
+              _meta_id: "tree"
+            }
+          },// nodes
+        },
+      }
     }).on("click", ".x-remove-btn", function(){
-      Aj.arrayUtil.commonEventTask.remove(this);
+      Aj.getContext(this).getArrayAssistant(true).remove();
     }).on("click", ".x-add-btn", function(){
-      var context = Aj.getContext(this);
-      var item = context.getItem();
+      var assistant = Aj.getContext(this).getArrayAssistant(true);
+      var item = assistant.getItem();
       if(!Array.isArray(item.nodes)){
         item.nodes = [];
       }
