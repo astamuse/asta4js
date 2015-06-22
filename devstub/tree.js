@@ -95,7 +95,7 @@ $(function () {
       _duplicator: "li",
       _item: {
         name: ".x-name",
-        _value: Aj.nest(function(){return treeMetaFn}, "children", ".x-tree-fn-meta", ".x-child-tree"),
+        children: Aj.nest(".x-child-tree", ".x-tree-fn-meta", function(){return treeMetaFn}),
       }
     };
     

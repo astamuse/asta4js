@@ -2309,7 +2309,10 @@ return /******/ (function(modules) { // webpackBootstrap
 	var constant = __webpack_require__(2)
 	var util = __webpack_require__(1)
 
-	var nestedBinding = function(currentMetaRefGetter, nestedPropertyName, rootSelector, childRootParentSelector){
+	/**
+	 * This function is used to show how simple we can wrap a common rendering/binding logic
+	 */
+	var nestedBinding = function(childRootParentSelector, rootSelector, treeMetaRefGetter){
 	  var root = document.querySelector(rootSelector);
 	  root = document.importNode(root, true);
 	  
@@ -2317,7 +2320,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    _selector: childRootParentSelector,
 	    _render: function(target, newValue, oldValue, bindContext){
 	      if(bindContext._childNodesScopeRef){
-	        bindContext._childNodesScopeRef.currentNode = newValue;
+	        bindContext._childNodesScopeRef.currentNodes = newValue;
 	      }else{
 	        //we have to delay the children binding due to avoiding the binding selectors of 
 	        //properties to be propagated to the child tree
@@ -2329,10 +2332,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	            bindContext.asBackground(function(){
 	              Aj.init(function(_scope){
 	                bindContext._childNodesScopeRef = _scope;
-	                _scope.currentNode = newValue;
-	                var childMeta = {};
-	                childMeta[nestedPropertyName] = currentMetaRefGetter();
-	                _scope.snippet(target).bind(_scope.currentNode, childMeta);
+	                _scope.currentNodes = newValue;
+	                _scope.snippet(target).bind(_scope.currentNodes, treeMetaRefGetter.apply());
 	              });
 	            });
 	          }
@@ -2342,6 +2343,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	  }
 	}
 
+	/**
+	 * This function is used to make developer's life better (since it had made me vomit)
+	 */
 	var _nest = function(meta){
 	  var nestDef = meta._nest;
 	  delete meta._nest;
@@ -2353,6 +2357,12 @@ return /******/ (function(modules) { // webpackBootstrap
 	  meta._selector = nestDef._child_root_parent;
 	  meta._render = function(target, newValue, oldValue, bindContext){
 	    
+	    /*
+	     * The following is ugly but we have no way to retrieve and store the original tree root DOM before 
+	     * it has been rendered by given data. Perhaps we need some infrastructural support from framework core
+	     * to combat this ugly implementation, but let us make it workable at first.
+	     */
+	     //start the vomiting logic
 	    var cacheHoldingContext = bindContext;
 	    while(cacheHoldingContext){
 	      if(cacheHoldingContext._nestedCache && cacheHoldingContext._nestedCache._meta_id === nestDef._meta_id){
@@ -2380,7 +2390,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	      }
 
 	    }
+	    // finished the vomiting reality, GBUA!
 	    
+	    // following is as the same as the above function
 	    if(bindContext._childNodesScopeRef){
 	      bindContext._childNodesScopeRef.currentNodes = newValue;
 	    }else{
@@ -2408,9 +2420,6 @@ return /******/ (function(modules) { // webpackBootstrap
 	  priority : constant.metaRewritterPriority["_nest"],
 	  fn : _nest
 	};
-
-
-
 
 	module.exports = nestedBinding;
 
