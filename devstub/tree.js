@@ -23,6 +23,14 @@ $(function () {
     
     initTreeData();
     
+    var arrayIndexesStrRender = function(prefix){
+      return function(target, newValue){
+        var assistant = newValue.getArrayAssistant(true);
+        var indexes = assistant.getIndexes();
+        target.attr("id", prefix + "-" + indexes.join("-"));
+      }
+    }
+    
     $scope.snippet(".x-tree").bind($scope.data, {
       tree:{
         _meta_id: "treeMeta",
@@ -32,11 +40,11 @@ $(function () {
             ".x-btn",
             {
               _selector: ".x-btn",
-              _render: function(target, newValue){
-                var assistant = newValue.getArrayAssistant();
-                var indexes = assistant.getIndexes();
-                target.attr("id", "btn-"+indexes.join("-"));
-              }
+              _render: arrayIndexesStrRender("btn")
+            },
+            {
+              _selector: ".x-row",
+              _render: arrayIndexesStrRender("row")
             }
           ],
           name: ".x-name",
@@ -50,7 +58,7 @@ $(function () {
         }
       }
     }).on("click", ".x-node-info-btn", function(){
-      var assistant = Aj.getContext(this).assistant(true);
+      var assistant = Aj.getContext(this).getArrayAssistant(true);
       var chain = [];
       var backtracking = 0;
       var item = assistant.getItem(backtracking);
@@ -59,7 +67,7 @@ $(function () {
         backtracking++;
         item = assistant.getItem(backtracking);
       }
-      $("#x-node-context-info").text(chain.join("->"));
+      $("#x-node-context-info").text(chain.join("::"));
     }).on("click", ".x-add-btn", function(){
       var assistant = Aj.getContext(this).getArrayAssistant(true);
       var item = assistant.getItem();

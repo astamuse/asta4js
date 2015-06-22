@@ -5296,7 +5296,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	  
 	  var arrayInfo = getBacktrackingArrayInfo(this, backtracking);
 	  if(arrayInfo._context){
-	    return arrayInfo._indexes[arrayInfo._indexes.length-1];
+	    var adjust = backtracking === undefined ? 0 : backtracking;
+	    return arrayInfo._indexes[arrayInfo._indexes.length-adjust-1];
 	  }else{
 	    return undefined;
 	  }
