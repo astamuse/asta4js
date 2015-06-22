@@ -4,7 +4,7 @@ var config=require("./config")
 var constant = require("./constant")
 var util = require("./util")
 
-var nestedBinding = function(currentMetaRef, nestedPropertyName, rootSelector, childRootParentSelector){
+var nestedBinding = function(currentMetaRefGetter, nestedPropertyName, rootSelector, childRootParentSelector){
   var root = document.querySelector(rootSelector);
   root = document.importNode(root, true);
   
@@ -26,7 +26,7 @@ var nestedBinding = function(currentMetaRef, nestedPropertyName, rootSelector, c
                 bindContext._childNodesScopeRef = _scope;
                 _scope.currentNode = newValue;
                 var childMeta = {};
-                childMeta[nestedPropertyName] = currentMetaRef;
+                childMeta[nestedPropertyName] = currentMetaRefGetter();
                 _scope.snippet(target).bind(_scope.currentNode, childMeta);
               });
             });

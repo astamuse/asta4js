@@ -3,7 +3,7 @@
 var util = require("./util");
 
 var canFastReturn=function(assistant, backtracking){
-  return !(assistant._backtrackingToBackground && backtracking);
+  return !(assistant._backtrackingToBackground || backtracking);
 }
 
 var getBacktrackingArrayInfo=function(assistant, backtracking){

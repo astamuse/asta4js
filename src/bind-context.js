@@ -226,13 +226,13 @@ BindContext.prototype._discard=function(){
 };
 
 BindContext.prototype.getArrayAssistant=function(backtrackingToBackground){
-  var cacheKey = Boolean(backtrackingToBackground);
-  var assistant = this._getResource("array-assistant", cacheKey);
+  var _backtrackingToBackground = Boolean(backtrackingToBackground);
+  var assistant = this._getResource("array-assistant", _backtrackingToBackground);
   if(assistant){
     //OK
   }else{
-    assistant = new ArrayAssistant(this);
-    this._addResource("array-assistant", cacheKey, assistant);
+    assistant = new ArrayAssistant(this, _backtrackingToBackground);
+    this._addResource("array-assistant", _backtrackingToBackground, assistant);
   }
   return assistant;
 }

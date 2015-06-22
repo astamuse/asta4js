@@ -2309,7 +2309,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	var constant = __webpack_require__(2)
 	var util = __webpack_require__(1)
 
-	var nestedBinding = function(currentMetaRef, nestedPropertyName, rootSelector, childRootParentSelector){
+	var nestedBinding = function(currentMetaRefGetter, nestedPropertyName, rootSelector, childRootParentSelector){
 	  var root = document.querySelector(rootSelector);
 	  root = document.importNode(root, true);
 	  
@@ -2331,7 +2331,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	                bindContext._childNodesScopeRef = _scope;
 	                _scope.currentNode = newValue;
 	                var childMeta = {};
-	                childMeta[nestedPropertyName] = currentMetaRef;
+	                childMeta[nestedPropertyName] = currentMetaRefGetter();
 	                _scope.snippet(target).bind(_scope.currentNode, childMeta);
 	              });
 	            });
@@ -5062,13 +5062,13 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 	BindContext.prototype.getArrayAssistant=function(backtrackingToBackground){
-	  var cacheKey = Boolean(backtrackingToBackground);
-	  var assistant = this._getResource("array-assistant", cacheKey);
+	  var _backtrackingToBackground = Boolean(backtrackingToBackground);
+	  var assistant = this._getResource("array-assistant", _backtrackingToBackground);
 	  if(assistant){
 	    //OK
 	  }else{
-	    assistant = new ArrayAssistant(this);
-	    this._addResource("array-assistant", cacheKey, assistant);
+	    assistant = new ArrayAssistant(this, _backtrackingToBackground);
+	    this._addResource("array-assistant", _backtrackingToBackground, assistant);
 	  }
 	  return assistant;
 	}
@@ -5216,7 +5216,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	var util = __webpack_require__(1);
 
 	var canFastReturn=function(assistant, backtracking){
-	  return !(assistant._backtrackingToBackground && backtracking);
+	  return !(assistant._backtrackingToBackground || backtracking);
 	}
 
 	var getBacktrackingArrayInfo=function(assistant, backtracking){

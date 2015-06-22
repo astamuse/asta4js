@@ -88,6 +88,20 @@ $(function () {
         children: []
       });
     });
+    
+    //try fn meta
+    var treeMetaFn = {
+      _meta_id: "treeMeta",
+      _duplicator: "li",
+      _item: {
+        name: ".x-name",
+        _value: Aj.nest(function(){return treeMetaFn}, "children", ".x-tree-fn-meta", ".x-child-tree"),
+      }
+    };
+    
+    $scope.snippet(".x-tree-fn-meta").bind($scope.data, {
+      tree: treeMetaFn
+    });
       
    
   });
