@@ -45,10 +45,8 @@ $(function () {
       list: {
         _duplicator: ".x-row",
         _item: {
-          _index    : [
-            ".x-seq",
-            ".x-remove@>[index=]",
-          ],
+          _index    : ".x-seq",
+          _context  : ".x-remove",
           name      : ".x-name",
           bloodType : ".x-bloodtype",
           sex : {
@@ -66,9 +64,7 @@ $(function () {
         }
       }
     }).on("click", ".x-remove", function(){
-      var currentIndex = parseInt($(this).attr("index"));
-      //getCurrentIndex()
-      $scope.data.list.splice(currentIndex, 1);
+      Aj.getContext(this).getArrayAssistant().remove();
     });
     /*
     $.on()
