@@ -238,7 +238,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  return to;
 	};
 
-	util.override = function(from, to){
+	util.merge = function(from, to){
 	  var ret = to;
 	  if(from === undefined || from === null){
 	    //do nothing
@@ -250,6 +250,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	    for(var p in from){
 	      to[p] = util.override(from[p], to[p]);
 	    }
+	  }else if(util.isPlainObject(from) && Array.isArray(to)){
+	    to.push(from);
 	  }else{
 	    throw "cannot override different type data from \n"
 	          + JSON.stringify(from) + "\n"
@@ -2941,6 +2943,62 @@ return /******/ (function(modules) { // webpackBootstrap
 	  return newMeta;
 	};
 
+	var mergeMeta=function(from, to){
+	  var ret = to;
+	  if(from === undefined || from === null){
+	    //do nothing
+	  }else if (to === undefined || to === null){
+	    ret = util.clone(from);
+	  }else if(Array.isArray(from) && Array.isArray(to)){
+	    Array.prototype.push.apply(to, from);
+	  }else if (util.isPlainObject(from) && util.isPlainObject(to)){
+	    var fc;
+	    var fp, tp;
+	    for(var p in from){
+	      fc = config.meta.fieldClassifier(p);
+	      fp = from[p];
+	      tp = to[p];
+	      to[p] = mergeMeta(fp, tp);
+	      /*
+	      if( fc === "_value"){
+	        to[p] = mergeMeta(fp, tp);
+	      }else{//_prop or _splice
+	        if(Array.isArray(fp) || Array.isArray(tp)){
+	          to[p] = mergeMeta(fp, tp);
+	        }else{
+	          var tmp = [];
+	          if(tp){
+	            tmp.push(tp);
+	          }
+	          if(fp){
+	            tmp.push(fp);
+	          }
+	          to[p] = tmp;
+	        }
+	      }
+	      */
+	    }
+	  }else if(util.isPlainObject(from) && Array.isArray(to)){
+	    to.push(from);
+	  }else if(Array.isArray(from) && util.isPlainObject(to)){
+	    ret = [];
+	    ret.push(to);
+	    Array.prototype.push.apply(ret, from);
+	  }else{
+	    /*
+	    throw "cannot merge meta from \n"
+	          + JSON.stringify(from) + "\n"
+	          + " to \n"
+	          + JSON.stringify(to) + "\n"
+	          + "(possibly have conflict property define, change one of them to array to avoid conflict)";
+	    */
+	    ret = [];
+	    ret.push(to);
+	    ret.push(from);
+	  }
+	  return ret;
+	}
+
 	var _on_change = function(meta){
 	  var changeFn = meta._on_change;
 	  //if _on_change is specified, the _change_handler_creator will be forced to handle _on_change
@@ -3004,7 +3062,10 @@ return /******/ (function(modules) { // webpackBootstrap
 	  fn : _assign
 	};
 
-	module.exports = normalizeMeta
+	module.exports = {
+	  normalizeMeta: normalizeMeta,
+	  mergeMeta: mergeMeta
+	}
 
 /***/ },
 /* 13 */
@@ -4847,7 +4908,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	var util = __webpack_require__(1);
 	var config = __webpack_require__(3);
-	var normalizeMeta = __webpack_require__(12);
+	var metaApi = __webpack_require__(12);
 
 	var ResourceMap = __webpack_require__(17);
 	var ArrayAssistant = __webpack_require__(18)
@@ -5005,7 +5066,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  }
 	  
 	  if(!meta._meta_trace_id){
-	    meta = normalizeMeta(meta);
+	    meta = metaApi.normalizeMeta(meta);
 	  }
 
 	  var nonRecursive = ["_value", "_splice"];
@@ -6127,7 +6188,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	var config = __webpack_require__(3);
 	var constant = __webpack_require__(2)
 	var Snippet = __webpack_require__(15)
-	var normalizeMeta = __webpack_require__(12)
+	var metaApi = __webpack_require__(12)
 
 	var $ = config.$;
 
@@ -6316,7 +6377,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	      };
 	    }
 	  }//end checkbox or radio
-	  return normalizeMeta(newMeta);
+	  return metaApi.normalizeMeta(newMeta);
 
 	}//end optionRewrite
 
@@ -6903,8 +6964,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	    this._form._file_preload_format = format;
 	    return this;
 	  },
-	  override: function(obj){
-	    util.override(obj, this);
+	  merge: function(obj){
+	    util.merge(obj, this);
 	    return this;
 	  }
 	  

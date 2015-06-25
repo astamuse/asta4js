@@ -452,6 +452,62 @@ var normalizeMeta = function(meta, propertyPath, parentMeta){
   return newMeta;
 };
 
+var mergeMeta=function(from, to){
+  var ret = to;
+  if(from === undefined || from === null){
+    //do nothing
+  }else if (to === undefined || to === null){
+    ret = util.clone(from);
+  }else if(Array.isArray(from) && Array.isArray(to)){
+    Array.prototype.push.apply(to, from);
+  }else if (util.isPlainObject(from) && util.isPlainObject(to)){
+    var fc;
+    var fp, tp;
+    for(var p in from){
+      fc = config.meta.fieldClassifier(p);
+      fp = from[p];
+      tp = to[p];
+      to[p] = mergeMeta(fp, tp);
+      /*
+      if( fc === "_value"){
+        to[p] = mergeMeta(fp, tp);
+      }else{//_prop or _splice
+        if(Array.isArray(fp) || Array.isArray(tp)){
+          to[p] = mergeMeta(fp, tp);
+        }else{
+          var tmp = [];
+          if(tp){
+            tmp.push(tp);
+          }
+          if(fp){
+            tmp.push(fp);
+          }
+          to[p] = tmp;
+        }
+      }
+      */
+    }
+  }else if(util.isPlainObject(from) && Array.isArray(to)){
+    to.push(from);
+  }else if(Array.isArray(from) && util.isPlainObject(to)){
+    ret = [];
+    ret.push(to);
+    Array.prototype.push.apply(ret, from);
+  }else{
+    /*
+    throw "cannot merge meta from \n"
+          + JSON.stringify(from) + "\n"
+          + " to \n"
+          + JSON.stringify(to) + "\n"
+          + "(possibly have conflict property define, change one of them to array to avoid conflict)";
+    */
+    ret = [];
+    ret.push(to);
+    ret.push(from);
+  }
+  return ret;
+}
+
 var _on_change = function(meta){
   var changeFn = meta._on_change;
   //if _on_change is specified, the _change_handler_creator will be forced to handle _on_change
@@ -515,4 +571,7 @@ config.meta.rewritterMap["_assign"] = {
   fn : _assign
 };
 
-module.exports = normalizeMeta
+module.exports = {
+  normalizeMeta: normalizeMeta,
+  mergeMeta: mergeMeta
+}

@@ -101,7 +101,7 @@ util.shallowCopy = function(arg1, arg2, arg3){
   return to;
 };
 
-util.override = function(from, to){
+util.merge = function(from, to){
   var ret = to;
   if(from === undefined || from === null){
     //do nothing
@@ -113,6 +113,8 @@ util.override = function(from, to){
     for(var p in from){
       to[p] = util.override(from[p], to[p]);
     }
+  }else if(util.isPlainObject(from) && Array.isArray(to)){
+    to.push(from);
   }else{
     throw "cannot override different type data from \n"
           + JSON.stringify(from) + "\n"

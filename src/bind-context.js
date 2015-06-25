@@ -2,7 +2,7 @@
 
 var util = require("./util");
 var config = require("./config");
-var normalizeMeta = require("./meta");
+var metaApi = require("./meta");
 
 var ResourceMap = require("./resource-map");
 var ArrayAssistant = require("./bind-context-array-assistant")
@@ -160,7 +160,7 @@ BindContext.prototype._bind=function(meta){
   }
   
   if(!meta._meta_trace_id){
-    meta = normalizeMeta(meta);
+    meta = metaApi.normalizeMeta(meta);
   }
 
   var nonRecursive = ["_value", "_splice"];

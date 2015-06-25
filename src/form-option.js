@@ -5,7 +5,7 @@ var arrayUtil=require("./arrayUtil");
 var config = require("./config");
 var constant = require("./constant")
 var Snippet = require("./snippet")
-var normalizeMeta = require("./meta")
+var metaApi = require("./meta")
 
 var $ = config.$;
 
@@ -194,7 +194,7 @@ var rewriteOptionMeta=function(optionMeta, inputType){
       };
     }
   }//end checkbox or radio
-  return normalizeMeta(newMeta);
+  return metaApi.normalizeMeta(newMeta);
 
 }//end optionRewrite
 

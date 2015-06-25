@@ -208,8 +208,8 @@ _addMetaApiExtending({
     this._form._file_preload_format = format;
     return this;
   },
-  override: function(obj){
-    util.override(obj, this);
+  merge: function(obj){
+    util.merge(obj, this);
     return this;
   }
   
