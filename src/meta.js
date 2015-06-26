@@ -8,7 +8,9 @@ var arrayUtil=require("./arrayUtil");
 var config=require("./config");
 var constant = require("./constant")
 
-var __reverseMetaKeys = ["_meta_type", "_parent_meta", "_orginal_meta", "_meta_id", "_meta_trace_id", "_meta_desc", "_value", "_prop", "_splice", "_target_path"];
+var __reverseMetaKeys = ["_meta_type", "_parent_meta", "_orginal_meta", "_meta_id", "_meta_trace_id", "_meta_desc", 
+                         "_value", "_value_ref", "_prop", "_splice", 
+                         "_target_path", "_virtual", "_virtual_root_path"];
 
 var __ordered_metaRewritter = null;
 
@@ -144,6 +146,15 @@ var normalizeMeta = function(meta, propertyPath, parentMeta){
   if(typeof newMeta !== "object"){
     newMeta = config.meta.nonObjectMetaConvertor(newMeta);
   }
+  
+  if(newMeta._merge){
+    var mergeSource = newMeta._merge;
+    delete newMeta._merge;
+    newMeta = mergeMeta(mergeSource, newMeta)
+    if(config.debug && newMeta._debug){
+      console.log("merged meta(" + newMeta._debug + ")", newMeta);
+    }
+  }
 
   if(newMeta._meta_type){
     //do nothing
@@ -155,6 +166,26 @@ var normalizeMeta = function(meta, propertyPath, parentMeta){
   newMeta._parent_meta = parentMeta;
   if(newMeta._meta_id){
     newMeta._orginal_meta = util.clone(meta);
+  }
+  
+  if(newMeta._virtual){
+    if(propertyPath){
+      newMeta._virtual_root_path = propertyPath.replace(".", "_dot_");
+    }else{
+      //why the developer do this? kick ass...
+      newMeta._virtual_root_path = "__virtual_from_root_7823iunrsa8df2r__";
+    }
+    propertyPath = "";
+  }
+  
+  if(parentMeta){
+    if(parentMeta._virtual_root_path){
+      if(newMeta._virtual_root_path){//virtual under virtual, kick ass!
+        newMeta._virtual_root_path = parentMeta._virtual_root_path + "__cascade_virtual__" + newMeta._virtual_root_path;
+      }else{
+        newMeta._virtual_root_path = parentMeta._virtual_root_path;
+      }
+    }
   }
 
   switch(newMeta._meta_type){

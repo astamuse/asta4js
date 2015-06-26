@@ -238,29 +238,6 @@ return /******/ (function(modules) { // webpackBootstrap
 	  return to;
 	};
 
-	util.merge = function(from, to){
-	  var ret = to;
-	  if(from === undefined || from === null){
-	    //do nothing
-	  }else if (to === undefined || to === null){
-	    ret = util.clone(from);
-	  }else if(Array.isArray(from) && Array.isArray(to)){
-	    Array.prototype.push.apply(to, from);
-	  }else if (util.isPlainObject(from) && util.isPlainObject(to)){
-	    for(var p in from){
-	      to[p] = util.override(from[p], to[p]);
-	    }
-	  }else if(util.isPlainObject(from) && Array.isArray(to)){
-	    to.push(from);
-	  }else{
-	    throw "cannot override different type data from \n"
-	          + JSON.stringify(from) + "\n"
-	          + " to \n"
-	          + JSON.stringify(to) + "\n";
-	  }
-	  return ret;
-	}
-
 	/*
 	 * copied from jquery
 	 */
@@ -2634,6 +2611,15 @@ return /******/ (function(modules) { // webpackBootstrap
 	   //convert function to standard meta format
 	  if(typeof newMeta !== "object"){
 	    newMeta = config.meta.nonObjectMetaConvertor(newMeta);
+	  }
+	  
+	  if(newMeta._merge){
+	    var mergeSource = newMeta._merge;
+	    delete newMeta._merge;
+	    newMeta = mergeMeta(mergeSource, newMeta)
+	    if(config.debug && newMeta._debug){
+	      console.log("merged meta(" + newMeta._debug + ")", newMeta);
+	    }
 	  }
 
 	  if(newMeta._meta_type){
@@ -6763,6 +6749,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	var config = __webpack_require__(3);
 	var constant = __webpack_require__(2)
 	var Snippet = __webpack_require__(15)
+	var metaApi = __webpack_require__(12)
 
 	var api={};
 
@@ -6965,7 +6952,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    return this;
 	  },
 	  merge: function(obj){
-	    util.merge(obj, this);
+	    metaApi.mergeMeta(obj, this);
 	    return this;
 	  }
 	  

@@ -101,29 +101,6 @@ util.shallowCopy = function(arg1, arg2, arg3){
   return to;
 };
 
-util.merge = function(from, to){
-  var ret = to;
-  if(from === undefined || from === null){
-    //do nothing
-  }else if (to === undefined || to === null){
-    ret = util.clone(from);
-  }else if(Array.isArray(from) && Array.isArray(to)){
-    Array.prototype.push.apply(to, from);
-  }else if (util.isPlainObject(from) && util.isPlainObject(to)){
-    for(var p in from){
-      to[p] = util.override(from[p], to[p]);
-    }
-  }else if(util.isPlainObject(from) && Array.isArray(to)){
-    to.push(from);
-  }else{
-    throw "cannot override different type data from \n"
-          + JSON.stringify(from) + "\n"
-          + " to \n"
-          + JSON.stringify(to) + "\n";
-  }
-  return ret;
-}
-
 /*
  * copied from jquery
  */

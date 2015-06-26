@@ -7,6 +7,7 @@ var transformers = require("./transformers");
 var config = require("./config");
 var constant = require("./constant")
 var Snippet = require("./snippet")
+var metaApi = require("./meta")
 
 var api={};
 
@@ -209,7 +210,7 @@ _addMetaApiExtending({
     return this;
   },
   merge: function(obj){
-    util.merge(obj, this);
+    metaApi.mergeMeta(obj, this);
     return this;
   }
   

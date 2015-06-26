@@ -1,3 +1,5 @@
+Aj.config.debug=true;
+
 $(function () {
 
   Aj.init(function ($scope) {
@@ -51,8 +53,9 @@ $(function () {
     $scope.snippet(".x-tree").bind($scope.data, {
       tree:{
         _merge: treeMeta,
+        _debug: "merge tree meta",
         _item: {
-          _context: "a.btn"
+          _context: "a.btn",
           nodes: {
             length: {
               _selector: ".x-toggle-btn@>[style:display=]",
@@ -66,8 +69,32 @@ $(function () {
                 _value_ref: ".x-toggle-btn"
               },
               {
-                _virtual: true
-                _selector: ">.x-toggle-icon@>[class:glyphicon-chevron-right|glyphicon-chevron-down]",
+                _virtual: true,
+                _ref: true,
+                _selector: ".x-toggle-btn"
+              },
+              {
+                _value_ref: {
+                  _virtual: true,
+                  _selector: ".x-toggle-btn",
+                }
+              },
+              {
+                _virtual: {
+                  _value_ref: ".x-toggle-btn"
+                }
+              },
+              {
+                _virtual: {
+                  _selector: ">.x-toggle-icon@>[class:(glyphicon-chevron-right|glyphicon-chevron-down)?]",
+                  _transform: function(v){
+                    return v ? "glyphicon-chevron-right" : "glyphicon-chevron-down"
+                  }
+                }
+              },
+              {
+                _virtual: true,
+                _selector: ">.x-toggle-icon@>[class:(glyphicon-chevron-right|glyphicon-chevron-down)?]",
                 _transform: function(v){
                   return v ? "glyphicon-chevron-right" : "glyphicon-chevron-down"
                 }

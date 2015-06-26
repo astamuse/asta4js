@@ -9,7 +9,8 @@ var ResourceMap = require("./resource-map");
 var ValueMonitor=function(scope, varRefRoot){
   this.scope = scope;
   this.varRefRoot = varRefRoot;
-  this.observerMap = new ResourceMap();;
+  this.observerMap = new ResourceMap();
+  this.virtualMonitor = new ResourceMap();
 }
 
 var convertObservePath=function(rootPath, subPath){
@@ -25,6 +26,15 @@ var convertObservePath=function(rootPath, subPath){
   //fix the n-dimensions array path
   observePath = observePath.replace(".[", "[");
   return observePath;
+}
+
+ValueMonitor.prototype.getVirtualMonitor=function(virtualRootPath){
+  var vm = this.virtualMonitor.get("vm", virtualRootPath);
+  if(!vm){
+    vm = new ValueMonitor({}, "");
+    this.virtualMonitor.add("vm", virtualRootPath, vm);
+  }
+  return vm;
 }
 
 ValueMonitor.prototype.createSubMonitor=function(subPath){
@@ -146,6 +156,9 @@ ValueMonitor.prototype.getCompoundValueRef=function(pathes){
 
 ValueMonitor.prototype.discard=function(){
   this.observerMap.discard();
+  if(this._virtual_monitor){
+    this._virtual_monitor.discard();
+  }
 }
 
 module.exports=ValueMonitor;
