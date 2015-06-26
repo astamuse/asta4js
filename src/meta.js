@@ -127,6 +127,14 @@ var creatorDebugIntercept=function(debugId, meta, creator, creatorType){
   }
 }
 
+var getValueMonitor=function(bindContext, virtualRootPath){
+  if(virtualRootPath === undefined){
+    return bindContext._valueMonitor;
+  }else{
+    return bindContext._valueMonitor.getVirtualMonitor(virtualRootPath);
+  }
+}
+
 var normalizeMeta = function(meta, propertyPath, parentMeta){
   
   if(propertyPath === undefined || propertyPath === null){
@@ -169,30 +177,28 @@ var normalizeMeta = function(meta, propertyPath, parentMeta){
   }
   
   if(newMeta._virtual){
-    if(propertyPath){
-      newMeta._virtual_root_path = propertyPath.replace(".", "_dot_");
-    }else{
-      //why the developer do this? kick ass...
-      newMeta._virtual_root_path = "__virtual_from_root_7823iunrsa8df2r__";
-    }
+    newMeta._virtual_root_path = propertyPath;
     propertyPath = "";
+  }else{
+    newMeta._virtual_root_path = undefined;
   }
   
   if(parentMeta){
-    if(parentMeta._virtual_root_path){
-      if(newMeta._virtual_root_path){//virtual under virtual, kick ass!
-        newMeta._virtual_root_path = parentMeta._virtual_root_path + "__cascade_virtual__" + newMeta._virtual_root_path;
-      }else{
+    if(parentMeta._virtual_root_path !== undefined){
+      if(newMeta._virtual_root_path === undefined){
         newMeta._virtual_root_path = parentMeta._virtual_root_path;
+      }else{//virtual under virtual, kick ass!
+        newMeta._virtual_root_path = parentMeta._virtual_root_path + "['" + newMeta._virtual_root_path + "']";
       }
     }
   }
 
   switch(newMeta._meta_type){
     case "_root":
-      var subMetas = ["_value", "_prop", "_splice"];
+      var subMetas = ["_value", "_value_ref" , "_prop", "_splice"];
       var subRefs = {
         _value  : createAndRetrieveSubMetaRef(newMeta, "_value"),
+        _value_ref  : createAndRetrieveSubMetaRef(newMeta, "_value_ref"),
         _prop   : createAndRetrieveSubMetaRef(newMeta, "_prop"),
         _splice : createAndRetrieveSubMetaRef(newMeta, "_splice"),
       };
@@ -240,6 +246,7 @@ var normalizeMeta = function(meta, propertyPath, parentMeta){
     break;
     case "_splice":
     case "_value":
+    case "_value_ref":
       //now we will call the registered meta rewritter to rewrite the meta
       
       if(newMeta._meta_type === "_value"){
@@ -296,13 +303,23 @@ var normalizeMeta = function(meta, propertyPath, parentMeta){
         if(!newMeta._register_on_change){
           var targetPath = newMeta._target_path;
           newMeta._register_on_change = function (bindContext, changeHandler) {
-            bindContext._valueMonitor.pathObserve(newMeta._meta_trace_id, targetPath, function(newValue, oldValue){
-              changeHandler(newValue, oldValue, bindContext);
-            }, newMeta._transform);
-            var vr = bindContext._valueMonitor.getValueRef(targetPath, newMeta._transform);
-            return function(){
-              changeHandler(vr.getValue(), undefined, bindContext);
-            };
+            var vm = getValueMonitor(bindContext, newMeta._virtual_root_path);
+            var vr = vm.getValueRef(targetPath, newMeta._transform);
+            if(newMeta._meta_type === "_value_ref"){
+              vm.pathObserve(newMeta._meta_trace_id, targetPath, function(newValue, oldValue){
+                changeHandler(vr, undefined, bindContext);
+              }, newMeta._transform);
+              return function(){
+                changeHandler(vr, undefined, bindContext);
+              };
+            }else{
+              vm.pathObserve(newMeta._meta_trace_id, targetPath, function(newValue, oldValue){
+                changeHandler(newValue, oldValue, bindContext);
+              }, newMeta._transform);
+              return function(){
+                changeHandler(vr.getValue(), undefined, bindContext);
+              };
+            }
           };
           if(newMeta._item){
             var changeHandlerCreator = newMeta._change_handler_creator;
@@ -335,9 +352,12 @@ var normalizeMeta = function(meta, propertyPath, parentMeta){
                   existingChangeFn.apply(this, arguments);
                 }
                 
+                var vm = getValueMonitor(bindContext, newMeta._virtual_root_path);
+                
                 //register spice at first
                 if(newValue){
-                  bindContext._valueMonitor.arrayObserve(newMeta._meta_trace_id, newValue, function(splices){
+                  
+                  vm.arrayObserve(newMeta._meta_trace_id, newValue, function(splices){
                     
                      //retrieve mapped array for item monitor
                     var mappedArray = arrayMap ? arrayMap.call(newMeta, newValue, newValue, bindContext) : newValue;
@@ -361,7 +381,7 @@ var normalizeMeta = function(meta, propertyPath, parentMeta){
                       for (var i = diff; i >0; i--) {
                         newIndex = newLength - i;
                         newRootMonitorPath = targetPath + "[" + newIndex +"]";
-                        newMonitor = bindContext._valueMonitor.createSubMonitor(newRootMonitorPath);
+                        newMonitor = vm.createSubMonitor(newRootMonitorPath);
                         var childContext = {
                           _valueMonitor: newMonitor,
                           _boundArray: newValue,
@@ -378,7 +398,7 @@ var normalizeMeta = function(meta, propertyPath, parentMeta){
                     }
                   });
                 }else if(oldValue){//which means we need to remove previous registered array observer
-                  bindContext._valueMonitor.removeArrayObserve(newMeta._meta_trace_id);
+                  vm.removeArrayObserve(newMeta._meta_trace_id);
                 }
                 
                 //retrieve mapped array for item monitor
@@ -402,7 +422,7 @@ var normalizeMeta = function(meta, propertyPath, parentMeta){
                 //add new child context binding
                 for(var i=regularOld.length;i<regularNew.length;i++){
                   newRootMonitorPath = targetPath + "[" + i +"]";
-                  newMonitor = bindContext._valueMonitor.createSubMonitor(newRootMonitorPath);
+                  newMonitor = vm.createSubMonitor(newRootMonitorPath);
                   var childContext = {
                     _valueMonitor: newMonitor,
                     _boundArray: newValue,
@@ -423,10 +443,11 @@ var normalizeMeta = function(meta, propertyPath, parentMeta){
             newMeta._change_handler_creator = function(bindContext){
               var spliceFn = spliceChangeHandlerCreator.call(this, bindContext);
               return function(newValue, oldValue, bindContext){
+                var vm = getValueMonitor(bindContext, newMeta._virtual_root_path);
                 if(newValue){
-                  bindContext._valueMonitor.arrayObserve(newMeta._meta_trace_id, newValue, spliceFn);
+                  vm.arrayObserve(newMeta._meta_trace_id, newValue, spliceFn);
                 }else if(oldValue){//which means we need to remove previous registered array observer
-                  bindContext._valueMonitor.removeArrayObserve(newMeta._meta_trace_id);
+                  vm.removeArrayObserve(newMeta._meta_trace_id);
                 }
               }
             }
@@ -437,10 +458,17 @@ var normalizeMeta = function(meta, propertyPath, parentMeta){
       if(!newMeta._assign_change_handler_creator){
         var targetPath = newMeta._target_path;
         newMeta._assign_change_handler_creator = function(bindContext){
-          var vr = bindContext._valueMonitor.getValueRef(targetPath, newMeta._transform)
-          return function(value, bindContext){
-            vr.setValue(value);
-          };
+          var vm = getValueMonitor(bindContext, newMeta._virtual_root_path);
+          if(newMeta._meta_type === "_value_ref"){
+            return function(value, bindContext){
+              throw "Cannot assign value to value reference.";
+            };
+          }else{
+            var vr = vm.getValueRef(targetPath, newMeta._transform)
+            return function(value, bindContext){
+              vr.setValue(value);
+            };
+          }
         }
       }
       
@@ -469,7 +497,7 @@ var normalizeMeta = function(meta, propertyPath, parentMeta){
         }else{
           var recursivePath;
           if(propertyPath){
-            recursivePath = propertyPath + "." + p;
+            recursivePath = propertyPath + "['" + p + "']"; 
           }else{
             recursivePath = p;
           }

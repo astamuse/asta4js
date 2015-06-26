@@ -163,7 +163,7 @@ BindContext.prototype._bind=function(meta){
     meta = metaApi.normalizeMeta(meta);
   }
 
-  var nonRecursive = ["_value", "_splice"];
+  var nonRecursive = ["_value", "_value_ref", "_splice"];
   for(var i in nonRecursive){
     var sub = meta[nonRecursive[i]];
     if(!sub){

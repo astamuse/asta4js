@@ -10,13 +10,13 @@ var ValueMonitor=function(scope, varRefRoot){
   this.scope = scope;
   this.varRefRoot = varRefRoot;
   this.observerMap = new ResourceMap();
-  this.virtualMonitor = new ResourceMap();
+  this.virtualMonitorMap = new ResourceMap();
 }
 
 var convertObservePath=function(rootPath, subPath){
   var observePath;
   if(rootPath){
-    observePath = subPath ? rootPath + "." + subPath : rootPath;
+    observePath = subPath ? rootPath + subPath : rootPath;
   }else{
     observePath = subPath;
   }
@@ -29,10 +29,13 @@ var convertObservePath=function(rootPath, subPath){
 }
 
 ValueMonitor.prototype.getVirtualMonitor=function(virtualRootPath){
-  var vm = this.virtualMonitor.get("vm", virtualRootPath);
+  var k = virtualRootPath ? virtualRootPath : "__virtual_root__7uhanjdsf9";
+  var vm = this.virtualMonitorMap.get("vm", k);
   if(!vm){
-    vm = new ValueMonitor({}, "");
-    this.virtualMonitor.add("vm", virtualRootPath, vm);
+    vm = new ValueMonitor({
+      __id__: util.createUID()
+    }, "__vs__");
+    this.virtualMonitorMap.add("vm", k, vm);
   }
   return vm;
 }
@@ -156,9 +159,7 @@ ValueMonitor.prototype.getCompoundValueRef=function(pathes){
 
 ValueMonitor.prototype.discard=function(){
   this.observerMap.discard();
-  if(this._virtual_monitor){
-    this._virtual_monitor.discard();
-  }
+  this.virtualMonitorMap.discard();
 }
 
 module.exports=ValueMonitor;

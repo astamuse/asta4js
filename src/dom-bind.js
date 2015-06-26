@@ -149,6 +149,8 @@ var _selector = function (meta) {
     meta._selector = meta._selector.substring(0, attrOpIndex);
   }else if(meta._target_path === "_context" && !meta._attr_op){
     meta._attr_op = "[aj-rendered-context-ref=]";
+  }else if(meta._meta_type === "_value_ref" && !meta._attr_op){
+    meta._attr_op = "[aj-rendered-value-ref=]";
   }
     
   meta._selector_after_attr_op = meta._selector;
@@ -266,7 +268,13 @@ var _render = function (meta) {
       if(target.length === 0 && !meta._omit_target_not_found){
         console.error("could not find target of selector:", selector, meta);
       }
-      if(targetPath === "_context"){
+      if(this._meta_type === "_value_ref"){
+        var renderingStr = bindContext.toString() + ":::" + this._meta_trace_id;
+        return function(newValue, oldValue, bindContext){
+           bindContext._addResource("_value_ref_holding", renderingStr, newValue);
+          renderFn.call(self, target, renderingStr, undefined, bindContext);
+        }
+      }else if(targetPath === "_context"){
         //we do not need to observe anything, just return a force render handler
         return function(){
           renderFn.call(self, target, bindContext, undefined, bindContext);
@@ -348,6 +356,26 @@ module.exports.api = {
     }
     if(contextId){
       return BindContext.retrieveById(contextId);
+    }else{
+      return undefined;
+    }
+  },
+  
+  getValueRef: function(node, attrName){
+    var attr = attrName ? attrName : "aj-rendered-value-ref";
+    var refId;
+    if(util.isJQuery(node)){
+      refId = node.attr(attr);
+    }else{
+      //as raw dom element
+      refId = node.getAttribute(attr);
+    }
+    
+    if(refId){
+      var sepIdx = refId.indexOf(":::");
+      var contextId = refId.substring(0, sepIdx);
+      var context = BindContext.retrieveById(contextId);
+      return context._getResource("_value_ref_holding", refId);
     }else{
       return undefined;
     }

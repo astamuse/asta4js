@@ -2476,7 +2476,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	var config=__webpack_require__(3);
 	var constant = __webpack_require__(2)
 
-	var __reverseMetaKeys = ["_meta_type", "_parent_meta", "_orginal_meta", "_meta_id", "_meta_trace_id", "_meta_desc", "_value", "_prop", "_splice", "_target_path"];
+	var __reverseMetaKeys = ["_meta_type", "_parent_meta", "_orginal_meta", "_meta_id", "_meta_trace_id", "_meta_desc", 
+	                         "_value", "_value_ref", "_prop", "_splice", 
+	                         "_target_path", "_virtual", "_virtual_root_path"];
 
 	var __ordered_metaRewritter = null;
 
@@ -2593,6 +2595,14 @@ return /******/ (function(modules) { // webpackBootstrap
 	  }
 	}
 
+	var getValueMonitor=function(bindContext, virtualRootPath){
+	  if(virtualRootPath === undefined){
+	    return bindContext._valueMonitor;
+	  }else{
+	    return bindContext._valueMonitor.getVirtualMonitor(virtualRootPath);
+	  }
+	}
+
 	var normalizeMeta = function(meta, propertyPath, parentMeta){
 	  
 	  if(propertyPath === undefined || propertyPath === null){
@@ -2633,12 +2643,30 @@ return /******/ (function(modules) { // webpackBootstrap
 	  if(newMeta._meta_id){
 	    newMeta._orginal_meta = util.clone(meta);
 	  }
+	  
+	  if(newMeta._virtual){
+	    newMeta._virtual_root_path = propertyPath;
+	    propertyPath = "";
+	  }else{
+	    newMeta._virtual_root_path = undefined;
+	  }
+	  
+	  if(parentMeta){
+	    if(parentMeta._virtual_root_path !== undefined){
+	      if(newMeta._virtual_root_path === undefined){
+	        newMeta._virtual_root_path = parentMeta._virtual_root_path;
+	      }else{//virtual under virtual, kick ass!
+	        newMeta._virtual_root_path = parentMeta._virtual_root_path + "['" + newMeta._virtual_root_path + "']";
+	      }
+	    }
+	  }
 
 	  switch(newMeta._meta_type){
 	    case "_root":
-	      var subMetas = ["_value", "_prop", "_splice"];
+	      var subMetas = ["_value", "_value_ref" , "_prop", "_splice"];
 	      var subRefs = {
 	        _value  : createAndRetrieveSubMetaRef(newMeta, "_value"),
+	        _value_ref  : createAndRetrieveSubMetaRef(newMeta, "_value_ref"),
 	        _prop   : createAndRetrieveSubMetaRef(newMeta, "_prop"),
 	        _splice : createAndRetrieveSubMetaRef(newMeta, "_splice"),
 	      };
@@ -2686,6 +2714,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    break;
 	    case "_splice":
 	    case "_value":
+	    case "_value_ref":
 	      //now we will call the registered meta rewritter to rewrite the meta
 	      
 	      if(newMeta._meta_type === "_value"){
@@ -2742,13 +2771,23 @@ return /******/ (function(modules) { // webpackBootstrap
 	        if(!newMeta._register_on_change){
 	          var targetPath = newMeta._target_path;
 	          newMeta._register_on_change = function (bindContext, changeHandler) {
-	            bindContext._valueMonitor.pathObserve(newMeta._meta_trace_id, targetPath, function(newValue, oldValue){
-	              changeHandler(newValue, oldValue, bindContext);
-	            }, newMeta._transform);
-	            var vr = bindContext._valueMonitor.getValueRef(targetPath, newMeta._transform);
-	            return function(){
-	              changeHandler(vr.getValue(), undefined, bindContext);
-	            };
+	            var vm = getValueMonitor(bindContext, newMeta._virtual_root_path);
+	            var vr = vm.getValueRef(targetPath, newMeta._transform);
+	            if(newMeta._meta_type === "_value_ref"){
+	              vm.pathObserve(newMeta._meta_trace_id, targetPath, function(newValue, oldValue){
+	                changeHandler(vr, undefined, bindContext);
+	              }, newMeta._transform);
+	              return function(){
+	                changeHandler(vr, undefined, bindContext);
+	              };
+	            }else{
+	              vm.pathObserve(newMeta._meta_trace_id, targetPath, function(newValue, oldValue){
+	                changeHandler(newValue, oldValue, bindContext);
+	              }, newMeta._transform);
+	              return function(){
+	                changeHandler(vr.getValue(), undefined, bindContext);
+	              };
+	            }
 	          };
 	          if(newMeta._item){
 	            var changeHandlerCreator = newMeta._change_handler_creator;
@@ -2781,9 +2820,12 @@ return /******/ (function(modules) { // webpackBootstrap
 	                  existingChangeFn.apply(this, arguments);
 	                }
 	                
+	                var vm = getValueMonitor(bindContext, newMeta._virtual_root_path);
+	                
 	                //register spice at first
 	                if(newValue){
-	                  bindContext._valueMonitor.arrayObserve(newMeta._meta_trace_id, newValue, function(splices){
+	                  
+	                  vm.arrayObserve(newMeta._meta_trace_id, newValue, function(splices){
 	                    
 	                     //retrieve mapped array for item monitor
 	                    var mappedArray = arrayMap ? arrayMap.call(newMeta, newValue, newValue, bindContext) : newValue;
@@ -2807,7 +2849,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	                      for (var i = diff; i >0; i--) {
 	                        newIndex = newLength - i;
 	                        newRootMonitorPath = targetPath + "[" + newIndex +"]";
-	                        newMonitor = bindContext._valueMonitor.createSubMonitor(newRootMonitorPath);
+	                        newMonitor = vm.createSubMonitor(newRootMonitorPath);
 	                        var childContext = {
 	                          _valueMonitor: newMonitor,
 	                          _boundArray: newValue,
@@ -2824,7 +2866,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	                    }
 	                  });
 	                }else if(oldValue){//which means we need to remove previous registered array observer
-	                  bindContext._valueMonitor.removeArrayObserve(newMeta._meta_trace_id);
+	                  vm.removeArrayObserve(newMeta._meta_trace_id);
 	                }
 	                
 	                //retrieve mapped array for item monitor
@@ -2848,7 +2890,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	                //add new child context binding
 	                for(var i=regularOld.length;i<regularNew.length;i++){
 	                  newRootMonitorPath = targetPath + "[" + i +"]";
-	                  newMonitor = bindContext._valueMonitor.createSubMonitor(newRootMonitorPath);
+	                  newMonitor = vm.createSubMonitor(newRootMonitorPath);
 	                  var childContext = {
 	                    _valueMonitor: newMonitor,
 	                    _boundArray: newValue,
@@ -2869,10 +2911,11 @@ return /******/ (function(modules) { // webpackBootstrap
 	            newMeta._change_handler_creator = function(bindContext){
 	              var spliceFn = spliceChangeHandlerCreator.call(this, bindContext);
 	              return function(newValue, oldValue, bindContext){
+	                var vm = getValueMonitor(bindContext, newMeta._virtual_root_path);
 	                if(newValue){
-	                  bindContext._valueMonitor.arrayObserve(newMeta._meta_trace_id, newValue, spliceFn);
+	                  vm.arrayObserve(newMeta._meta_trace_id, newValue, spliceFn);
 	                }else if(oldValue){//which means we need to remove previous registered array observer
-	                  bindContext._valueMonitor.removeArrayObserve(newMeta._meta_trace_id);
+	                  vm.removeArrayObserve(newMeta._meta_trace_id);
 	                }
 	              }
 	            }
@@ -2883,10 +2926,17 @@ return /******/ (function(modules) { // webpackBootstrap
 	      if(!newMeta._assign_change_handler_creator){
 	        var targetPath = newMeta._target_path;
 	        newMeta._assign_change_handler_creator = function(bindContext){
-	          var vr = bindContext._valueMonitor.getValueRef(targetPath, newMeta._transform)
-	          return function(value, bindContext){
-	            vr.setValue(value);
-	          };
+	          var vm = getValueMonitor(bindContext, newMeta._virtual_root_path);
+	          if(newMeta._meta_type === "_value_ref"){
+	            return function(value, bindContext){
+	              throw "Cannot assign value to value reference.";
+	            };
+	          }else{
+	            var vr = vm.getValueRef(targetPath, newMeta._transform)
+	            return function(value, bindContext){
+	              vr.setValue(value);
+	            };
+	          }
 	        }
 	      }
 	      
@@ -2915,7 +2965,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	        }else{
 	          var recursivePath;
 	          if(propertyPath){
-	            recursivePath = propertyPath + "." + p;
+	            recursivePath = propertyPath + "['" + p + "']"; 
 	          }else{
 	            recursivePath = p;
 	          }
@@ -5055,7 +5105,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    meta = metaApi.normalizeMeta(meta);
 	  }
 
-	  var nonRecursive = ["_value", "_splice"];
+	  var nonRecursive = ["_value", "_value_ref", "_splice"];
 	  for(var i in nonRecursive){
 	    var sub = meta[nonRecursive[i]];
 	    if(!sub){
@@ -5508,13 +5558,14 @@ return /******/ (function(modules) { // webpackBootstrap
 	var ValueMonitor=function(scope, varRefRoot){
 	  this.scope = scope;
 	  this.varRefRoot = varRefRoot;
-	  this.observerMap = new ResourceMap();;
+	  this.observerMap = new ResourceMap();
+	  this.virtualMonitorMap = new ResourceMap();
 	}
 
 	var convertObservePath=function(rootPath, subPath){
 	  var observePath;
 	  if(rootPath){
-	    observePath = subPath ? rootPath + "." + subPath : rootPath;
+	    observePath = subPath ? rootPath + subPath : rootPath;
 	  }else{
 	    observePath = subPath;
 	  }
@@ -5524,6 +5575,18 @@ return /******/ (function(modules) { // webpackBootstrap
 	  //fix the n-dimensions array path
 	  observePath = observePath.replace(".[", "[");
 	  return observePath;
+	}
+
+	ValueMonitor.prototype.getVirtualMonitor=function(virtualRootPath){
+	  var k = virtualRootPath ? virtualRootPath : "__virtual_root__7uhanjdsf9";
+	  var vm = this.virtualMonitorMap.get("vm", k);
+	  if(!vm){
+	    vm = new ValueMonitor({
+	      __id__: util.createUID()
+	    }, "__vs__");
+	    this.virtualMonitorMap.add("vm", k, vm);
+	  }
+	  return vm;
 	}
 
 	ValueMonitor.prototype.createSubMonitor=function(subPath){
@@ -5645,6 +5708,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	ValueMonitor.prototype.discard=function(){
 	  this.observerMap.discard();
+	  this.virtualMonitorMap.discard();
 	}
 
 	module.exports=ValueMonitor;
@@ -6529,6 +6593,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	    meta._selector = meta._selector.substring(0, attrOpIndex);
 	  }else if(meta._target_path === "_context" && !meta._attr_op){
 	    meta._attr_op = "[aj-rendered-context-ref=]";
+	  }else if(meta._meta_type === "_value_ref" && !meta._attr_op){
+	    meta._attr_op = "[aj-rendered-value-ref=]";
 	  }
 	    
 	  meta._selector_after_attr_op = meta._selector;
@@ -6646,7 +6712,13 @@ return /******/ (function(modules) { // webpackBootstrap
 	      if(target.length === 0 && !meta._omit_target_not_found){
 	        console.error("could not find target of selector:", selector, meta);
 	      }
-	      if(targetPath === "_context"){
+	      if(this._meta_type === "_value_ref"){
+	        var renderingStr = bindContext.toString() + ":::" + this._meta_trace_id;
+	        return function(newValue, oldValue, bindContext){
+	           bindContext._addResource("_value_ref_holding", renderingStr, newValue);
+	          renderFn.call(self, target, renderingStr, undefined, bindContext);
+	        }
+	      }else if(targetPath === "_context"){
 	        //we do not need to observe anything, just return a force render handler
 	        return function(){
 	          renderFn.call(self, target, bindContext, undefined, bindContext);
@@ -6728,6 +6800,26 @@ return /******/ (function(modules) { // webpackBootstrap
 	    }
 	    if(contextId){
 	      return BindContext.retrieveById(contextId);
+	    }else{
+	      return undefined;
+	    }
+	  },
+	  
+	  getValueRef: function(node, attrName){
+	    var attr = attrName ? attrName : "aj-rendered-value-ref";
+	    var refId;
+	    if(util.isJQuery(node)){
+	      refId = node.attr(attr);
+	    }else{
+	      //as raw dom element
+	      refId = node.getAttribute(attr);
+	    }
+	    
+	    if(refId){
+	      var sepIdx = refId.indexOf(":::");
+	      var contextId = refId.substring(0, sepIdx);
+	      var context = BindContext.retrieveById(contextId);
+	      return context._getResource("_value_ref_holding", refId);
 	    }else{
 	      return undefined;
 	    }
