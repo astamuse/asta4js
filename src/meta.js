@@ -497,7 +497,7 @@ var normalizeMeta = function(meta, propertyPath, parentMeta){
         }else{
           var recursivePath;
           if(propertyPath){
-            recursivePath = propertyPath + "['" + p + "']"; 
+            recursivePath = propertyPath + "." + p; 
           }else{
             recursivePath = p;
           }

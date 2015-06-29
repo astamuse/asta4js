@@ -63,7 +63,6 @@ $(function () {
                 return v ? "" : "none";
               }
             },
-            /*
             "@collapsed" :[
               {
                 _virtual: true,
@@ -84,7 +83,6 @@ $(function () {
                 }
               },
             ]//end @collapsed
-            */
           },// nodes
         },
       }

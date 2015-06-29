@@ -16,6 +16,9 @@ $(function () {
         {
           _virtual: true,
           _selector: ".x-show"
+        },
+        {
+          _selector: ".x-show-direct"
         }
       ]
     }).bind(".x-add", "click", function(){

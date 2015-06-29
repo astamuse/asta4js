@@ -13,19 +13,48 @@ var ValueMonitor=function(scope, varRefRoot){
   this.virtualMonitorMap = new ResourceMap();
 }
 
-var convertObservePath=function(rootPath, subPath){
-  var observePath;
-  if(rootPath){
-    observePath = subPath ? rootPath + subPath : rootPath;
+var concatPath = function(p1, p2){
+  var path;
+  if(p1){
+    path = p2 ? p1 + "." + p2 : p1;
   }else{
-    observePath = subPath;
+    path = p2;
   }
+  //fix the n-dimensions array path
+  path = path.replace(".[", "[");
+  return path;
+}
+
+var convertObservePath=function(rootPath, subPath){
+  var observePath = concatPath(rootPath, subPath);
   if(!observePath){
       throw "The scope root cannot be observed";
   }
   //fix the n-dimensions array path
   observePath = observePath.replace(".[", "[");
-  return observePath;
+  
+  var parts = observePath.split(".");
+  var safePath = "";
+  var arrayReg = /(\[[0-9]+\])+/
+  var match;
+  var p;
+  for(var i=0;i<parts.length;i++){
+    p = parts[i];
+    match = arrayReg.exec(p);
+    if(match){
+      p = p.substring(0, match.index)
+      if(p){
+        safePath += "['" + p + "']";
+      }
+      safePath += match[0];
+    }else{
+      if(p){
+        safePath += "['" + p + "']";
+      }
+    }
+  }
+  
+  return safePath;
 }
 
 ValueMonitor.prototype.getVirtualMonitor=function(virtualRootPath){
@@ -41,7 +70,7 @@ ValueMonitor.prototype.getVirtualMonitor=function(virtualRootPath){
 }
 
 ValueMonitor.prototype.createSubMonitor=function(subPath){
-  var observePath = convertObservePath(this.varRefRoot, subPath);
+   var observePath = concatPath(this.varRefRoot, subPath);
   return new ValueMonitor(this.scope, observePath);
 };
 
@@ -61,18 +90,23 @@ ValueMonitor.prototype.pathObserve=function(identifier, subPath, changeFn, trans
   this.observerMap.add(observePath, identifier, observer);
 }
 
-function setValueWithSpawn(ref, path, value){
-  var dotIndex = path.indexOf(".");
-  if(dotIndex < 0){
-    ref[path] = value;
+function setValueWithSpawn(ref, path, value, pathPartIndex){
+  var index;
+  if(pathPartIndex === undefined){
+    index = 0;
   }else{
-    var firstSeg = path.substring(0, dotIndex);
-    var leftSeg = path.substring(dotIndex+1);
-    if(!ref[firstSeg]){
-      ref[firstSeg] = {};
-    }
-    setValueWithSpawn(ref[firstSeg], leftSeg, value);
+    index = pathPartIndex;
   }
+  
+  if(index == path.length -1){
+    ref[path[index]] = value;
+  }else{
+    if(!ref[path[index]]){
+      ref[path[index]] = {};
+    }
+    setValueWithSpawn(ref[path[index]], path, value, index+1);
+  }
+
 }
 
 ValueMonitor.prototype.getValueRef=function(subPath, transform){
@@ -89,7 +123,7 @@ ValueMonitor.prototype.getValueRef=function(subPath, transform){
             spawn = true; //default to generate all necessary sub path
           }
           if(spawn){
-            setValueWithSpawn(scope, observePath, tv);
+            setValueWithSpawn(scope, path, tv);
           }
       }
     },
