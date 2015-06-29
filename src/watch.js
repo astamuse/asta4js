@@ -7,23 +7,6 @@ var config = require("./config");
 var constant = require("./constant")
 var ValueMonitor = require("./value-monitor")
 
-var getWatchDelegateScope=function(bindContext, meta){
-  var watchDelegateScope = bindContext._getResource("_watch", meta._meta_trace_id);
-  if(!watchDelegateScope){
-    watchDelegateScope = {
-      value: undefined,
-    };
-    var valueMonitor = new ValueMonitor(watchDelegateScope, "");
-    watchDelegateScope.valueMonitor = valueMonitor;
-    watchDelegateScope.valueRef = valueMonitor.getValueRef("value");
-    watchDelegateScope.discard=function(){
-      this.valueMonitor.discard();
-    }
-    bindContext._addResource("_watch", meta._meta_trace_id, watchDelegateScope);
-  }
-  return watchDelegateScope;
-}
-
 var _watch = function (meta) {
   var watchDef = meta._watch;
   var parentPath = meta._target_path;
@@ -48,31 +31,10 @@ var _watch = function (meta) {
     return path;
   });
   
-  if (!meta._register_on_change) {
-    meta._register_on_change = function(bindContext, changeHandler) {
-      var watchDelegateScope = getWatchDelegateScope(bindContext, meta);
-      watchDelegateScope.valueMonitor.pathObserve(meta._meta_trace_id, "value", function(newValue, oldValue){
-        changeHandler(newValue, oldValue, bindContext);
-      });
-      return function(){
-        changeHandler(watchDelegateScope.valueRef.getValue(), undefined, bindContext);
-      }
-    };
-  }
-  
-  if(!meta._assign){
-    meta._assign = function (value, bindContext){
-      var watchDelegateScope = getWatchDelegateScope(bindContext, meta);
-      watchDelegateScope.valueRef.setValue(value);
-      if(watchDef._store){
-        bindContext._valueMonitor.getValueRef(meta._target_path).setValue(value);
-      }
-    };
-  }
+  meta._virtual = true;
   
   if(!meta._register_assign){
     meta._register_assign = function (bindContext, changeHandler){
-      var watchDelegateScope = getWatchDelegateScope(bindContext, meta);
       bindContext._valueMonitor.compoundObserve(meta._meta_trace_id, observerTargets, function(newValues, oldValues){
         if(watchDef._cal){
           changeHandler(watchDef._cal.apply(null, newValues), bindContext);
