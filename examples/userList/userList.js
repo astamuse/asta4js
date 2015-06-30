@@ -45,8 +45,8 @@ $(function () {
       list: {
         _duplicator: ".x-row",
         _item: {
-          _index    : ".x-seq",
           _context  : ".x-remove",
+          _index    : ".x-seq",
           name      : ".x-name",
           bloodType : ".x-bloodtype",
           sex : {

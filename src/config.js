@@ -5,6 +5,18 @@ var _global = window ? window : {};
 
 module.exports = {
   $: _global.jQuery,
+  moduleRequire: function(modName, callback){
+    //try to use requirejs as default loader
+    if(requirejs){
+      requirejs([modName], function(mod){
+        callback(mod);
+      });
+    }else{
+      //fallback to commonjs style
+      callback(require(module));
+    }
+    
+  },
   debug : true,
   autoSyncAfterJqueryAjax: true,
   meta  : {

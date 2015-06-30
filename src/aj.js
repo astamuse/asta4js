@@ -20,10 +20,7 @@ Aj.sync = util.sync;
 
 Aj.arrayUtil = require("./arrayUtil");
 
-Aj.init = function(initFunc){
-  var scope = Aj.config.scope.create();
-  initFunc(scope);
-}
+Aj.init = require("./init");
 
 Aj.delay=Aj.util.delay;
 
@@ -47,5 +44,7 @@ if($){
     });
   }
 }
+
+
 
 module.exports = Aj;
