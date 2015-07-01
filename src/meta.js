@@ -492,7 +492,7 @@ var normalizeMeta = function(meta, propertyPath, parentMeta){
         if(ppm.nonMeta){
           continue;
         }
-        if(p === "_index" || p === "_indexes" || p === "_context"){
+        if(p === "_index" || p === "_indexes" || p === "_context" || p === "_uid"){
           newMeta[p] = normalizeMeta(ppm, p, newMeta);
         }else{
           var recursivePath;
@@ -605,9 +605,11 @@ config.meta.nonObjectMetaConvertor = function(meta){
 };
 
 config.meta.fieldClassifier = function (fieldName, metaId) {
-  if (fieldName === "_context"){
+  if (fieldName === "_uid"){
     return "_prop";
-  } else if (fieldName === "_index"){
+  }else if (fieldName === "_context"){
+    return "_prop";
+  }else if (fieldName === "_index"){
     return "_prop";
   } else if (fieldName === "_indexes") {
     return "_prop";

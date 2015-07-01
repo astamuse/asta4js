@@ -688,7 +688,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	        if(ppm.nonMeta){
 	          continue;
 	        }
-	        if(p === "_index" || p === "_indexes" || p === "_context"){
+	        if(p === "_index" || p === "_indexes" || p === "_context" || p === "_uid"){
 	          newMeta[p] = normalizeMeta(ppm, p, newMeta);
 	        }else{
 	          var recursivePath;
@@ -801,9 +801,11 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 	config.meta.fieldClassifier = function (fieldName, metaId) {
-	  if (fieldName === "_context"){
+	  if (fieldName === "_uid"){
 	    return "_prop";
-	  } else if (fieldName === "_index"){
+	  }else if (fieldName === "_context"){
+	    return "_prop";
+	  }else if (fieldName === "_index"){
 	    return "_prop";
 	  } else if (fieldName === "_indexes") {
 	    return "_prop";
@@ -3803,6 +3805,12 @@ return /******/ (function(modules) { // webpackBootstrap
 	           bindContext._addResource("_value_ref_holding", renderingStr, newValue);
 	          renderFn.call(self, target, renderingStr, undefined, bindContext);
 	        }
+	      }else if(targetPath === "_uid"){
+	        //we do not need to observe anything, just return a force render handler with uid
+	        return function(){
+	          var uid = util.createUID();
+	          renderFn.call(self, target, uid, undefined, bindContext);
+	        }
 	      }else if(targetPath === "_context"){
 	        //we do not need to observe anything, just return a force render handler
 	        return function(){
@@ -5268,8 +5276,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	    if(typeof v === "function"){
 	      (function(k, v){
 	        wmod[k] = function(){
-	          v.apply(this, arguments);
+	          var ret = v.apply(this, arguments);
 	          util.sync();
+	          return ret;
 	        }
 	      })(k, v);
 	    }else{

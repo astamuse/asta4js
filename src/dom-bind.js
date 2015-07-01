@@ -274,6 +274,12 @@ var _render = function (meta) {
            bindContext._addResource("_value_ref_holding", renderingStr, newValue);
           renderFn.call(self, target, renderingStr, undefined, bindContext);
         }
+      }else if(targetPath === "_uid"){
+        //we do not need to observe anything, just return a force render handler with uid
+        return function(){
+          var uid = util.createUID();
+          renderFn.call(self, target, uid, undefined, bindContext);
+        }
       }else if(targetPath === "_context"){
         //we do not need to observe anything, just return a force render handler
         return function(){

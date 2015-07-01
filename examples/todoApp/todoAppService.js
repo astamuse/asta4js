@@ -21,9 +21,9 @@ var service = {
       callback(list);
     });
   },
-  
-  calUIControlData : function(list){
-    var control = {};
+
+  calStatistics : function(list){
+    var stat = {};
     
     var calList = list
     if(!calList){
@@ -37,13 +37,13 @@ var service = {
       }
     }
     
-    control.count = list.length;
-    control.completeCount = completeCount;
-    control.unCompleteCount = list.length-completeCount;
-    control.allCompleted = completeCount == list.length;
-    return control;
+    stat.count = list.length;
+    stat.completeCount = completeCount;
+    stat.unCompleteCount = list.length-completeCount;
+    stat.allCompleted = completeCount == list.length;
+    return stat;
 
-  };
+  }
 };
 
 define(service);

@@ -15,8 +15,9 @@ var wrapSyncToModule = function(mod){
     if(typeof v === "function"){
       (function(k, v){
         wmod[k] = function(){
-          v.apply(this, arguments);
+          var ret = v.apply(this, arguments);
           util.sync();
+          return ret;
         }
       })(k, v);
     }else{

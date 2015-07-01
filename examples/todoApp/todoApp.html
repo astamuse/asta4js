@@ -133,6 +133,17 @@ body {
 	display: none;
 }
 
+#todo-list li .operating-msg{
+    font-size: 8px;
+    font-style: italic;
+    color: grey;
+    display: none;
+}
+
+#todo-list li .operating-msg-show{
+    display: block;
+}
+
 #todoapp footer {
 	display: none;
 	margin: 0 -20px -20px -20px;
@@ -230,9 +241,13 @@ body {
             <ul id="todo-list">
                 <li class="x-todo-item">
                     <div class="view">
-                        <input name="todo-complete" class="toggle" type="checkbox"> <label class="x-todo-text">sdfdsf</label>
-                        <a class="destroy" index="?"></a>
-                    </div> <input name="todo-input" class="edit" type="text" value="sdfdsf">
+                        <input name="todo-complete" class="toggle" type="checkbox"> 
+                        <label class="x-todo-text">sdfdsf</label>
+                        <a class="destroy"></a>
+                    </div> 
+                    <div class="edit">
+                        <input name="todo-input" type="text" value="sdfdsf">
+                    </div>
                 </li>
                 <!-- li class="done">
                     <div class="view">
