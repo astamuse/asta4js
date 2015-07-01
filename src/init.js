@@ -102,7 +102,7 @@ module.exports = function(arg1, arg2){
       })(modName, wrap, cache, i);
     }
   }else{
-    acceptModule(undefined, undefined, undefined, undefined, undefined, undefined, [], initFunc);
+    acceptModule(undefined, undefined, undefined, undefined, undefined, 0, [], initFunc);
   }
   
 };
