@@ -1,10 +1,5 @@
 <html>
 <head>
-<script
-    src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
-<script src="../../dist/aj.js"></script>
-<script src="todoApp.js"></script>
-
 <style>
 html, body {
 	margin: 0;
@@ -138,6 +133,17 @@ body {
 	display: none;
 }
 
+#todo-list li .operating-msg{
+    font-size: 8px;
+    font-style: italic;
+    color: grey;
+    display: none;
+}
+
+#todo-list li .operating-msg-show{
+    display: block;
+}
+
 #todoapp footer {
 	display: none;
 	margin: 0 -20px -20px -20px;
@@ -235,9 +241,13 @@ body {
             <ul id="todo-list">
                 <li class="x-todo-item">
                     <div class="view">
-                        <input name="todo-complete" class="toggle" type="checkbox"> <label class="x-todo-text">sdfdsf</label>
-                        <a class="destroy" index="?"></a>
-                    </div> <input name="todo-input" class="edit" type="text" value="sdfdsf">
+                        <input name="todo-complete" class="toggle" type="checkbox"> 
+                        <label class="x-todo-text">sdfdsf</label>
+                        <a class="destroy"></a>
+                    </div> 
+                    <div class="edit">
+                        <input name="todo-input" type="text" value="sdfdsf">
+                    </div>
                 </li>
                 <!-- li class="done">
                     <div class="view">
@@ -267,6 +277,11 @@ body {
     </div>
 
     <div id="instructions">Double-click to edit a todo.</div>
+
+    
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+    <script src="../../dist/aj.js"></script>
+    <script data-main="todoApp.js" src="require.min.js"></script>
 
 </body>
 </html>
