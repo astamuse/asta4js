@@ -37,7 +37,7 @@ Asta4js is a MVVM framework which allows independent html template and separate 
 
 Plenty examples can be found at [http://astamuse.github.io/asta4js](http://astamuse.github.io/asta4js)
 
-User guide is at [Asta4js wiki](https://github.com/astamuse/asta4js/wiki)
+User guide is at [Asta4js wiki](https://github.com/astamuse/asta4js/wiki/User-Guide)
 
 ## Why Asta4js
 
