@@ -2774,9 +2774,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  moduleRequire: function(modName, callback){
 	    //try to use requirejs as default loader
 	    if(requirejs){
-	      requirejs([modName], function(mod){
-	        callback(mod);
-	      });
+	      requirejs([modName], callback);
 	    }else{
 	      //fallback to commonjs style
 	      callback(__webpack_require__(8)(module));

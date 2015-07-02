@@ -8,9 +8,7 @@ module.exports = {
   moduleRequire: function(modName, callback){
     //try to use requirejs as default loader
     if(requirejs){
-      requirejs([modName], function(mod){
-        callback(mod);
-      });
+      requirejs([modName], callback);
     }else{
       //fallback to commonjs style
       callback(require(module));
