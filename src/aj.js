@@ -45,6 +45,10 @@ if($){
   }
 }
 
+//following is for debug purpose, don't access it in client source.
+Aj.__internal__ = {};
+
+Aj.__internal__.Observe=require("../lib/observe")
 
 
 module.exports = Aj;

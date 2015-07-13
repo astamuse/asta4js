@@ -202,6 +202,13 @@ BindContext.prototype._addDiscardHook=function(fn){
 
 BindContext.prototype._discard=function(){
   
+  //to avoid recursively discarding
+  if(this.__in_discarding__){
+    return;
+  }
+  
+  this.__in_discarding__ = true;
+  
   for(var i=0;i<this._discardHook.length;i++){
     this._discardHook[i].apply();
   }
@@ -220,6 +227,7 @@ BindContext.prototype._discard=function(){
   }
   
   delete contextIdMap[this._id];
+  delete this.__in_discarding__;
   
   //console.log("discard context", this._iid);
 

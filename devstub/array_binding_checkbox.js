@@ -24,6 +24,12 @@ $(function () {
           ]
         }
       }
+    }).bind(".x-clean", "click", function(){
+      $scope.data.list = [];
+      Aj.delay(function(){
+        $("#error-msg").text(Aj.__internal__.Observe.Observer._errorThrownDuringCallback);
+      }, 0, 5);
     });
   });
 });
+

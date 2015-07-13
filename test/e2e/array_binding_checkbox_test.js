@@ -130,7 +130,12 @@ describe('array binding checkbox tests', function() {
         assert(text.indexOf("b")<0);
         assert(text.indexOf("c")>=0);
       });
-
+      
+      page.click(".x-clean");
+      
+      page.getText("#error-msg", function(err, text){
+        assert.strictEqual(text, "");
+      });
       
       page.call(done);
     });
