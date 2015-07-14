@@ -81,13 +81,13 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	"use strict";
 
-	var util = __webpack_require__(5);
+	var util = __webpack_require__(1);
 	var shallow = util.shallowCopy;
 
 	var Aj={};
 
 	//basic apis
-	Aj.config = __webpack_require__(7);
+	Aj.config = __webpack_require__(3);
 
 	var $ = Aj.config.$;
 
@@ -99,24 +99,24 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	Aj.sync = util.sync;
 
-	Aj.arrayUtil = __webpack_require__(9);
+	Aj.arrayUtil = __webpack_require__(5);
 
-	Aj.init = __webpack_require__(22);
+	Aj.init = __webpack_require__(21);
 
 	Aj.delay=Aj.util.delay;
 
-	Aj.nest = __webpack_require__(23);
+	Aj.nest = __webpack_require__(22);
 
 
 
 	//entry point
-	__webpack_require__(1);
+	__webpack_require__(23);
 
 	//internal extension
 	__webpack_require__(24);
-	__webpack_require__(17);
-	shallow(__webpack_require__(14).api, Aj);
-	shallow(__webpack_require__(19), Aj);
+	__webpack_require__(16);
+	shallow(__webpack_require__(13).api, Aj);
+	shallow(__webpack_require__(18), Aj);
 
 	if($){
 	  if(Aj.config.autoSyncAfterJqueryAjax){
@@ -126,6 +126,10 @@ return /******/ (function(modules) { // webpackBootstrap
 	  }
 	}
 
+	//following is for debug purpose, don't access it in client source.
+	Aj.__internal__ = {};
+
+	Aj.__internal__.Observe=__webpack_require__(8)
 
 
 	module.exports = Aj;
@@ -136,59 +140,165 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	"use strict";
 
-	var util = __webpack_require__(5);
-	var config = __webpack_require__(7);
-	var Snippet = __webpack_require__(15);
-	var rewriteObserverMeta = __webpack_require__(2);
+	var constant = __webpack_require__(2)
+	var config = __webpack_require__(3);
 
-	var BindContext = __webpack_require__(10);
-	var ValueMonitor = __webpack_require__(16);
+	var util = {};
+	var $ = config.$;
 
-
-	var Scope = function(){
+	util.sync = function(){
+	  Platform.performMicrotaskCheckpoint();
 	};
 
-	var createValueMonitorContext=function(scope, varRef){
+	util.determineRefPath = function (scope, varRef, searchKey) {
+	  var deleteSearchKey;
+	  if(searchKey){
+	    deleteSearchKey = false;
+	  }else{
+	    deleteSearchKey = true;
+	    searchKey = constant.impossibleSearchKey;
+	    varRef[searchKey] = 1;
+	  }
 
-	  var refPath = util.determineRefPath(scope, varRef);
-	  var monitor = new ValueMonitor(scope, refPath);
+	  var refPath = null;
+	  for (var p in scope) {
+	    var ref = scope[p];
+	    if( ref === undefined || ref === null){
+	      continue;
+	    }
+	    if (ref[searchKey]) {
+	      refPath = p;
+	      break;
+	    }
+	  }
 	  
-	  return {
-	    _valueMonitor: monitor
-	  };
+	  if(deleteSearchKey){
+	    delete varRef[searchKey];
+	  }
 
+	  return refPath;
+	};
+
+	var __uidTimestamp = Date.now();
+	var __uidSeq = 0;
+	util.createUID = function () {
+	  if(__uidSeq >= 1000000){
+	    __uidTimestamp = Date.now();
+	    __uidSeq = 0;
+	  }
+	  __uidSeq++;
+	  return "aj-" + __uidSeq + "-"+ __uidTimestamp;
+	};
+
+	util.clone = __webpack_require__(25);
+
+	util.isJQuery = function(obj){
+	  if(obj){
+	    if($){
+	      return obj instanceof $
+	          || obj.constructor == $
+	          || Boolean(obj.jquery);
+	    }else{
+	      return Boolean(obj.jquery);
+	    }
+	  }else{
+	    return false;
+	  }
 	}
-
-	var createSnippetContext=function(snippet){
-	  return {
-	    _snippet: snippet
-	  };
-	}
-
-	Scope.prototype.observe = function(varRef, meta){
-	  var context = createValueMonitorContext(this, varRef);
-	  var bindContext = new BindContext(context);
-	  bindContext._bind(meta);
-	}
-
-	var snippetBindMeta = Snippet.prototype.bindMeta;
 
 	/**
-	 * root/selector
+	 * (from)
+	 * (from, [propList])
+	 * (from, to)
+	 * (from, to, [propList])
 	 */
-	Scope.prototype.snippet = function(arg){
-	  var scope = this;
-	  var snippet = new Snippet(arg);
-	  snippet.bindMeta = function(varRef, meta){
-	    var context = createValueMonitorContext(scope, varRef);
-	    return snippetBindMeta.call(this, meta, context);
-	  };
-	  return snippet;
+	util.shallowCopy = function(arg1, arg2, arg3){
+	  var from = arg1;
+	  var to;
+	  var props;
+	  if(Array.isArray(arg2)){
+	    to = {};
+	    props = arg2;
+	  }else{
+	    to = arg2;
+	    props = arg3;
+	  }
+	  if(!to){
+	    to = {};
+	  }
+	  if(props){
+	    var p;
+	    for(var i=0;i<props.length;i++){
+	      p = props[i];
+	      to[p] = from[p];
+	    }
+	  }else{
+	    for(var p in from){
+	      to[p] = from[p];
+	    }
+	  }
+	  
+	  return to;
+	};
+
+	/*
+	 * copied from jquery
+	 */
+	util.isPlainObject = function(obj){
+	    if ( !obj || obj.toString() !== "[object Object]" || obj.nodeType || obj.setInterval ) {
+	        return false;
+	    }
+	     
+	    if ( obj.constructor && !obj.hasOwnProperty("constructor") && !obj.constructor.prototype.hasOwnProperty("isPrototypeOf") ) {
+	        return false;
+	    }
+	     
+	    var key;
+	    for ( key in obj ) {}
+	 
+	    return key === undefined || obj.hasOwnProperty(key);
+	}
+	    
+	util.findWithRoot = function(rootElem, selector){
+	      if(selector === ":root"){
+	        return rootElem;
+	      }
+	      var result = rootElem.find(selector);
+	      if(result.length === 0){
+	        if(rootElem.is(selector)){
+	          return rootElem;
+	        }
+	      }
+	      return result;
+	};
+
+	util.delay=function(callback, timeout, delayMoreCycles){
+	  if(delayMoreCycles && delayMoreCycles > 0){
+	    setTimeout(function(){
+	      util.delay(callback, timeout, delayMoreCycles-1);
+	    }, 0);
+	    return;
+	  }else{
+	    setTimeout(function(){
+	      callback.apply();
+	      util.sync();
+	    }, timeout ? timeout : 0);
+	  }
 	}
 
-	config.scope.create=function(){
-	  return new Scope();
+	util.safeRemove=function(el){
+	  if(this.isJQuery(el)){
+	    if(document.body.contains(el[0])){
+	      el.remove();
+	    }
+	  }else{
+	    if(document.body.contains(el)){
+	      el.parentNode.removeChild(el);
+	    }
+	  }
 	}
+
+	module.exports = util;
 
 /***/ },
 /* 2 */
@@ -196,13 +306,456 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	"use strict";
 
-	var _lib_observe = __webpack_require__(3);
+	var constant={};
 
-	var util=__webpack_require__(5);
-	var arrayUtil=__webpack_require__(9);
+	constant.metaRewritterPriority={
+	  _nest:  10000, 
+	  _watch: 20000,
+	  _form : 30000,
+	  _duplicator: 40000,
+	  _selector : 50000,
+	  _attr_op : 60000,
+	  _selector_after_attr_op : 65000,
+	  _render : 70000,
+	  _register_dom_change: 80000,
+	  _on_change: 90000,
+	  _assign : 100000
+	};
 
-	var config=__webpack_require__(7);
-	var constant = __webpack_require__(6)
+	constant.impossibleSearchKey = "aj-impossible-search-key-ashfdpnasvdnoaisdfn3423#$%$#$%0as8d23nalsfdasdf";
+
+
+	module.exports = constant;
+
+/***/ },
+/* 3 */
+/***/ function(module, exports, __webpack_require__) {
+
+	"use strict";
+
+	//to avoid unit test failed on lacking of global reference
+	var _global = window ? window : {};
+
+	module.exports = {
+	  $: _global.jQuery,
+	  moduleRequire: function(modName, callback){
+	    //try to use requirejs as default loader
+	    if(requirejs){
+	      requirejs([modName], callback);
+	    }else{
+	      //fallback to commonjs style
+	      callback(__webpack_require__(4)(module));
+	    }
+	    
+	  },
+	  debug : true,
+	  autoSyncAfterJqueryAjax: true,
+	  meta  : {
+	    nonObjectMetaConvertor : function(meta){},
+	    fieldClassifier    : function(fieldName, metaId){},
+	    rewritterMap          : {},
+	    typedFormHandler: {
+	      _render:{},
+	      _register_dom_change:{}
+	    },
+	  },
+	  scope : {
+	    create: function(){}
+	  },
+	  snippet: {
+	    resolveRoot: function(arg){}
+	  },
+	};
+
+
+
+/***/ },
+/* 4 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var map = {
+		"./arrayUtil": 5,
+		"./arrayUtil.js": 5,
+		"./bind-context": 6,
+		"./bind-context-array-assistant": 11,
+		"./bind-context-array-assistant.js": 11,
+		"./bind-context.js": 6,
+		"./config": 3,
+		"./config.js": 3,
+		"./constant": 2,
+		"./constant.js": 2,
+		"./dom-bind": 13,
+		"./dom-bind.js": 13,
+		"./form": 16,
+		"./form-api": 18,
+		"./form-api.js": 18,
+		"./form-option": 17,
+		"./form-option.js": 17,
+		"./form.js": 16,
+		"./init": 21,
+		"./init.js": 21,
+		"./meta": 7,
+		"./meta.js": 7,
+		"./nestedBinding": 22,
+		"./nestedBinding.js": 22,
+		"./resource-map": 10,
+		"./resource-map.js": 10,
+		"./scope": 23,
+		"./scope.js": 23,
+		"./snippet": 14,
+		"./snippet.js": 14,
+		"./transformers": 19,
+		"./transformers.js": 19,
+		"./util": 1,
+		"./util.js": 1,
+		"./value-monitor": 15,
+		"./value-monitor.js": 15,
+		"./watch": 24,
+		"./watch.js": 24
+	};
+	function webpackContext(req) {
+		return __webpack_require__(webpackContextResolve(req));
+	};
+	function webpackContextResolve(req) {
+		return map[req] || (function() { throw new Error("Cannot find module '" + req + "'.") }());
+	};
+	webpackContext.keys = function webpackContextKeys() {
+		return Object.keys(map);
+	};
+	webpackContext.resolve = webpackContextResolve;
+	module.exports = webpackContext;
+	webpackContext.id = 4;
+
+
+/***/ },
+/* 5 */
+/***/ function(module, exports, __webpack_require__) {
+
+	"use strict";
+
+	var arrayUtil = {};
+
+	arrayUtil.swap = function (array, index1, index2) {
+	      var tmp = array[index1];
+	      array[index1] = array[index2];
+	      array[index2] = tmp;
+	};
+
+	arrayUtil.arrayLengthAdjust = function (targetArray, hopeLength, initialNewFn, discardCutFn) {
+	  var existingLength = targetArray.length;
+	  if(initialNewFn){
+	    var newItem;
+	    for(var i=existingLength;i<hopeLength;i++){
+	      newItem = initialNewFn(i);
+	      targetArray[i] = newItem;
+	    }
+	  }else{
+	    for(var i=existingLength;i<hopeLength;i++){
+	      targetArray[i] = undefined;
+	    }
+	  }
+	  var removeCount = existingLength - hopeLength;
+	  if(removeCount > 0){
+	    if(discardCutFn){
+	      for(var i=hopeLength;i<existingLength;i++){
+	        discardCutFn(targetArray[i], i);
+	      }
+	    }
+	    targetArray.splice(hopeLength, removeCount);
+	  }
+	};
+
+	//TODO we should keep ref always
+	arrayUtil.regulateArray = function (v, tryKeepRef) {
+	  if (Array.isArray(v)) {
+	    if(tryKeepRef){
+	      return v;
+	    }else{
+	      return [].concat(v);
+	    }
+	  } else if (v === null || v === undefined) {
+	    return new Array();
+	  } else {
+	    return [v];
+	  }
+	};
+
+	module.exports = arrayUtil;
+
+/***/ },
+/* 6 */
+/***/ function(module, exports, __webpack_require__) {
+
+	"use strict";
+
+	var util = __webpack_require__(1);
+	var config = __webpack_require__(3);
+	var metaApi = __webpack_require__(7);
+
+	var ResourceMap = __webpack_require__(10);
+	var ArrayAssistant = __webpack_require__(11)
+
+	var currentBackgroundContext = undefined;
+	var contextIdMap = {};
+
+	var BindContext=function(override, arrayIndexes){
+	  if(override){
+	    util.shallowCopy(override, this);
+	  }
+	  
+	  this._id = util.createUID();
+	  contextIdMap[this._id] = this;
+	  
+	  this._backgroundContext = currentBackgroundContext;
+	  if(this._backgroundContext){
+	    var self = this;
+	    this._backgroundContext._addDiscardHook(function(){
+	      self._discard();
+	    });
+	  }
+
+	  this._arrayIndexes = arrayIndexes;
+	  if(arrayIndexes){
+	      this._arrayIndex = arrayIndexes[arrayIndexes.length-1];
+	  }
+	  
+	  this._resourceMap = new ResourceMap();
+	  //we declared an independent map for child context due to performance reason
+	  this._childContextMap = new ResourceMap();
+	  
+	  this._discardHook = [];
+	  
+	  this._forceSyncFromObserveTargetMap={};
+	  this._forceSyncToObserveTargetMap={};
+	  
+	  /*
+	  this._iid = util.createUID();
+	  var backgroundIID;
+	  if(this._backgroundContext){
+	    backgroundIID = this._backgroundContext._iid;
+	  }
+	  console.log("create context", this._iid, "for indexes:", this._arrayIndexes, "via background", backgroundIID);
+	  */
+
+	}
+
+	BindContext.prototype.asBackground = function(fn) {
+	  var backup = currentBackgroundContext;
+	  try{
+	    currentBackgroundContext = this;
+	    fn.apply();
+	  }finally{
+	    currentBackgroundContext = backup;
+	  }
+	}
+
+	BindContext.prototype._getArrayIndexes=function(){
+	  return this._arrayIndexes;
+	}
+
+	BindContext.prototype._getArrayIndex=function(){
+	  return this._arrayIndexes[this._arrayIndexes.length-1];
+	}
+
+	BindContext.prototype._addResource=function(category, identifier, discardable){
+	  this._resourceMap.add(category, identifier, discardable);
+	}
+
+	BindContext.prototype._removeResource=function(category, identifier){
+	  this._resourceMap.remove(category, identifier);
+	}
+
+	BindContext.prototype._getResource=function(category, identifier){
+	  return this._resourceMap.get(category, identifier);
+	}
+
+	BindContext.prototype._createChildContext=function(identifier, index, override){
+	  var indexes = this._arrayIndexes ? util.clone(this._arrayIndexes) : [];
+	  indexes.push(index);
+	  var ov = util.shallowCopy(this);
+	  util.shallowCopy(override, ov);
+	  var context = new BindContext(ov, indexes);
+	  this._childContextMap.add(index, identifier, context);
+	  context._parentContext = this;
+	  return context;
+	}
+
+	BindContext.prototype._removeChildContext=function(identifier, index){
+	  this._childContextMap.remove(index, identifier);
+	}
+
+	BindContext.prototype._getChildContext=function(identifier, index){
+	  return this._childContextMap.get(index, identifier);
+	}
+
+	var forceSyncWithObserveTarget=function(targetMap, metaTraceId){
+	  var keys;
+	  if(metaTraceId){
+	    var force = targetMap[metaTraceId];
+	    if(force){
+	      force.apply();
+	    }
+	  }else{
+	    for(var k in targetMap){
+	      targetMap[k].apply();
+	    }
+	  }
+	}
+
+	BindContext.prototype._forceSyncFromObserveTarget=function(metaTraceId){
+	  forceSyncWithObserveTarget(this._forceSyncFromObserveTargetMap, metaTraceId);
+	}
+
+	BindContext.prototype._forceSyncToObserveTarget=function(metaTraceId){
+	  forceSyncWithObserveTarget(this._forceSyncToObserveTargetMap, metaTraceId);
+	}
+
+	BindContext.prototype._bindMetaActions=function(meta){
+	  if(meta._pre_binding){
+	    for(var k=0;k<meta._pre_binding.length;k++){
+	      meta._pre_binding[k].call(meta, this);
+	    }
+	  }
+	  if(meta._register_on_change){
+	    var changeHandler = meta._change_handler_creator.call(meta, this);
+	    var force = meta._register_on_change.call(meta, this, function(){
+	      changeHandler.apply(meta, arguments);
+	    });
+	    this._forceSyncFromObserveTargetMap[meta._meta_trace_id] = force;
+	    force.apply();
+	  }
+	  if(meta._register_assign){
+	    var assignChangeHandler = meta._assign_change_handler_creator.call(meta, this);
+	    var force = meta._register_assign.call(meta, this, function(){
+	      assignChangeHandler.apply(meta, arguments);
+	      util.sync();
+	    });
+	    this._forceSyncToObserveTargetMap[meta._meta_trace_id] = force;
+	  }
+	  if(meta._post_binding){
+	    for(var k=0;k<meta._post_binding.length;k++){
+	      meta._post_binding[k].call(meta, this);
+	    }
+	  }
+	}
+
+	BindContext.prototype._bind=function(meta){  
+	  if(Array.isArray(meta)){
+	    for(var i=0;i<meta.length;i++){
+	      this._bind(meta[i]);
+	    }
+	    return;
+	  }
+	  
+	  if(!meta._meta_trace_id){
+	    meta = metaApi.normalizeMeta(meta);
+	  }
+
+	  var nonRecursive = ["_value", "_value_ref", "_splice"];
+	  for(var i in nonRecursive){
+	    var sub = meta[nonRecursive[i]];
+	    if(!sub){
+	      continue;
+	    }
+	    for(var j=0;j<sub.length;j++){
+	      var sm = sub[j];
+	      this._bindMetaActions(sm);
+	    };
+	  }
+	  
+	  var propSub = meta._prop;
+	  if(!propSub){
+	    return;
+	  }
+	  
+	  for(var i=0;i<propSub.length;i++){
+	    var ps = propSub[i];
+	    for(var p in ps){
+	      //TODO
+	      if(p === "_parent_meta" || p === "_orginal_meta"){
+	        continue;
+	      }
+	      var pm = ps[p];
+	      if(typeof pm === "object"){
+	        this._bind(pm);
+	      }
+	    }
+	  }
+
+	};
+
+	BindContext.prototype._addDiscardHook=function(fn){
+	  this._discardHook.push(fn);
+	};
+
+	BindContext.prototype._discard=function(){
+	  
+	  //to avoid recursively discarding
+	  if(this.__in_discarding__){
+	    return;
+	  }
+	  
+	  this.__in_discarding__ = true;
+	  
+	  for(var i=0;i<this._discardHook.length;i++){
+	    this._discardHook[i].apply();
+	  }
+	  
+	  var p;
+	  for(var k in this){
+	    if(k === "_parentContext" || k === "_backgroundContext"){
+	      continue;
+	    }
+	    p = this[k];
+	    if(p && p._discard){
+	      p._discard();
+	    }else if(p && p.discard){
+	      p.discard();
+	    }
+	  }
+	  
+	  delete contextIdMap[this._id];
+	  delete this.__in_discarding__;
+	  
+	  //console.log("discard context", this._iid);
+
+	};
+
+	BindContext.prototype.getArrayAssistant=function(backtrackingToBackground){
+	  var _backtrackingToBackground = Boolean(backtrackingToBackground);
+	  var assistant = this._getResource("array-assistant", _backtrackingToBackground);
+	  if(assistant){
+	    //OK
+	  }else{
+	    assistant = new ArrayAssistant(this, _backtrackingToBackground);
+	    this._addResource("array-assistant", _backtrackingToBackground, assistant);
+	  }
+	  return assistant;
+	}
+
+	BindContext.prototype.toString=function(){
+	  return this._id;
+	}
+
+	BindContext.retrieveById=function(id){
+	  return contextIdMap[id];
+	}
+
+	module.exports=BindContext;
+
+/***/ },
+/* 7 */
+/***/ function(module, exports, __webpack_require__) {
+
+	"use strict";
+
+	var _lib_observe = __webpack_require__(8);
+
+	var util=__webpack_require__(1);
+	var arrayUtil=__webpack_require__(5);
+
+	var config=__webpack_require__(3);
+	var constant = __webpack_require__(2)
 
 	var __reverseMetaKeys = ["_meta_type", "_parent_meta", "_orginal_meta", "_meta_id", "_meta_trace_id", "_meta_desc", 
 	                         "_value", "_value_ref", "_prop", "_splice", 
@@ -834,7 +1387,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	}
 
 /***/ },
-/* 3 */
+/* 8 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(global, module) {/*
@@ -2549,10 +3102,10 @@ return /******/ (function(modules) { // webpackBootstrap
 	  
 	})(typeof global !== 'undefined' && global && typeof module !== 'undefined' && module ? global : this || window);
 
-	/* WEBPACK VAR INJECTION */}.call(exports, (function() { return this; }()), __webpack_require__(4)(module)))
+	/* WEBPACK VAR INJECTION */}.call(exports, (function() { return this; }()), __webpack_require__(9)(module)))
 
 /***/ },
-/* 4 */
+/* 9 */
 /***/ function(module, exports, __webpack_require__) {
 
 	module.exports = function(module) {
@@ -2568,615 +3121,12 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ },
-/* 5 */
-/***/ function(module, exports, __webpack_require__) {
-
-	"use strict";
-
-	var constant = __webpack_require__(6)
-	var config = __webpack_require__(7);
-
-	var util = {};
-	var $ = config.$;
-
-	util.sync = function(){
-	  Platform.performMicrotaskCheckpoint();
-	};
-
-	util.determineRefPath = function (scope, varRef, searchKey) {
-	  var deleteSearchKey;
-	  if(searchKey){
-	    deleteSearchKey = false;
-	  }else{
-	    deleteSearchKey = true;
-	    searchKey = constant.impossibleSearchKey;
-	    varRef[searchKey] = 1;
-	  }
-
-	  var refPath = null;
-	  for (var p in scope) {
-	    var ref = scope[p];
-	    if( ref === undefined || ref === null){
-	      continue;
-	    }
-	    if (ref[searchKey]) {
-	      refPath = p;
-	      break;
-	    }
-	  }
-	  
-	  if(deleteSearchKey){
-	    delete varRef[searchKey];
-	  }
-
-	  return refPath;
-	};
-
-	var __uidTimestamp = Date.now();
-	var __uidSeq = 0;
-	util.createUID = function () {
-	  if(__uidSeq >= 1000000){
-	    __uidTimestamp = Date.now();
-	    __uidSeq = 0;
-	  }
-	  __uidSeq++;
-	  return "aj-" + __uidSeq + "-"+ __uidTimestamp;
-	};
-
-	util.clone = __webpack_require__(25);
-
-	util.isJQuery = function(obj){
-	  if(obj){
-	    if($){
-	      return obj instanceof $
-	          || obj.constructor == $
-	          || Boolean(obj.jquery);
-	    }else{
-	      return Boolean(obj.jquery);
-	    }
-	  }else{
-	    return false;
-	  }
-	}
-
-	/**
-	 * (from)
-	 * (from, [propList])
-	 * (from, to)
-	 * (from, to, [propList])
-	 */
-	util.shallowCopy = function(arg1, arg2, arg3){
-	  var from = arg1;
-	  var to;
-	  var props;
-	  if(Array.isArray(arg2)){
-	    to = {};
-	    props = arg2;
-	  }else{
-	    to = arg2;
-	    props = arg3;
-	  }
-	  if(!to){
-	    to = {};
-	  }
-	  if(props){
-	    var p;
-	    for(var i=0;i<props.length;i++){
-	      p = props[i];
-	      to[p] = from[p];
-	    }
-	  }else{
-	    for(var p in from){
-	      to[p] = from[p];
-	    }
-	  }
-	  
-	  return to;
-	};
-
-	/*
-	 * copied from jquery
-	 */
-	util.isPlainObject = function(obj){
-	    if ( !obj || obj.toString() !== "[object Object]" || obj.nodeType || obj.setInterval ) {
-	        return false;
-	    }
-	     
-	    if ( obj.constructor && !obj.hasOwnProperty("constructor") && !obj.constructor.prototype.hasOwnProperty("isPrototypeOf") ) {
-	        return false;
-	    }
-	     
-	    var key;
-	    for ( key in obj ) {}
-	 
-	    return key === undefined || obj.hasOwnProperty(key);
-	}
-	    
-	util.findWithRoot = function(rootElem, selector){
-	      if(selector === ":root"){
-	        return rootElem;
-	      }
-	      var result = rootElem.find(selector);
-	      if(result.length === 0){
-	        if(rootElem.is(selector)){
-	          return rootElem;
-	        }
-	      }
-	      return result;
-	};
-
-	util.delay=function(callback, timeout, delayMoreCycles){
-	  if(delayMoreCycles && delayMoreCycles > 0){
-	    setTimeout(function(){
-	      util.delay(callback, timeout, delayMoreCycles-1);
-	    }, 0);
-	    return;
-	  }else{
-	    setTimeout(function(){
-	      callback.apply();
-	      util.sync();
-	    }, timeout ? timeout : 0);
-	  }
-	}
-
-	util.safeRemove=function(el){
-	  if(this.isJQuery(el)){
-	    if(document.body.contains(el[0])){
-	      el.remove();
-	    }
-	  }else{
-	    if(document.body.contains(el)){
-	      el.parentNode.removeChild(el);
-	    }
-	  }
-	}
-
-	module.exports = util;
-
-/***/ },
-/* 6 */
-/***/ function(module, exports, __webpack_require__) {
-
-	"use strict";
-
-	var constant={};
-
-	constant.metaRewritterPriority={
-	  _nest:  10000, 
-	  _watch: 20000,
-	  _form : 30000,
-	  _duplicator: 40000,
-	  _selector : 50000,
-	  _attr_op : 60000,
-	  _selector_after_attr_op : 65000,
-	  _render : 70000,
-	  _register_dom_change: 80000,
-	  _on_change: 90000,
-	  _assign : 100000
-	};
-
-	constant.impossibleSearchKey = "aj-impossible-search-key-ashfdpnasvdnoaisdfn3423#$%$#$%0as8d23nalsfdasdf";
-
-
-	module.exports = constant;
-
-/***/ },
-/* 7 */
-/***/ function(module, exports, __webpack_require__) {
-
-	"use strict";
-
-	//to avoid unit test failed on lacking of global reference
-	var _global = window ? window : {};
-
-	module.exports = {
-	  $: _global.jQuery,
-	  moduleRequire: function(modName, callback){
-	    //try to use requirejs as default loader
-	    if(requirejs){
-	      requirejs([modName], function(mod){
-	        callback(mod);
-	      });
-	    }else{
-	      //fallback to commonjs style
-	      callback(__webpack_require__(8)(module));
-	    }
-	    
-	  },
-	  debug : true,
-	  autoSyncAfterJqueryAjax: true,
-	  meta  : {
-	    nonObjectMetaConvertor : function(meta){},
-	    fieldClassifier    : function(fieldName, metaId){},
-	    rewritterMap          : {},
-	    typedFormHandler: {
-	      _render:{},
-	      _register_dom_change:{}
-	    },
-	  },
-	  scope : {
-	    create: function(){}
-	  },
-	  snippet: {
-	    resolveRoot: function(arg){}
-	  },
-	};
-
-
-
-/***/ },
-/* 8 */
-/***/ function(module, exports, __webpack_require__) {
-
-	var map = {
-		"./arrayUtil": 9,
-		"./arrayUtil.js": 9,
-		"./bind-context": 10,
-		"./bind-context-array-assistant": 12,
-		"./bind-context-array-assistant.js": 12,
-		"./bind-context.js": 10,
-		"./config": 7,
-		"./config.js": 7,
-		"./constant": 6,
-		"./constant.js": 6,
-		"./dom-bind": 14,
-		"./dom-bind.js": 14,
-		"./form": 17,
-		"./form-api": 19,
-		"./form-api.js": 19,
-		"./form-option": 18,
-		"./form-option.js": 18,
-		"./form.js": 17,
-		"./init": 22,
-		"./init.js": 22,
-		"./meta": 2,
-		"./meta.js": 2,
-		"./nestedBinding": 23,
-		"./nestedBinding.js": 23,
-		"./resource-map": 11,
-		"./resource-map.js": 11,
-		"./scope": 1,
-		"./scope.js": 1,
-		"./snippet": 15,
-		"./snippet.js": 15,
-		"./transformers": 20,
-		"./transformers.js": 20,
-		"./util": 5,
-		"./util.js": 5,
-		"./value-monitor": 16,
-		"./value-monitor.js": 16,
-		"./watch": 24,
-		"./watch.js": 24
-	};
-	function webpackContext(req) {
-		return __webpack_require__(webpackContextResolve(req));
-	};
-	function webpackContextResolve(req) {
-		return map[req] || (function() { throw new Error("Cannot find module '" + req + "'.") }());
-	};
-	webpackContext.keys = function webpackContextKeys() {
-		return Object.keys(map);
-	};
-	webpackContext.resolve = webpackContextResolve;
-	module.exports = webpackContext;
-	webpackContext.id = 8;
-
-
-/***/ },
-/* 9 */
-/***/ function(module, exports, __webpack_require__) {
-
-	"use strict";
-
-	var arrayUtil = {};
-
-	arrayUtil.swap = function (array, index1, index2) {
-	      var tmp = array[index1];
-	      array[index1] = array[index2];
-	      array[index2] = tmp;
-	};
-
-	arrayUtil.arrayLengthAdjust = function (targetArray, hopeLength, initialNewFn, discardCutFn) {
-	  var existingLength = targetArray.length;
-	  if(initialNewFn){
-	    var newItem;
-	    for(var i=existingLength;i<hopeLength;i++){
-	      newItem = initialNewFn(i);
-	      targetArray[i] = newItem;
-	    }
-	  }else{
-	    for(var i=existingLength;i<hopeLength;i++){
-	      targetArray[i] = undefined;
-	    }
-	  }
-	  var removeCount = existingLength - hopeLength;
-	  if(removeCount > 0){
-	    if(discardCutFn){
-	      for(var i=hopeLength;i<existingLength;i++){
-	        discardCutFn(targetArray[i], i);
-	      }
-	    }
-	    targetArray.splice(hopeLength, removeCount);
-	  }
-	};
-
-	//TODO we should keep ref always
-	arrayUtil.regulateArray = function (v, tryKeepRef) {
-	  if (Array.isArray(v)) {
-	    if(tryKeepRef){
-	      return v;
-	    }else{
-	      return [].concat(v);
-	    }
-	  } else if (v === null || v === undefined) {
-	    return new Array();
-	  } else {
-	    return [v];
-	  }
-	};
-
-	module.exports = arrayUtil;
-
-/***/ },
 /* 10 */
 /***/ function(module, exports, __webpack_require__) {
 
 	"use strict";
 
-	var util = __webpack_require__(5);
-	var config = __webpack_require__(7);
-	var metaApi = __webpack_require__(2);
-
-	var ResourceMap = __webpack_require__(11);
-	var ArrayAssistant = __webpack_require__(12)
-
-	var currentBackgroundContext = undefined;
-	var contextIdMap = {};
-
-	var BindContext=function(override, arrayIndexes){
-	  if(override){
-	    util.shallowCopy(override, this);
-	  }
-	  
-	  this._id = util.createUID();
-	  contextIdMap[this._id] = this;
-	  
-	  this._backgroundContext = currentBackgroundContext;
-	  if(this._backgroundContext){
-	    var self = this;
-	    this._backgroundContext._addDiscardHook(function(){
-	      self._discard();
-	    });
-	  }
-
-	  this._arrayIndexes = arrayIndexes;
-	  if(arrayIndexes){
-	      this._arrayIndex = arrayIndexes[arrayIndexes.length-1];
-	  }
-	  
-	  this._resourceMap = new ResourceMap();
-	  //we declared an independent map for child context due to performance reason
-	  this._childContextMap = new ResourceMap();
-	  
-	  this._discardHook = [];
-	  
-	  this._forceSyncFromObserveTargetMap={};
-	  this._forceSyncToObserveTargetMap={};
-	  
-	  /*
-	  this._iid = util.createUID();
-	  var backgroundIID;
-	  if(this._backgroundContext){
-	    backgroundIID = this._backgroundContext._iid;
-	  }
-	  console.log("create context", this._iid, "for indexes:", this._arrayIndexes, "via background", backgroundIID);
-	  */
-
-	}
-
-	BindContext.prototype.asBackground = function(fn) {
-	  var backup = currentBackgroundContext;
-	  try{
-	    currentBackgroundContext = this;
-	    fn.apply();
-	  }finally{
-	    currentBackgroundContext = backup;
-	  }
-	}
-
-	BindContext.prototype._getArrayIndexes=function(){
-	  return this._arrayIndexes;
-	}
-
-	BindContext.prototype._getArrayIndex=function(){
-	  return this._arrayIndexes[this._arrayIndexes.length-1];
-	}
-
-	BindContext.prototype._addResource=function(category, identifier, discardable){
-	  this._resourceMap.add(category, identifier, discardable);
-	}
-
-	BindContext.prototype._removeResource=function(category, identifier){
-	  this._resourceMap.remove(category, identifier);
-	}
-
-	BindContext.prototype._getResource=function(category, identifier){
-	  return this._resourceMap.get(category, identifier);
-	}
-
-	BindContext.prototype._createChildContext=function(identifier, index, override){
-	  var indexes = this._arrayIndexes ? util.clone(this._arrayIndexes) : [];
-	  indexes.push(index);
-	  var ov = util.shallowCopy(this);
-	  util.shallowCopy(override, ov);
-	  var context = new BindContext(ov, indexes);
-	  this._childContextMap.add(index, identifier, context);
-	  context._parentContext = this;
-	  return context;
-	}
-
-	BindContext.prototype._removeChildContext=function(identifier, index){
-	  this._childContextMap.remove(index, identifier);
-	}
-
-	BindContext.prototype._getChildContext=function(identifier, index){
-	  return this._childContextMap.get(index, identifier);
-	}
-
-	var forceSyncWithObserveTarget=function(targetMap, metaTraceId){
-	  var keys;
-	  if(metaTraceId){
-	    var force = targetMap[metaTraceId];
-	    if(force){
-	      force.apply();
-	    }
-	  }else{
-	    for(var k in targetMap){
-	      targetMap[k].apply();
-	    }
-	  }
-	}
-
-	BindContext.prototype._forceSyncFromObserveTarget=function(metaTraceId){
-	  forceSyncWithObserveTarget(this._forceSyncFromObserveTargetMap, metaTraceId);
-	}
-
-	BindContext.prototype._forceSyncToObserveTarget=function(metaTraceId){
-	  forceSyncWithObserveTarget(this._forceSyncToObserveTargetMap, metaTraceId);
-	}
-
-	BindContext.prototype._bindMetaActions=function(meta){
-	  if(meta._pre_binding){
-	    for(var k=0;k<meta._pre_binding.length;k++){
-	      meta._pre_binding[k].call(meta, this);
-	    }
-	  }
-	  if(meta._register_on_change){
-	    var changeHandler = meta._change_handler_creator.call(meta, this);
-	    var force = meta._register_on_change.call(meta, this, function(){
-	      changeHandler.apply(meta, arguments);
-	    });
-	    this._forceSyncFromObserveTargetMap[meta._meta_trace_id] = force;
-	    force.apply();
-	  }
-	  if(meta._register_assign){
-	    var assignChangeHandler = meta._assign_change_handler_creator.call(meta, this);
-	    var force = meta._register_assign.call(meta, this, function(){
-	      assignChangeHandler.apply(meta, arguments);
-	      util.sync();
-	    });
-	    this._forceSyncToObserveTargetMap[meta._meta_trace_id] = force;
-	  }
-	  if(meta._post_binding){
-	    for(var k=0;k<meta._post_binding.length;k++){
-	      meta._post_binding[k].call(meta, this);
-	    }
-	  }
-	}
-
-	BindContext.prototype._bind=function(meta){  
-	  if(Array.isArray(meta)){
-	    for(var i=0;i<meta.length;i++){
-	      this._bind(meta[i]);
-	    }
-	    return;
-	  }
-	  
-	  if(!meta._meta_trace_id){
-	    meta = metaApi.normalizeMeta(meta);
-	  }
-
-	  var nonRecursive = ["_value", "_value_ref", "_splice"];
-	  for(var i in nonRecursive){
-	    var sub = meta[nonRecursive[i]];
-	    if(!sub){
-	      continue;
-	    }
-	    for(var j=0;j<sub.length;j++){
-	      var sm = sub[j];
-	      this._bindMetaActions(sm);
-	    };
-	  }
-	  
-	  var propSub = meta._prop;
-	  if(!propSub){
-	    return;
-	  }
-	  
-	  for(var i=0;i<propSub.length;i++){
-	    var ps = propSub[i];
-	    for(var p in ps){
-	      //TODO
-	      if(p === "_parent_meta" || p === "_orginal_meta"){
-	        continue;
-	      }
-	      var pm = ps[p];
-	      if(typeof pm === "object"){
-	        this._bind(pm);
-	      }
-	    }
-	  }
-
-	};
-
-	BindContext.prototype._addDiscardHook=function(fn){
-	  this._discardHook.push(fn);
-	};
-
-	BindContext.prototype._discard=function(){
-	  
-	  for(var i=0;i<this._discardHook.length;i++){
-	    this._discardHook[i].apply();
-	  }
-	  
-	  var p;
-	  for(var k in this){
-	    if(k === "_parentContext" || k === "_backgroundContext"){
-	      continue;
-	    }
-	    p = this[k];
-	    if(p && p._discard){
-	      p._discard();
-	    }else if(p && p.discard){
-	      p.discard();
-	    }
-	  }
-	  
-	  delete contextIdMap[this._id];
-	  
-	  //console.log("discard context", this._iid);
-
-	};
-
-	BindContext.prototype.getArrayAssistant=function(backtrackingToBackground){
-	  var _backtrackingToBackground = Boolean(backtrackingToBackground);
-	  var assistant = this._getResource("array-assistant", _backtrackingToBackground);
-	  if(assistant){
-	    //OK
-	  }else{
-	    assistant = new ArrayAssistant(this, _backtrackingToBackground);
-	    this._addResource("array-assistant", _backtrackingToBackground, assistant);
-	  }
-	  return assistant;
-	}
-
-	BindContext.prototype.toString=function(){
-	  return this._id;
-	}
-
-	BindContext.retrieveById=function(id){
-	  return contextIdMap[id];
-	}
-
-	module.exports=BindContext;
-
-/***/ },
-/* 11 */
-/***/ function(module, exports, __webpack_require__) {
-
-	"use strict";
-
-	var util = __webpack_require__(5);
+	var util = __webpack_require__(1);
 
 	var discardNode=function(node){
 	  if(node){
@@ -3295,12 +3245,12 @@ return /******/ (function(modules) { // webpackBootstrap
 	module.exports=ResourceMap;
 
 /***/ },
-/* 12 */
+/* 11 */
 /***/ function(module, exports, __webpack_require__) {
 
 	"use strict";
 
-	var util = __webpack_require__(5);
+	var util = __webpack_require__(1);
 
 	var canFastReturn=function(assistant, backtracking){
 	  return !(assistant._backtrackingToBackground || backtracking);
@@ -3525,20 +3475,20 @@ return /******/ (function(modules) { // webpackBootstrap
 	module.exports=BindContextArrayAssistant
 
 /***/ },
-/* 13 */,
-/* 14 */
+/* 12 */,
+/* 13 */
 /***/ function(module, exports, __webpack_require__) {
 
 	"use strict";
 
-	var _lib_observe = __webpack_require__(3);
+	var _lib_observe = __webpack_require__(8);
 
-	var util = __webpack_require__(5);
-	var arrayUtil=__webpack_require__(9);
-	var config = __webpack_require__(7);
-	var constant = __webpack_require__(6)
-	var Snippet = __webpack_require__(15);
-	var BindContext = __webpack_require__(10);
+	var util = __webpack_require__(1);
+	var arrayUtil=__webpack_require__(5);
+	var config = __webpack_require__(3);
+	var constant = __webpack_require__(2)
+	var Snippet = __webpack_require__(14);
+	var BindContext = __webpack_require__(6);
 
 	var $ = config.$;
 
@@ -3922,15 +3872,15 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ },
-/* 15 */
+/* 14 */
 /***/ function(module, exports, __webpack_require__) {
 
 	"use strict";
 
-	var util = __webpack_require__(5);
-	var config = __webpack_require__(7);
-	var BindContext = __webpack_require__(10);
-	var ValueMonitor = __webpack_require__(16);
+	var util = __webpack_require__(1);
+	var config = __webpack_require__(3);
+	var BindContext = __webpack_require__(6);
+	var ValueMonitor = __webpack_require__(15);
 
 	var $ = config.$;
 
@@ -4021,16 +3971,16 @@ return /******/ (function(modules) { // webpackBootstrap
 	module.exports = Snippet;
 
 /***/ },
-/* 16 */
+/* 15 */
 /***/ function(module, exports, __webpack_require__) {
 
 	"use strict";
 
-	var _ = __webpack_require__(3);
+	var _ = __webpack_require__(8);
 
-	var util = __webpack_require__(5);
-	var config = __webpack_require__(7);
-	var ResourceMap = __webpack_require__(11);
+	var util = __webpack_require__(1);
+	var config = __webpack_require__(3);
+	var ResourceMap = __webpack_require__(10);
 
 	var ValueMonitor=function(scope, varRefRoot){
 	  this.scope = scope;
@@ -4225,23 +4175,23 @@ return /******/ (function(modules) { // webpackBootstrap
 	module.exports=ValueMonitor;
 
 /***/ },
-/* 17 */
+/* 16 */
 /***/ function(module, exports, __webpack_require__) {
 
 	"use strict";
 
-	var _lib_observe = __webpack_require__(3);
+	var _lib_observe = __webpack_require__(8);
 
-	var util = __webpack_require__(5);
-	var arrayUtil=__webpack_require__(9);
-	var config = __webpack_require__(7);
-	var constant = __webpack_require__(6)
-	var Snippet = __webpack_require__(15)
+	var util = __webpack_require__(1);
+	var arrayUtil=__webpack_require__(5);
+	var config = __webpack_require__(3);
+	var constant = __webpack_require__(2)
+	var Snippet = __webpack_require__(14)
 
-	var BindContext = __webpack_require__(10)
-	var ValueMonitor = __webpack_require__(16)
+	var BindContext = __webpack_require__(6)
+	var ValueMonitor = __webpack_require__(15)
 
-	var optionUtil = __webpack_require__(18)
+	var optionUtil = __webpack_require__(17)
 
 	var $ = config.$;
 
@@ -4628,17 +4578,17 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ },
-/* 18 */
+/* 17 */
 /***/ function(module, exports, __webpack_require__) {
 
 	"use strict";
 
-	var util = __webpack_require__(5);
-	var arrayUtil=__webpack_require__(9);
-	var config = __webpack_require__(7);
-	var constant = __webpack_require__(6)
-	var Snippet = __webpack_require__(15)
-	var metaApi = __webpack_require__(2)
+	var util = __webpack_require__(1);
+	var arrayUtil=__webpack_require__(5);
+	var config = __webpack_require__(3);
+	var constant = __webpack_require__(2)
+	var Snippet = __webpack_require__(14)
+	var metaApi = __webpack_require__(7)
 
 	var $ = config.$;
 
@@ -4839,19 +4789,19 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ },
-/* 19 */
+/* 18 */
 /***/ function(module, exports, __webpack_require__) {
 
 	"use strict";
 
-	var _lib_observe = __webpack_require__(3);
+	var _lib_observe = __webpack_require__(8);
 
-	var util = __webpack_require__(5);
-	var transformers = __webpack_require__(20);
-	var config = __webpack_require__(7);
-	var constant = __webpack_require__(6)
-	var Snippet = __webpack_require__(15)
-	var metaApi = __webpack_require__(2)
+	var util = __webpack_require__(1);
+	var transformers = __webpack_require__(19);
+	var config = __webpack_require__(3);
+	var constant = __webpack_require__(2)
+	var Snippet = __webpack_require__(14)
+	var metaApi = __webpack_require__(7)
 
 	var api={};
 
@@ -5127,12 +5077,12 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ },
-/* 20 */
+/* 19 */
 /***/ function(module, exports, __webpack_require__) {
 
 	"use strict";
 
-	var util = __webpack_require__(5);
+	var util = __webpack_require__(1);
 
 	var _int = {
 	  _set_value: function(v){
@@ -5255,13 +5205,13 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ },
-/* 21 */,
-/* 22 */
+/* 20 */,
+/* 21 */
 /***/ function(module, exports, __webpack_require__) {
 
 	"use strict";
 
-	var util = __webpack_require__(5);
+	var util = __webpack_require__(1);
 
 	var moduleCache = {
 	  wrapped: {},
@@ -5319,7 +5269,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	}
 
 	module.exports = function(arg1, arg2){
-	  var _require = __webpack_require__(7).moduleRequire;
+	  var _require = __webpack_require__(3).moduleRequire;
 	  var deps, initFunc;
 	  if(arg2 === undefined && typeof arg1 === "function"){
 	    initFunc = arg1;
@@ -5369,14 +5319,14 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 /***/ },
-/* 23 */
+/* 22 */
 /***/ function(module, exports, __webpack_require__) {
 
 	"use strict";
 
-	var config=__webpack_require__(7)
-	var constant = __webpack_require__(6)
-	var util = __webpack_require__(5)
+	var config=__webpack_require__(3)
+	var constant = __webpack_require__(2)
+	var util = __webpack_require__(1)
 
 	/**
 	 * This function is used to show how simple we can wrap a common rendering/binding logic
@@ -5493,17 +5443,77 @@ return /******/ (function(modules) { // webpackBootstrap
 	module.exports = nestedBinding;
 
 /***/ },
+/* 23 */
+/***/ function(module, exports, __webpack_require__) {
+
+	"use strict";
+
+	var util = __webpack_require__(1);
+	var config = __webpack_require__(3);
+	var Snippet = __webpack_require__(14);
+	var rewriteObserverMeta = __webpack_require__(7);
+
+	var BindContext = __webpack_require__(6);
+	var ValueMonitor = __webpack_require__(15);
+
+
+	var Scope = function(){
+	};
+
+	var createValueMonitorContext=function(scope, varRef){
+
+	  var refPath = util.determineRefPath(scope, varRef);
+	  var monitor = new ValueMonitor(scope, refPath);
+	  
+	  return {
+	    _valueMonitor: monitor
+	  };
+
+	}
+
+	var createSnippetContext=function(snippet){
+	  return {
+	    _snippet: snippet
+	  };
+	}
+
+	Scope.prototype.observe = function(varRef, meta){
+	  var context = createValueMonitorContext(this, varRef);
+	  var bindContext = new BindContext(context);
+	  bindContext._bind(meta);
+	}
+
+	var snippetBindMeta = Snippet.prototype.bindMeta;
+
+	/**
+	 * root/selector
+	 */
+	Scope.prototype.snippet = function(arg){
+	  var scope = this;
+	  var snippet = new Snippet(arg);
+	  snippet.bindMeta = function(varRef, meta){
+	    var context = createValueMonitorContext(scope, varRef);
+	    return snippetBindMeta.call(this, meta, context);
+	  };
+	  return snippet;
+	}
+
+	config.scope.create=function(){
+	  return new Scope();
+	}
+
+/***/ },
 /* 24 */
 /***/ function(module, exports, __webpack_require__) {
 
 	"use strict";
 
-	var _lib_observe = __webpack_require__(3);
+	var _lib_observe = __webpack_require__(8);
 
-	var util = __webpack_require__(5);
-	var config = __webpack_require__(7);
-	var constant = __webpack_require__(6)
-	var ValueMonitor = __webpack_require__(16)
+	var util = __webpack_require__(1);
+	var config = __webpack_require__(3);
+	var constant = __webpack_require__(2)
+	var ValueMonitor = __webpack_require__(15)
 
 	var _watch = function (meta) {
 	  var watchDef = meta._watch;
