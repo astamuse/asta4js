@@ -5540,6 +5540,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  });
 	  
 	  meta._virtual = true;
+	  meta._virtual_root_path = meta._target_path;
 	  
 	  if(!meta._register_assign){
 	    meta._register_assign = function (bindContext, changeHandler){
