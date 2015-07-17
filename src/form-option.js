@@ -46,7 +46,9 @@ var retrieveTargetPropMetaRoot=function(meta){
 }
 
 var defaultValueFn=function (v){
-  if(v.value === undefined){
+  if(v === undefined){
+    return undefined;
+  }else if(v.value === undefined){
     return v;
   }else{
     return v.value;
@@ -54,7 +56,9 @@ var defaultValueFn=function (v){
 }
 
 var defaultTextFn=function(v){
-  if(v.text === undefined){
+  if(v === undefined){
+    return undefined;
+  }else if(v.text === undefined){
     return v;
   }else{
     return v.text;

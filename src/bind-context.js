@@ -40,6 +40,18 @@ var BindContext=function(override, arrayIndexes){
   this._forceSyncFromObserveTargetMap={};
   this._forceSyncToObserveTargetMap={};
   
+  var defaultSkipDiscardProps = ["_parentContext", "_backgroundContext"];
+  if(this._skipDiscardProps){
+    for(var i=0;i<defaultSkipDiscardProps.length;i++){
+      if(this._skipDiscardProps.indexOf(defaultSkipDiscardProps[i]) < 0){
+        this._skipDiscardProps.push(defaultSkipDiscardProps[i]);
+      }
+    }
+  }else{
+    this._skipDiscardProps = defaultSkipDiscardProps;
+  }
+  
+  
   /*
   this._iid = util.createUID();
   var backgroundIID;
@@ -89,6 +101,7 @@ BindContext.prototype._createChildContext=function(identifier, index, override){
   var context = new BindContext(ov, indexes);
   this._childContextMap.add(index, identifier, context);
   context._parentContext = this;
+  Array.prototype.push.apply(context._skipDiscardProps, this._skipDiscardProps);
   return context;
 }
 
@@ -215,7 +228,7 @@ BindContext.prototype._discard=function(){
   
   var p;
   for(var k in this){
-    if(k === "_parentContext" || k === "_backgroundContext"){
+    if(this._skipDiscardProps.indexOf(k) >= 0){
       continue;
     }
     p = this[k];

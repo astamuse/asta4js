@@ -371,6 +371,8 @@ var _form = function (meta) {
           _optionBindingHub: optionBindingHub,
           _inputTargetBindContext: bindContext,
         });
+        optionContext._skipDiscardProps.push("_snippet");
+        optionContext._skipDiscardProps.push("_inputTargetBindContext");
         optionContext._bind(optionMeta);
       })
 

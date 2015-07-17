@@ -22,7 +22,7 @@ var ResourceList=function(){
   this.tail = this.head;
 }
 ResourceList.prototype.isEmpty=function(){
-  return !this.head.next;
+  return !this.head || !this.head.next;
 }
 
 ResourceList.prototype.add=function(identifier, discardable){
@@ -98,9 +98,11 @@ ResourceMap.prototype.add=function(category, identifier, discardable){
 
 ResourceMap.prototype.remove=function(category, identifier){
   var list = this.getList(category);
-  list.remove(identifier);
-  if(list.isEmpty()){
-    delete this.map[category];
+  if(list){
+    list.remove(identifier);
+    if(list.isEmpty()){
+      delete this.map[category];
+    }
   }
 };
 

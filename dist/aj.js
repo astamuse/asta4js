@@ -528,6 +528,18 @@ return /******/ (function(modules) { // webpackBootstrap
 	  this._forceSyncFromObserveTargetMap={};
 	  this._forceSyncToObserveTargetMap={};
 	  
+	  var defaultSkipDiscardProps = ["_parentContext", "_backgroundContext"];
+	  if(this._skipDiscardProps){
+	    for(var i=0;i<defaultSkipDiscardProps.length;i++){
+	      if(this._skipDiscardProps.indexOf(defaultSkipDiscardProps[i]) < 0){
+	        this._skipDiscardProps.push(defaultSkipDiscardProps[i]);
+	      }
+	    }
+	  }else{
+	    this._skipDiscardProps = defaultSkipDiscardProps;
+	  }
+	  
+	  
 	  /*
 	  this._iid = util.createUID();
 	  var backgroundIID;
@@ -577,6 +589,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  var context = new BindContext(ov, indexes);
 	  this._childContextMap.add(index, identifier, context);
 	  context._parentContext = this;
+	  Array.prototype.push.apply(context._skipDiscardProps, this._skipDiscardProps);
 	  return context;
 	}
 
@@ -703,7 +716,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  
 	  var p;
 	  for(var k in this){
-	    if(k === "_parentContext" || k === "_backgroundContext"){
+	    if(this._skipDiscardProps.indexOf(k) >= 0){
 	      continue;
 	    }
 	    p = this[k];
@@ -3148,7 +3161,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  this.tail = this.head;
 	}
 	ResourceList.prototype.isEmpty=function(){
-	  return !this.head.next;
+	  return !this.head || !this.head.next;
 	}
 
 	ResourceList.prototype.add=function(identifier, discardable){
@@ -3224,9 +3237,11 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	ResourceMap.prototype.remove=function(category, identifier){
 	  var list = this.getList(category);
-	  list.remove(identifier);
-	  if(list.isEmpty()){
-	    delete this.map[category];
+	  if(list){
+	    list.remove(identifier);
+	    if(list.isEmpty()){
+	      delete this.map[category];
+	    }
 	  }
 	};
 
@@ -4551,6 +4566,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	          _optionBindingHub: optionBindingHub,
 	          _inputTargetBindContext: bindContext,
 	        });
+	        optionContext._skipDiscardProps.push("_snippet");
+	        optionContext._skipDiscardProps.push("_inputTargetBindContext");
 	        optionContext._bind(optionMeta);
 	      })
 
@@ -4629,7 +4646,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	}
 
 	var defaultValueFn=function (v){
-	  if(v.value === undefined){
+	  if(v === undefined){
+	    return undefined;
+	  }else if(v.value === undefined){
 	    return v;
 	  }else{
 	    return v.value;
@@ -4637,7 +4656,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	}
 
 	var defaultTextFn=function(v){
-	  if(v.text === undefined){
+	  if(v === undefined){
+	    return undefined;
+	  }else if(v.text === undefined){
 	    return v;
 	  }else{
 	    return v.text;
