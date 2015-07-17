@@ -5,13 +5,16 @@ $(function () {
 
     $scope.data = [
       {
-        any: "fas"
+        any: "aaa"
       },
       {
-        any: "xxx"
+        any: "bbb"
       },
       {
-        any: "zzz"
+        any: "ccc"
+      },
+      {
+        any: "ddd"
       }
     ]
     

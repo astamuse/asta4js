@@ -589,7 +589,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  var context = new BindContext(ov, indexes);
 	  this._childContextMap.add(index, identifier, context);
 	  context._parentContext = this;
-	  Array.prototype.push.apply(context._skipDiscardProps, this._skipDiscardProps);
+	  //Array.prototype.push.apply(context._skipDiscardProps, this._skipDiscardProps);
 	  return context;
 	}
 
