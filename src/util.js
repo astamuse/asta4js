@@ -47,8 +47,30 @@ util.createUID = function () {
     __uidSeq = 0;
   }
   __uidSeq++;
-  return "aj-" + __uidSeq + "-"+ __uidTimestamp;
+  return "aj_" + __uidSeq + "_"+ __uidTimestamp;
 };
+
+var safePathReplaces = [
+  [".", "_dot_"],
+  ["[", "_lb_"],
+  ["]", "_rb_"],
+  ["\"", "_dq_"],
+  ["\'", "_sg_"],
+];
+
+safePathReplaces.forEach(function(rep){
+  rep[1] = rep[1] + "_" + util.createUID();
+});
+
+util.transferToSafePropertyPath = function(path){
+  var p = path;
+  var rep;
+  for(var i=0;i<safePathReplaces.length;i++){
+    rep = safePathReplaces[i];
+    p = p.replace(rep[0], rep[1]);
+  }
+  return p;
+}
 
 util.clone = require("../lib/clone");
 

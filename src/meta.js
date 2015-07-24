@@ -131,6 +131,7 @@ var getValueMonitor=function(bindContext, virtualRootPath){
   if(virtualRootPath === undefined){
     return bindContext._valueMonitor;
   }else{
+    console.log("get vm for:", virtualRootPath, "from", bindContext._valueMonitor.varRefRoot);
     return bindContext._valueMonitor.getVirtualMonitor(virtualRootPath);
   }
 }
@@ -418,6 +419,7 @@ var normalizeMeta = function(meta, propertyPath, parentMeta){
                   childContext = bindContext._getChildContext(itemMeta._meta_trace_id, i);
                   childContext._boundArray = newValue;
                   childContext._mappedArray = mappedArray;
+                  childContext._valueMonitor.virtualScopeMonitorWrapper.reset();
                 }
                 //add new child context binding
                 for(var i=regularOld.length;i<regularNew.length;i++){

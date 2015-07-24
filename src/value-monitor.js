@@ -6,11 +6,41 @@ var util = require("./util");
 var config = require("./config");
 var ResourceMap = require("./resource-map");
 
+var VirtualScopeMonitorWrapper=function(){
+  this._scope = {};
+  this.monitorMap = new ResourceMap();
+}
+
+
+VirtualScopeMonitorWrapper.prototype.discard=function(){
+  this.monitorMap.discard();
+}
+
+VirtualScopeMonitorWrapper.prototype.getMonitro=function(virtualRootPath){
+  var k = virtualRootPath ? virtualRootPath : "";
+  k = util.transferToSafePropertyPath(k);
+  var monitor = this.monitorMap.get("vm", k);
+  if(!monitor){
+    monitor = new ValueMonitor(this._scope, k);
+    this.monitorMap.add("vm", k, monitor);
+  }
+  return monitor;
+}
+
+VirtualScopeMonitorWrapper.prototype.reset=function(){
+  for(var k in this._scope){
+    delete this._scope[k];
+  }
+}
+
+
+//===============================================================================
+
 var ValueMonitor=function(scope, varRefRoot){
   this.scope = scope;
   this.varRefRoot = varRefRoot;
   this.observerMap = new ResourceMap();
-  this.virtualMonitorMap = new ResourceMap();
+  this.virtualScopeMonitorWrapper = new VirtualScopeMonitorWrapper();
 }
 
 var concatPath = function(p1, p2){
@@ -58,15 +88,7 @@ var convertObservePath=function(rootPath, subPath){
 }
 
 ValueMonitor.prototype.getVirtualMonitor=function(virtualRootPath){
-  var k = virtualRootPath ? virtualRootPath : "__virtual_root__7uhanjdsf9";
-  var vm = this.virtualMonitorMap.get("vm", k);
-  if(!vm){
-    vm = new ValueMonitor({
-      __id__: util.createUID()
-    }, "__vs__");
-    this.virtualMonitorMap.add("vm", k, vm);
-  }
-  return vm;
+  return this.virtualScopeMonitorWrapper.getMonitro(virtualRootPath);
 }
 
 ValueMonitor.prototype.createSubMonitor=function(subPath){
@@ -193,7 +215,7 @@ ValueMonitor.prototype.getCompoundValueRef=function(pathes){
 
 ValueMonitor.prototype.discard=function(){
   this.observerMap.discard();
-  this.virtualMonitorMap.discard();
+  this.virtualScopeMonitorWrapper.discard();
 }
 
 module.exports=ValueMonitor;
