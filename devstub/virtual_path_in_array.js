@@ -3,7 +3,7 @@ $(function () {
   Aj.init(function ($scope) {
     console.log($scope);
 
-    $scope.data = {
+    var data = {
       list: [
         {
           value: "a"
@@ -19,6 +19,8 @@ $(function () {
         }
       ]
     };
+    
+    $scope.data = Aj.util.clone(data);
 
     $scope.snippet("body").bind($scope.data, {
       list:{
@@ -50,6 +52,8 @@ $(function () {
     }).bind(".x-remove", "click", function(){
       var assistant = Aj.getContext(this).getArrayAssistant();
       assistant.remove();
+    }).bind(".x-reset", "click", function(){
+      $scope.data = Aj.util.clone(data);
     });
   });
 
