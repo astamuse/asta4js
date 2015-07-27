@@ -6,6 +6,28 @@ var util = require("./util");
 var config = require("./config");
 var ResourceMap = require("./resource-map");
 
+var safePathReplaces = [
+  [".", "_dot_"],
+  ["[", "_lb_"],
+  ["]", "_rb_"],
+  ["\"", "_dq_"],
+  ["\'", "_sg_"],
+];
+
+safePathReplaces.forEach(function(rep){
+  rep[1] = rep[1] + "_" + util.createUID();
+});
+
+var transferToSafePropertyPath = function(path){
+  var p = path;
+  var rep;
+  for(var i=0;i<safePathReplaces.length;i++){
+    rep = safePathReplaces[i];
+    p = p.replace(rep[0], rep[1]);
+  }
+  return p;
+}
+
 var VirtualScopeMonitorWrapper=function(){
   this._scope = {};
   this.monitorMap = new ResourceMap();
@@ -18,7 +40,8 @@ VirtualScopeMonitorWrapper.prototype.discard=function(){
 
 VirtualScopeMonitorWrapper.prototype.getMonitro=function(virtualRootPath){
   var k = virtualRootPath ? virtualRootPath : "";
-  k = util.transferToSafePropertyPath(k);
+  k = transferToSafePropertyPath(k);
+  k = k ? "__vr__." + k : "__vr__";
   var monitor = this.monitorMap.get("vm", k);
   if(!monitor){
     monitor = new ValueMonitor(this._scope, k);
@@ -27,9 +50,11 @@ VirtualScopeMonitorWrapper.prototype.getMonitro=function(virtualRootPath){
   return monitor;
 }
 
-VirtualScopeMonitorWrapper.prototype.reset=function(){
-  for(var k in this._scope){
-    delete this._scope[k];
+VirtualScopeMonitorWrapper.prototype.reset=function(otherWrapper){
+  if(otherWrapper){
+    this._scope.__vr__ = util.clone(otherWrapper._scope.__vr__);
+  }else{
+    this._scope.__vr__ = {};
   }
 }
 

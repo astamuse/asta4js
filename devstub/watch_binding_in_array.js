@@ -38,7 +38,7 @@ $(function () {
             _cal: function(v){
               return v+"-watched";
             }
-          }
+          },
         }
       }
     }).bind(".x-remove", "click", function(){

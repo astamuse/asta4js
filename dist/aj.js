@@ -190,27 +190,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  return "aj_" + __uidSeq + "_"+ __uidTimestamp;
 	};
 
-	var safePathReplaces = [
-	  [".", "_dot_"],
-	  ["[", "_lb_"],
-	  ["]", "_rb_"],
-	  ["\"", "_dq_"],
-	  ["\'", "_sg_"],
-	];
 
-	safePathReplaces.forEach(function(rep){
-	  rep[1] = rep[1] + "_" + util.createUID();
-	});
-
-	util.transferToSafePropertyPath = function(path){
-	  var p = path;
-	  var rep;
-	  for(var i=0;i<safePathReplaces.length;i++){
-	    rep = safePathReplaces[i];
-	    p = p.replace(rep[0], rep[1]);
-	  }
-	  return p;
-	}
 
 	util.clone = __webpack_require__(25);
 
@@ -1177,10 +1157,42 @@ return /******/ (function(modules) { // webpackBootstrap
 	                      }
 	                    }else{
 	                      diff = 0 - diff;
-	                      for(var i=0;i<diff;i++){
-	                        bindContext._removeChildContext(itemMeta._meta_trace_id, newLength + i);
+	                      util.delay(function(){
+	                        for(var i=0;i<diff;i++){
+	                          bindContext._removeChildContext(itemMeta._meta_trace_id, newLength + i);
+	                        }
+	                      });
+	                    }
+	                    
+	                    var resetChildContextVirtualMonitor = function(bindContext, childIdentifier, childLength, startIndex, insertCount, removeCount){
+	                      var diff = insertCount - removeCount;
+	                      var wrapper1,wrapper2;
+	                      if(diff == 0){
+	                        for(var i=startIndex;i<startIndex+insertCount;i++){
+	                          bindContext._getChildContext(childIdentifier, i)._valueMonitor.virtualScopeMonitorWrapper.reset();
+	                        }
+	                      }else if(diff>0){
+	                        for(var i=childLength-1;i>=startIndex;i--){
+	                          wrapper1 = bindContext._getChildContext(childIdentifier, i)._valueMonitor.virtualScopeMonitorWrapper;
+	                          wrapper2 = bindContext._getChildContext(childIdentifier, i-diff)._valueMonitor.virtualScopeMonitorWrapper;
+	                          wrapper1.reset(wrapper2);
+	                        }
+	                        for(var i=startIndex;i<startIndex+insertCount;i++){
+	                          bindContext._getChildContext(childIdentifier, i)._valueMonitor.virtualScopeMonitorWrapper.reset();
+	                        }
+	                      }else{ //diff < 0
+	                        for(var i=startIndex;i<childLength;i++){
+	                          wrapper1 = bindContext._getChildContext(childIdentifier, i)._valueMonitor.virtualScopeMonitorWrapper;
+	                          wrapper2 = bindContext._getChildContext(childIdentifier, i-diff)._valueMonitor.virtualScopeMonitorWrapper;
+	                          wrapper1.reset(wrapper2);
+	                        }
 	                      }
 	                    }
+	                    
+	                    splices.forEach(function (s) {
+	                      resetChildContextVirtualMonitor(bindContext, itemMeta._meta_trace_id, newValue.length, s.index, s.addedCount, s.removed.length);
+	                    });
+	                    
 	                  });
 	                }else if(oldValue){//which means we need to remove previous registered array observer
 	                  vm.removeArrayObserve(newMeta._meta_trace_id);
@@ -4021,6 +4033,28 @@ return /******/ (function(modules) { // webpackBootstrap
 	var config = __webpack_require__(3);
 	var ResourceMap = __webpack_require__(10);
 
+	var safePathReplaces = [
+	  [".", "_dot_"],
+	  ["[", "_lb_"],
+	  ["]", "_rb_"],
+	  ["\"", "_dq_"],
+	  ["\'", "_sg_"],
+	];
+
+	safePathReplaces.forEach(function(rep){
+	  rep[1] = rep[1] + "_" + util.createUID();
+	});
+
+	var transferToSafePropertyPath = function(path){
+	  var p = path;
+	  var rep;
+	  for(var i=0;i<safePathReplaces.length;i++){
+	    rep = safePathReplaces[i];
+	    p = p.replace(rep[0], rep[1]);
+	  }
+	  return p;
+	}
+
 	var VirtualScopeMonitorWrapper=function(){
 	  this._scope = {};
 	  this.monitorMap = new ResourceMap();
@@ -4033,7 +4067,8 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	VirtualScopeMonitorWrapper.prototype.getMonitro=function(virtualRootPath){
 	  var k = virtualRootPath ? virtualRootPath : "";
-	  k = util.transferToSafePropertyPath(k);
+	  k = transferToSafePropertyPath(k);
+	  k = k ? "__vr__." + k : "__vr__";
 	  var monitor = this.monitorMap.get("vm", k);
 	  if(!monitor){
 	    monitor = new ValueMonitor(this._scope, k);
@@ -4042,9 +4077,11 @@ return /******/ (function(modules) { // webpackBootstrap
 	  return monitor;
 	}
 
-	VirtualScopeMonitorWrapper.prototype.reset=function(){
-	  for(var k in this._scope){
-	    delete this._scope[k];
+	VirtualScopeMonitorWrapper.prototype.reset=function(otherWrapper){
+	  if(otherWrapper){
+	    this._scope.__vr__ = util.clone(otherWrapper._scope.__vr__);
+	  }else{
+	    this._scope.__vr__ = {};
 	  }
 	}
 
@@ -5608,6 +5645,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  
 	  meta._virtual = true;
 	  meta._virtual_root_path = meta._target_path;
+	  meta._target_path = "";
 	  
 	  if(!meta._register_assign){
 	    meta._register_assign = function (bindContext, changeHandler){

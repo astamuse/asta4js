@@ -16,6 +16,9 @@ $(function () {
         },
         {
           value: "d"
+        },
+        {
+          value: "e"
         }
       ]
     };
@@ -27,34 +30,41 @@ $(function () {
         _duplicator: "li",
         _item: {
           _context: ".x-remove",
-          _index: ".x-index",
+          _index: [".x-index", ".x-idx-attr@>[index=]"],
           value: ".x-value",
-          "@vp":[
-            {
-              _virtual: true,
-              _value_ref: ".x-inc"
-            },
-            {
-              _virtual: true,
-              _selector: ".x-vp"
-            },
-          ]
+          "@vp":{
+            _virtual: true,
+            _value_ref: ".x-inc",
+            a: ".x-vp-a",
+            b: ".x-vp-b"
+          },
         }
       }
-    }).bind(".x-inc", "click", function(){
+    }).on("click", ".x-inc", function(){
       var ref = Aj.getValueRef(this);
       var v = ref.getValue();
       if(!v){
-        v = 0;
+        v = {
+          a: 0,
+          b: 0
+        }
       }
-      v++;
+      v.a = v.a + 1;
+      v.b = v.a * 10;
       ref.setValue(v);
-    }).bind(".x-remove", "click", function(){
+    }).on("click", ".x-remove", function(){
       var assistant = Aj.getContext(this).getArrayAssistant();
       assistant.remove();
     }).bind(".x-reset", "click", function(){
       $scope.data = Aj.util.clone(data);
+      inrem_idx = 0;
+    }).bind(".x-inrem", "click", function(){
+      $scope.data.list.splice(3, 1, {value: "in+" + (inrem_idx++)}, {value: "in+" + (inrem_idx++)});
+      $scope.data.list.splice(1, 1, {value: "in+" + (inrem_idx++)}, {value: "in+" + (inrem_idx++)});
     });
   });
 
+        
+  var inrem_idx = 0;
+  
 });

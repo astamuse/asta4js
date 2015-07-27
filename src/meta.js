@@ -393,10 +393,42 @@ var normalizeMeta = function(meta, propertyPath, parentMeta){
                       }
                     }else{
                       diff = 0 - diff;
-                      for(var i=0;i<diff;i++){
-                        bindContext._removeChildContext(itemMeta._meta_trace_id, newLength + i);
+                      util.delay(function(){
+                        for(var i=0;i<diff;i++){
+                          bindContext._removeChildContext(itemMeta._meta_trace_id, newLength + i);
+                        }
+                      });
+                    }
+                    
+                    var resetChildContextVirtualMonitor = function(bindContext, childIdentifier, childLength, startIndex, insertCount, removeCount){
+                      var diff = insertCount - removeCount;
+                      var wrapper1,wrapper2;
+                      if(diff == 0){
+                        for(var i=startIndex;i<startIndex+insertCount;i++){
+                          bindContext._getChildContext(childIdentifier, i)._valueMonitor.virtualScopeMonitorWrapper.reset();
+                        }
+                      }else if(diff>0){
+                        for(var i=childLength-1;i>=startIndex;i--){
+                          wrapper1 = bindContext._getChildContext(childIdentifier, i)._valueMonitor.virtualScopeMonitorWrapper;
+                          wrapper2 = bindContext._getChildContext(childIdentifier, i-diff)._valueMonitor.virtualScopeMonitorWrapper;
+                          wrapper1.reset(wrapper2);
+                        }
+                        for(var i=startIndex;i<startIndex+insertCount;i++){
+                          bindContext._getChildContext(childIdentifier, i)._valueMonitor.virtualScopeMonitorWrapper.reset();
+                        }
+                      }else{ //diff < 0
+                        for(var i=startIndex;i<childLength;i++){
+                          wrapper1 = bindContext._getChildContext(childIdentifier, i)._valueMonitor.virtualScopeMonitorWrapper;
+                          wrapper2 = bindContext._getChildContext(childIdentifier, i-diff)._valueMonitor.virtualScopeMonitorWrapper;
+                          wrapper1.reset(wrapper2);
+                        }
                       }
                     }
+                    
+                    splices.forEach(function (s) {
+                      resetChildContextVirtualMonitor(bindContext, itemMeta._meta_trace_id, newValue.length, s.index, s.addedCount, s.removed.length);
+                    });
+                    
                   });
                 }else if(oldValue){//which means we need to remove previous registered array observer
                   vm.removeArrayObserve(newMeta._meta_trace_id);
