@@ -895,7 +895,6 @@ return /******/ (function(modules) { // webpackBootstrap
 	  if(virtualRootPath === undefined){
 	    return bindContext._valueMonitor;
 	  }else{
-	    console.log("get vm for:", virtualRootPath, "from", bindContext._valueMonitor.varRefRoot);
 	    return bindContext._valueMonitor.getVirtualMonitor(virtualRootPath);
 	  }
 	}
@@ -1173,6 +1172,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	                        }
 	                      }else if(diff>0){
 	                        for(var i=childLength-1;i>=startIndex;i--){
+	                          if((i-diff) < 0){
+	                            break;
+	                          }
 	                          wrapper1 = bindContext._getChildContext(childIdentifier, i)._valueMonitor.virtualScopeMonitorWrapper;
 	                          wrapper2 = bindContext._getChildContext(childIdentifier, i-diff)._valueMonitor.virtualScopeMonitorWrapper;
 	                          wrapper1.reset(wrapper2);

@@ -43,6 +43,9 @@ describe('virtual path in array tests', function() {
           });
         })(i);
       }
+      page.getText(".x-err", function(err, text){
+        assert.strictEqual(text, "");
+      })
     }
     
     var clickVp = function(page, idx, times){
@@ -94,12 +97,24 @@ describe('virtual path in array tests', function() {
       confirmItemValue(page, ["a", "in+2", "c", "in+0", "e"], [3, 4, 5, 1, 7]);
     }
     
-    it("virtual path in array test", function(done){
+    it("common operation", function(done){
       var page = browser.url(url);
 
       confirmOnce(page);
       
       page.click(".x-reset");
+      
+      confirmOnce(page);
+      
+      page.call(done);
+    });
+    
+    it("insert into empty", function(done){
+      var page = browser.url(url);
+
+      page.click(".x-rem");
+      
+      page.click(".x-ins");
       
       confirmOnce(page);
       
