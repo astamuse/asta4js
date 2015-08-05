@@ -187,8 +187,10 @@ return /******/ (function(modules) { // webpackBootstrap
 	    __uidSeq = 0;
 	  }
 	  __uidSeq++;
-	  return "aj-" + __uidSeq + "-"+ __uidTimestamp;
+	  return "aj_" + __uidSeq + "_"+ __uidTimestamp;
 	};
+
+
 
 	util.clone = __webpack_require__(25);
 
@@ -528,6 +530,18 @@ return /******/ (function(modules) { // webpackBootstrap
 	  this._forceSyncFromObserveTargetMap={};
 	  this._forceSyncToObserveTargetMap={};
 	  
+	  var defaultSkipDiscardProps = ["_parentContext", "_backgroundContext"];
+	  if(this._skipDiscardProps){
+	    for(var i=0;i<defaultSkipDiscardProps.length;i++){
+	      if(this._skipDiscardProps.indexOf(defaultSkipDiscardProps[i]) < 0){
+	        this._skipDiscardProps.push(defaultSkipDiscardProps[i]);
+	      }
+	    }
+	  }else{
+	    this._skipDiscardProps = defaultSkipDiscardProps;
+	  }
+	  
+	  
 	  /*
 	  this._iid = util.createUID();
 	  var backgroundIID;
@@ -577,6 +591,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  var context = new BindContext(ov, indexes);
 	  this._childContextMap.add(index, identifier, context);
 	  context._parentContext = this;
+	  //Array.prototype.push.apply(context._skipDiscardProps, this._skipDiscardProps);
 	  return context;
 	}
 
@@ -703,7 +718,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  
 	  var p;
 	  for(var k in this){
-	    if(k === "_parentContext" || k === "_backgroundContext"){
+	    if(this._skipDiscardProps.indexOf(k) >= 0){
 	      continue;
 	    }
 	    p = this[k];
@@ -1141,10 +1156,45 @@ return /******/ (function(modules) { // webpackBootstrap
 	                      }
 	                    }else{
 	                      diff = 0 - diff;
-	                      for(var i=0;i<diff;i++){
-	                        bindContext._removeChildContext(itemMeta._meta_trace_id, newLength + i);
+	                      util.delay(function(){
+	                        for(var i=0;i<diff;i++){
+	                          bindContext._removeChildContext(itemMeta._meta_trace_id, newLength + i);
+	                        }
+	                      });
+	                    }
+	                    
+	                    var resetChildContextVirtualMonitor = function(bindContext, childIdentifier, childLength, startIndex, insertCount, removeCount){
+	                      var diff = insertCount - removeCount;
+	                      var wrapper1,wrapper2;
+	                      if(diff == 0){
+	                        for(var i=startIndex;i<startIndex+insertCount;i++){
+	                          bindContext._getChildContext(childIdentifier, i)._valueMonitor.virtualScopeMonitorWrapper.reset();
+	                        }
+	                      }else if(diff>0){
+	                        for(var i=childLength-1;i>=startIndex;i--){
+	                          if((i-diff) < 0){
+	                            break;
+	                          }
+	                          wrapper1 = bindContext._getChildContext(childIdentifier, i)._valueMonitor.virtualScopeMonitorWrapper;
+	                          wrapper2 = bindContext._getChildContext(childIdentifier, i-diff)._valueMonitor.virtualScopeMonitorWrapper;
+	                          wrapper1.reset(wrapper2);
+	                        }
+	                        for(var i=startIndex;i<startIndex+insertCount;i++){
+	                          bindContext._getChildContext(childIdentifier, i)._valueMonitor.virtualScopeMonitorWrapper.reset();
+	                        }
+	                      }else{ //diff < 0
+	                        for(var i=startIndex;i<childLength;i++){
+	                          wrapper1 = bindContext._getChildContext(childIdentifier, i)._valueMonitor.virtualScopeMonitorWrapper;
+	                          wrapper2 = bindContext._getChildContext(childIdentifier, i-diff)._valueMonitor.virtualScopeMonitorWrapper;
+	                          wrapper1.reset(wrapper2);
+	                        }
 	                      }
 	                    }
+	                    
+	                    splices.forEach(function (s) {
+	                      resetChildContextVirtualMonitor(bindContext, itemMeta._meta_trace_id, newValue.length, s.index, s.addedCount, s.removed.length);
+	                    });
+	                    
 	                  });
 	                }else if(oldValue){//which means we need to remove previous registered array observer
 	                  vm.removeArrayObserve(newMeta._meta_trace_id);
@@ -1167,6 +1217,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	                  childContext = bindContext._getChildContext(itemMeta._meta_trace_id, i);
 	                  childContext._boundArray = newValue;
 	                  childContext._mappedArray = mappedArray;
+	                  childContext._valueMonitor.virtualScopeMonitorWrapper.reset();
 	                }
 	                //add new child context binding
 	                for(var i=regularOld.length;i<regularNew.length;i++){
@@ -3148,7 +3199,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  this.tail = this.head;
 	}
 	ResourceList.prototype.isEmpty=function(){
-	  return !this.head.next;
+	  return !this.head || !this.head.next;
 	}
 
 	ResourceList.prototype.add=function(identifier, discardable){
@@ -3224,9 +3275,11 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	ResourceMap.prototype.remove=function(category, identifier){
 	  var list = this.getList(category);
-	  list.remove(identifier);
-	  if(list.isEmpty()){
-	    delete this.map[category];
+	  if(list){
+	    list.remove(identifier);
+	    if(list.isEmpty()){
+	      delete this.map[category];
+	    }
 	  }
 	};
 
@@ -3982,11 +4035,66 @@ return /******/ (function(modules) { // webpackBootstrap
 	var config = __webpack_require__(3);
 	var ResourceMap = __webpack_require__(10);
 
+	var safePathReplaces = [
+	  [".", "_dot_"],
+	  ["[", "_lb_"],
+	  ["]", "_rb_"],
+	  ["\"", "_dq_"],
+	  ["\'", "_sg_"],
+	];
+
+	safePathReplaces.forEach(function(rep){
+	  rep[1] = rep[1] + "_" + util.createUID();
+	});
+
+	var transferToSafePropertyPath = function(path){
+	  var p = path;
+	  var rep;
+	  for(var i=0;i<safePathReplaces.length;i++){
+	    rep = safePathReplaces[i];
+	    p = p.replace(rep[0], rep[1]);
+	  }
+	  return p;
+	}
+
+	var VirtualScopeMonitorWrapper=function(){
+	  this._scope = {};
+	  this.monitorMap = new ResourceMap();
+	}
+
+
+	VirtualScopeMonitorWrapper.prototype.discard=function(){
+	  this.monitorMap.discard();
+	}
+
+	VirtualScopeMonitorWrapper.prototype.getMonitro=function(virtualRootPath){
+	  var k = virtualRootPath ? virtualRootPath : "";
+	  k = transferToSafePropertyPath(k);
+	  k = k ? "__vr__." + k : "__vr__";
+	  var monitor = this.monitorMap.get("vm", k);
+	  if(!monitor){
+	    monitor = new ValueMonitor(this._scope, k);
+	    this.monitorMap.add("vm", k, monitor);
+	  }
+	  return monitor;
+	}
+
+	VirtualScopeMonitorWrapper.prototype.reset=function(otherWrapper){
+	  if(otherWrapper){
+	    this._scope.__vr__ = util.clone(otherWrapper._scope.__vr__);
+	  }else{
+	    this._scope.__vr__ = {};
+	  }
+	}
+
+
+	//===============================================================================
+
 	var ValueMonitor=function(scope, varRefRoot){
 	  this.scope = scope;
 	  this.varRefRoot = varRefRoot;
 	  this.observerMap = new ResourceMap();
-	  this.virtualMonitorMap = new ResourceMap();
+	  this.virtualScopeMonitorWrapper = new VirtualScopeMonitorWrapper();
 	}
 
 	var concatPath = function(p1, p2){
@@ -4034,15 +4142,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	}
 
 	ValueMonitor.prototype.getVirtualMonitor=function(virtualRootPath){
-	  var k = virtualRootPath ? virtualRootPath : "__virtual_root__7uhanjdsf9";
-	  var vm = this.virtualMonitorMap.get("vm", k);
-	  if(!vm){
-	    vm = new ValueMonitor({
-	      __id__: util.createUID()
-	    }, "__vs__");
-	    this.virtualMonitorMap.add("vm", k, vm);
-	  }
-	  return vm;
+	  return this.virtualScopeMonitorWrapper.getMonitro(virtualRootPath);
 	}
 
 	ValueMonitor.prototype.createSubMonitor=function(subPath){
@@ -4169,7 +4269,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	ValueMonitor.prototype.discard=function(){
 	  this.observerMap.discard();
-	  this.virtualMonitorMap.discard();
+	  this.virtualScopeMonitorWrapper.discard();
 	}
 
 	module.exports=ValueMonitor;
@@ -4551,6 +4651,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	          _optionBindingHub: optionBindingHub,
 	          _inputTargetBindContext: bindContext,
 	        });
+	        optionContext._skipDiscardProps.push("_snippet");
+	        optionContext._skipDiscardProps.push("_inputTargetBindContext");
 	        optionContext._bind(optionMeta);
 	      })
 
@@ -4629,7 +4731,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	}
 
 	var defaultValueFn=function (v){
-	  if(v.value === undefined){
+	  if(v === undefined){
+	    return undefined;
+	  }else if(v.value === undefined){
 	    return v;
 	  }else{
 	    return v.value;
@@ -4637,7 +4741,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	}
 
 	var defaultTextFn=function(v){
-	  if(v.text === undefined){
+	  if(v === undefined){
+	    return undefined;
+	  }else if(v.text === undefined){
 	    return v;
 	  }else{
 	    return v.text;
@@ -5540,6 +5646,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	  });
 	  
 	  meta._virtual = true;
+	  meta._virtual_root_path = meta._target_path;
+	  meta._target_path = "";
 	  
 	  if(!meta._register_assign){
 	    meta._register_assign = function (bindContext, changeHandler){
