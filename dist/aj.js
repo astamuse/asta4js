@@ -1066,25 +1066,44 @@ return /******/ (function(modules) { // webpackBootstrap
 	      if(newMeta._change_handler_creator || newMeta._item){
 	        if(!newMeta._register_on_change){
 	          var targetPath = newMeta._target_path;
-	          newMeta._register_on_change = function (bindContext, changeHandler) {
-	            var vm = getValueMonitor(bindContext, newMeta._virtual_root_path);
-	            var vr = vm.getValueRef(targetPath, newMeta._transform);
-	            if(newMeta._meta_type === "_value_ref"){
-	              vm.pathObserve(newMeta._meta_trace_id, targetPath, function(newValue, oldValue){
-	                changeHandler(vr, undefined, bindContext);
-	              }, newMeta._transform);
-	              return function(){
-	                changeHandler(vr, undefined, bindContext);
-	              };
-	            }else{
-	              vm.pathObserve(newMeta._meta_trace_id, targetPath, function(newValue, oldValue){
-	                changeHandler(newValue, oldValue, bindContext);
-	              }, newMeta._transform);
-	              return function(){
-	                changeHandler(vr.getValue(), undefined, bindContext);
-	              };
-	            }
-	          };
+	          if (targetPath === "_uid"){
+	            //we do not need to observe anything, just return a force render handler with uid
+	            newMeta._register_on_change = createRegisterForFakedProp(function(bindContext){
+	              return util.createUID();
+	            }, newMeta._transform);
+	          }else if(targetPath === "_context"){
+	            newMeta._register_on_change = createRegisterForFakedProp(function(bindContext){
+	              return bindContext;
+	            }, newMeta._transform);
+	          }else if(targetPath === "_index"){
+	            newMeta._register_on_change = createRegisterForFakedProp(function(bindContext){
+	              return bindContext._arrayIndexes[bindContext._arrayIndexes.length - 1];
+	            }, newMeta._transform);
+	          }else if (targetPath == "_indexes"){
+	            newMeta._register_on_change = createRegisterForFakedProp(function(bindContext){
+	              return bindContext._arrayIndexes;
+	            }, newMeta._transform);
+	          }else{
+	            newMeta._register_on_change = function (bindContext, changeHandler) {
+	              var vm = getValueMonitor(bindContext, newMeta._virtual_root_path);
+	              var vr = vm.getValueRef(targetPath, newMeta._transform);
+	              if(newMeta._meta_type === "_value_ref"){
+	                vm.pathObserve(newMeta._meta_trace_id, targetPath, function(newValue, oldValue){
+	                  changeHandler(vr, undefined, bindContext);
+	                }, newMeta._transform);
+	                return function(){
+	                  changeHandler(vr, undefined, bindContext);
+	                };
+	              }else{
+	                vm.pathObserve(newMeta._meta_trace_id, targetPath, function(newValue, oldValue){
+	                  changeHandler(newValue, oldValue, bindContext);
+	                }, newMeta._transform);
+	                return function(){
+	                  changeHandler(vr.getValue(), undefined, bindContext);
+	                };
+	              }
+	            };
+	          }
 	          if(newMeta._item){
 	            var changeHandlerCreator = newMeta._change_handler_creator;
 	            var itemMeta = newMeta._item;
@@ -1365,6 +1384,14 @@ return /******/ (function(modules) { // webpackBootstrap
 	    ret.push(from);
 	  }
 	  return ret;
+	}
+
+	var createRegisterForFakedProp = function(valueFn, transform){
+	  return function(bindContext, changeHandler){
+	    return function(){
+	      changeHandler(transform._get_value(valueFn(bindContext)), undefined, bindContext);
+	    };
+	  };
 	}
 
 	var _on_change = function(meta){
@@ -3803,35 +3830,13 @@ return /******/ (function(modules) { // webpackBootstrap
 	        console.error("could not find target of selector:", selector, meta);
 	      }
 	      if(this._meta_type === "_value_ref"){
-	        var renderingStr = bindContext.toString() + ":::" + this._meta_trace_id;
 	        return function(newValue, oldValue, bindContext){
-	           bindContext._addResource("_value_ref_holding", renderingStr, newValue);
+	          var renderingStr = bindContext.toString() + ":::" + this._meta_trace_id;
+	          bindContext._addResource("_value_ref_holding", renderingStr, newValue);
 	          renderFn.call(self, target, renderingStr, undefined, bindContext);
-	        }
-	      }else if(targetPath === "_uid"){
-	        //we do not need to observe anything, just return a force render handler with uid
-	        return function(){
-	          var uid = util.createUID();
-	          renderFn.call(self, target, uid, undefined, bindContext);
-	        }
-	      }else if(targetPath === "_context"){
-	        //we do not need to observe anything, just return a force render handler
-	        return function(){
-	          renderFn.call(self, target, bindContext, undefined, bindContext);
-	        }
-	      }else if(targetPath === "_index"){
-	        //we do not need to observe anything, just return a force render handler
-	        return function(){
-	          renderFn.call(self, target, bindContext._arrayIndexes[bindContext._arrayIndexes.length - 1], undefined, bindContext);
-	        }
-	      }else if (targetPath == "_indexes"){
-	        //we do not need to observe anything, just return a force render handler
-	        return function(){
-	          renderFn.call(self, target, bindContext._arrayIndexes, undefined, bindContext);
 	        }
 	      }else{
 	        return function(newValue, oldValue, bindContext){
-	          //TODO we should convert old value too.
 	          renderFn.call(self, target, newValue, oldValue, bindContext);
 	        }
 	      }

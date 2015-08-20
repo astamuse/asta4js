@@ -269,35 +269,13 @@ var _render = function (meta) {
         console.error("could not find target of selector:", selector, meta);
       }
       if(this._meta_type === "_value_ref"){
-        var renderingStr = bindContext.toString() + ":::" + this._meta_trace_id;
         return function(newValue, oldValue, bindContext){
-           bindContext._addResource("_value_ref_holding", renderingStr, newValue);
+          var renderingStr = bindContext.toString() + ":::" + this._meta_trace_id;
+          bindContext._addResource("_value_ref_holding", renderingStr, newValue);
           renderFn.call(self, target, renderingStr, undefined, bindContext);
-        }
-      }else if(targetPath === "_uid"){
-        //we do not need to observe anything, just return a force render handler with uid
-        return function(){
-          var uid = util.createUID();
-          renderFn.call(self, target, uid, undefined, bindContext);
-        }
-      }else if(targetPath === "_context"){
-        //we do not need to observe anything, just return a force render handler
-        return function(){
-          renderFn.call(self, target, bindContext, undefined, bindContext);
-        }
-      }else if(targetPath === "_index"){
-        //we do not need to observe anything, just return a force render handler
-        return function(){
-          renderFn.call(self, target, bindContext._arrayIndexes[bindContext._arrayIndexes.length - 1], undefined, bindContext);
-        }
-      }else if (targetPath == "_indexes"){
-        //we do not need to observe anything, just return a force render handler
-        return function(){
-          renderFn.call(self, target, bindContext._arrayIndexes, undefined, bindContext);
         }
       }else{
         return function(newValue, oldValue, bindContext){
-          //TODO we should convert old value too.
           renderFn.call(self, target, newValue, oldValue, bindContext);
         }
       }

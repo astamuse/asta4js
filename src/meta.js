@@ -302,25 +302,44 @@ var normalizeMeta = function(meta, propertyPath, parentMeta){
       if(newMeta._change_handler_creator || newMeta._item){
         if(!newMeta._register_on_change){
           var targetPath = newMeta._target_path;
-          newMeta._register_on_change = function (bindContext, changeHandler) {
-            var vm = getValueMonitor(bindContext, newMeta._virtual_root_path);
-            var vr = vm.getValueRef(targetPath, newMeta._transform);
-            if(newMeta._meta_type === "_value_ref"){
-              vm.pathObserve(newMeta._meta_trace_id, targetPath, function(newValue, oldValue){
-                changeHandler(vr, undefined, bindContext);
-              }, newMeta._transform);
-              return function(){
-                changeHandler(vr, undefined, bindContext);
-              };
-            }else{
-              vm.pathObserve(newMeta._meta_trace_id, targetPath, function(newValue, oldValue){
-                changeHandler(newValue, oldValue, bindContext);
-              }, newMeta._transform);
-              return function(){
-                changeHandler(vr.getValue(), undefined, bindContext);
-              };
-            }
-          };
+          if (targetPath === "_uid"){
+            //we do not need to observe anything, just return a force render handler with uid
+            newMeta._register_on_change = createRegisterForFakedProp(function(bindContext){
+              return util.createUID();
+            }, newMeta._transform);
+          }else if(targetPath === "_context"){
+            newMeta._register_on_change = createRegisterForFakedProp(function(bindContext){
+              return bindContext;
+            }, newMeta._transform);
+          }else if(targetPath === "_index"){
+            newMeta._register_on_change = createRegisterForFakedProp(function(bindContext){
+              return bindContext._arrayIndexes[bindContext._arrayIndexes.length - 1];
+            }, newMeta._transform);
+          }else if (targetPath == "_indexes"){
+            newMeta._register_on_change = createRegisterForFakedProp(function(bindContext){
+              return bindContext._arrayIndexes;
+            }, newMeta._transform);
+          }else{
+            newMeta._register_on_change = function (bindContext, changeHandler) {
+              var vm = getValueMonitor(bindContext, newMeta._virtual_root_path);
+              var vr = vm.getValueRef(targetPath, newMeta._transform);
+              if(newMeta._meta_type === "_value_ref"){
+                vm.pathObserve(newMeta._meta_trace_id, targetPath, function(newValue, oldValue){
+                  changeHandler(vr, undefined, bindContext);
+                }, newMeta._transform);
+                return function(){
+                  changeHandler(vr, undefined, bindContext);
+                };
+              }else{
+                vm.pathObserve(newMeta._meta_trace_id, targetPath, function(newValue, oldValue){
+                  changeHandler(newValue, oldValue, bindContext);
+                }, newMeta._transform);
+                return function(){
+                  changeHandler(vr.getValue(), undefined, bindContext);
+                };
+              }
+            };
+          }
           if(newMeta._item){
             var changeHandlerCreator = newMeta._change_handler_creator;
             var itemMeta = newMeta._item;
@@ -601,6 +620,14 @@ var mergeMeta=function(from, to){
     ret.push(from);
   }
   return ret;
+}
+
+var createRegisterForFakedProp = function(valueFn, transform){
+  return function(bindContext, changeHandler){
+    return function(){
+      changeHandler(transform._get_value(valueFn(bindContext)), undefined, bindContext);
+    };
+  };
 }
 
 var _on_change = function(meta){
