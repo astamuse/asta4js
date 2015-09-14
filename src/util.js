@@ -11,6 +11,11 @@ util.sync = function(){
 };
 
 util.determineRefPath = function (scope, varRef, searchKey) {
+  
+  if(varRef === null || varRef === undefined){
+    throw "Could not determine ref path on " + varRef +", did you forget to initialize the binding target?";;
+  }
+  
   var deleteSearchKey;
   if(searchKey){
     deleteSearchKey = false;
