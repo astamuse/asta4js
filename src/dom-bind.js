@@ -118,12 +118,19 @@ var _duplicator = function(meta){
           dupTarget = mappedArrayInfo.dupTargets[j];
           dupSpawned = $(dupTarget.templateStr);
           dupTarget.insertPoint.after(dupSpawned);
+          if(dupTarget.insertPoint == dupTarget.placeHolder){
+            dupTarget.insertPoint.remove();//remove the placeholder since we have items here
+          }
           dupTarget.insertPoint = dupSpawned;
           mappedItem[j] = dupSpawned;
         }
         return mappedItem;
-      }, function(mappedItem){
+      }, function(mappedItem, idx){
         for(var j=0;j<targetLength;j++){
+          if(idx === 0){
+            var dupTarget = mappedArrayInfo.dupTargets[j];
+            mappedItem[j].after(dupTarget.placeHolder);//revive placeholder in dom tree since we are going to remove all items
+          }
           mappedItem[j].remove();
         }
       });

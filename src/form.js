@@ -155,6 +155,9 @@ var checkboxOrRadioRender = function(meta, formDef, inputType, target, newValue,
       //there must be "aj-placeholder-id"
       var placeHolderId = target.attr("aj-placeholder-id");
       var insertPoint = snippet.find("#" + placeHolderId);
+      if(insertPoint.length == 0){
+        insertPoint = $(snippet.find("[aj-generated=" + placeHolderId + "]")[0]);
+      }
       unmatchedValue.forEach(function(v){
         var uid = util.createUID();
         var input = target.clone().attr("id", uid).val(v).prop("checked", true);
@@ -163,7 +166,7 @@ var checkboxOrRadioRender = function(meta, formDef, inputType, target, newValue,
         var diverge = $("<span>").attr("aj-diverge-value", optionId);
         diverge.append(input).append(label);
         
-        insertPoint.after(diverge);
+        insertPoint.before(diverge);
       });
     }
   }

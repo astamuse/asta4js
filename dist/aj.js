@@ -151,6 +151,11 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 	util.determineRefPath = function (scope, varRef, searchKey) {
+	  
+	  if(varRef === null || varRef === undefined){
+	    throw "Could not determine ref path on " + varRef +", did you forget to initialize the binding target?";;
+	  }
+	  
 	  var deleteSearchKey;
 	  if(searchKey){
 	    deleteSearchKey = false;
@@ -3679,12 +3684,19 @@ return /******/ (function(modules) { // webpackBootstrap
 	          dupTarget = mappedArrayInfo.dupTargets[j];
 	          dupSpawned = $(dupTarget.templateStr);
 	          dupTarget.insertPoint.after(dupSpawned);
+	          if(dupTarget.insertPoint == dupTarget.placeHolder){
+	            dupTarget.insertPoint.remove();//remove the placeholder since we have items here
+	          }
 	          dupTarget.insertPoint = dupSpawned;
 	          mappedItem[j] = dupSpawned;
 	        }
 	        return mappedItem;
-	      }, function(mappedItem){
+	      }, function(mappedItem, idx){
 	        for(var j=0;j<targetLength;j++){
+	          if(idx === 0){
+	            var dupTarget = mappedArrayInfo.dupTargets[j];
+	            mappedItem[j].after(dupTarget.placeHolder);//revive placeholder in dom tree since we are going to remove all items
+	          }
 	          mappedItem[j].remove();
 	        }
 	      });
@@ -4440,6 +4452,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	      //there must be "aj-placeholder-id"
 	      var placeHolderId = target.attr("aj-placeholder-id");
 	      var insertPoint = snippet.find("#" + placeHolderId);
+	      if(insertPoint.length == 0){
+	        insertPoint = $(snippet.find("[aj-generated=" + placeHolderId + "]")[0]);
+	      }
 	      unmatchedValue.forEach(function(v){
 	        var uid = util.createUID();
 	        var input = target.clone().attr("id", uid).val(v).prop("checked", true);
@@ -4448,7 +4463,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	        var diverge = $("<span>").attr("aj-diverge-value", optionId);
 	        diverge.append(input).append(label);
 	        
-	        insertPoint.after(diverge);
+	        insertPoint.before(diverge);
 	      });
 	    }
 	  }
