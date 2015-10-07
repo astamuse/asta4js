@@ -9,18 +9,17 @@ var BindContext = require("./bind-context");
 var ValueMonitor = require("./value-monitor");
 
 
+
+
 var Scope = function(){
 };
 
 var createValueMonitorContext=function(scope, varRef){
-
-  var refPath = util.determineRefPath(scope, varRef);
+  var refPath = util.determineRefPath(scope, varRef);  
   var monitor = new ValueMonitor(scope, refPath);
-  
   return {
     _valueMonitor: monitor
   };
-
 }
 
 var createSnippetContext=function(snippet){

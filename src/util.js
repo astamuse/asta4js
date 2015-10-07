@@ -3,6 +3,8 @@
 var constant = require("./constant")
 var config = require('./config');
 
+var RefPath = require("./ref-path")
+
 var util = {};
 var $ = config.$;
 
@@ -14,6 +16,10 @@ util.determineRefPath = function (scope, varRef, searchKey) {
   
   if(varRef === null || varRef === undefined){
     throw "Could not determine ref path on " + varRef +", did you forget to initialize the binding target?";;
+  }
+  
+  if(varRef instanceof RefPath){
+    return varRef.path;
   }
   
   var deleteSearchKey;

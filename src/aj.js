@@ -26,7 +26,7 @@ Aj.delay=Aj.util.delay;
 
 Aj.nest = require("./nestedBinding");
 
-
+Aj.refPath=require("./ref-path").api;
 
 //entry point
 require("./scope");
@@ -46,7 +46,9 @@ if($){
 }
 
 //following is for debug purpose, don't access it in client source.
-Aj.__internal__ = {};
+Aj.__internal__ = {
+  __msg__: "this is for debug purpose, don't access me in your source"
+};
 
 Aj.__internal__.Observe=require("../lib/observe")
 
