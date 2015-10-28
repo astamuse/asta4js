@@ -153,7 +153,7 @@ module.exports = function (grunt) {
           options: {
               // overwrite default settings
               desiredCapabilities: {
-                  browserName: 'ie'
+                  browserName: 'internet explorer'
               }
           }
       },
