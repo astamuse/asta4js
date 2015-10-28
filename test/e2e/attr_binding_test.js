@@ -29,6 +29,12 @@ describe('attr binding tests', function() {
       page.getAttribute("#check-box", "checked", function(err, checked){
         assert.equal(Boolean(checked), false);
       });
+      page.getAttribute("#check-box", "disabled", function(err, disabled){
+        assert.equal(Boolean(disabled), true);
+      });
+      page.getAttribute("#check-box", "class", function(err, cls){
+        assert.equal(cls.indexOf("hidden") >=0, true);
+      });
       page.call(done);
     });
     

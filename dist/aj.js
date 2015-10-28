@@ -3835,6 +3835,18 @@ return /******/ (function(modules) { // webpackBootstrap
 	          };
 	        }
 	      }, {
+	        comment : "class existing(reverse)",
+	        reg : /^\[class:not\((.+)\)\?\]$/,
+	        renderFn : function (matched) {
+	          return function (target, newValue, oldValue) {
+	            if (newValue) {
+	              target.removeClass(matched);
+	            } else {
+	              target.addClass(matched);
+	            }
+	          };
+	        }
+	      }, {
 	        comment : "class existing",
 	        reg : /^\[class:(.+)\?\]$/,
 	        renderFn : function (matched) {
@@ -3852,6 +3864,14 @@ return /******/ (function(modules) { // webpackBootstrap
 	        renderFn : function (matched) {
 	          return function (target, newValue, oldValue) {
 	            target.attr(matched, newValue);
+	          };
+	        }
+	      }, {
+	        comment : "attr existing(reverse)",
+	        reg : /^\[\:not\((.+)\)\?\]$/,
+	        renderFn : function (matched) {
+	          return function (target, newValue, oldValue) {
+	            target.prop(matched, !newValue);
 	          };
 	        }
 	      }, {

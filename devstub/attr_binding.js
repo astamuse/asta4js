@@ -12,6 +12,10 @@ $(function(){
             color: "#target-table@>[class:(blue|red)?]",
             height: "#target-table@>[class:height40?]",
             checked: "#check-box@>[checked?]",
+            enabled:  [
+              "#check-box@>[:not(disabled)?]",
+              "#check-box@>[class:not(hidden)?]"
+            ]
           }).bind("#set-value", "click", function(){
             var v = $("#data-input").val();
             $scope.data = JSON.parse(v);
