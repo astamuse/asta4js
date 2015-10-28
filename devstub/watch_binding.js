@@ -26,6 +26,20 @@ $(function () {
             return y + "-" + m + "-" + d + ":" + b;
           }
         }
+      },
+      "watch-year-str": {
+        _selector: ".x-watch-year-str",
+        _watch: {
+          _fields: ["year"]
+        },
+        _render: function(target, values){
+          if(values){
+            target.text("wy:" + values[0]);
+          }else{
+            target.text("wy:");
+          }
+          
+        }
       }
     }).bind($scope.data2,{
       babe: keyupInput()

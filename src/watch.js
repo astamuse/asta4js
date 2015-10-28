@@ -37,23 +37,20 @@ var _watch = function (meta) {
   
   if(!meta._register_assign){
     meta._register_assign = function (bindContext, changeHandler){
-      bindContext._valueMonitor.compoundObserve(meta._meta_trace_id, observerTargets, function(newValues, oldValues){
+      var chfn = function(newValues, oldValues){
+        var value = [];
+        Array.prototype.push.apply(value, newValues);
         if(watchDef._cal){
-          changeHandler(watchDef._cal.apply(null, newValues), bindContext);
-        }else{
-          changeHandler(newValues, bindContext);
+          value = watchDef._cal.apply(null, value);
         }
-      });
+        changeHandler(value, bindContext);
+      };
+      bindContext._valueMonitor.compoundObserve(meta._meta_trace_id, observerTargets, chfn);
+
       var valueRef = bindContext._valueMonitor.getCompoundValueRef(observerTargets);
       var force = function(){
         var targetValues = valueRef.getValues();
-        var value;
-        if(watchDef._cal){
-          value = watchDef._cal.apply(null, targetValues);
-        }else{
-          value = targetValues;
-        }
-        changeHandler(value, bindContext);
+        chfn(targetValues, undefined);
       };
       force.apply();
       return force;
