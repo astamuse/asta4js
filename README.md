@@ -59,16 +59,16 @@ run certain test on chrome
 grunt wtestc -file test/e2e/virtual_path_in_array_test.js
 ```
 
-build
+dev build
 
 ```
-grunt build
+grunt dev
 ```
 
 dev watch
 
 ```
-grunt dev
+grunt watch
 ```
 
 
