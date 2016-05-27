@@ -3514,21 +3514,12 @@ return /******/ (function(modules) { // webpackBootstrap
 	}
 
 	BindContextArrayAssistant.prototype.getItem = function(backtracking){
-	  if(canFastReturn(this, backtracking)){
-	    var array = this._originalContext._boundArray;
-	    if(array === undefined){
-	      return undefined;
-	    }else{
-	      return array[array.length-1];
-	    }
-	  }
-	  
-	  var arrayInfo = getBacktrackingArrayInfo(this, backtracking);
-	  if(arrayInfo._out_of_tracking || !arrayInfo._context){
+	  var array = this.getArray(backtracking);
+	  var index = this.getIndex(backtracking);
+	  if(array === undefined || index === undefined){
 	    return undefined;
 	  }else{
-	    var index = this.getIndex(backtracking);
-	    return arrayInfo._context._boundArray[index];
+	    return array[index];
 	  }
 	}
 
