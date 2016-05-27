@@ -45,6 +45,34 @@ We have been practicing separating rendering/binding logic from the front-end te
 
 We had created a server side framework [Asta4D](https://github.com/astamuse/asta4d) to achieve our goal years ago,nowadays we believe it is the time to create one for client side programming, thus we created Asta4js.  
 
+## development
+
+run all test
+
+```
+grunt test
+```
+
+run certain test on chrome
+
+```
+grunt wtestc -file test/e2e/virtual_path_in_array_test.js
+```
+
+build
+
+```
+grunt build
+```
+
+dev watch
+
+```
+grunt dev
+```
+
+
+
 ## status and road map
 
 Currently, Asta4js is still in alpha developing, which means it still lacks of some important functionalities, but it can be considered as stable for existing functions because we are using it in our service developing.
